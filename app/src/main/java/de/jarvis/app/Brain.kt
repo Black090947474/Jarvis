@@ -126,10 +126,11 @@ class BrainRouter(brains: List<Brain>) {
 }
 
 
-/** Baut die Reihenfolge der KIs: Groq → Mistral → Gemini → Claude. Volles Limit = sofort die nächste. */
+/** Baut die Reihenfolge der KIs: NVIDIA → Groq → Mistral → Gemini → Claude. Volles Limit = sofort die nächste. */
 object Brains {
     fun build(p: Prefs, tools: PhoneTools, mem: Memory, chat: Boolean): BrainRouter {
         val plan = mutableListOf<Pair<Provider, String>>()
+        if (p.nvidiaKey.isNotBlank()) plan += Provider.NVIDIA to p.nvidiaKey
         if (p.groqKey.isNotBlank()) plan += Provider.GROQ to p.groqKey
         if (p.mistralKey.isNotBlank()) plan += Provider.MISTRAL to p.mistralKey
         val later = p.geminiKey.isNotBlank() || p.anthropicKey.isNotBlank()

@@ -6,7 +6,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Ein Anbieter mit OpenAI-kompatibler Schnittstelle (Groq, Mistral). */
+/** Ein Anbieter mit OpenAI-kompatibler Schnittstelle (Groq, NVIDIA, Mistral). */
 class Provider(
     val name: String,
     val url: String,
@@ -20,6 +20,10 @@ class Provider(
             listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "meta-llama/llama-4-scout-17b-16e-instruct",
                 "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"),
             listOf("qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct"), "max_completion_tokens")
+        // NVIDIA NIM (build.nvidia.com): kostenlos ohne Kreditkarte, ca. 40 Anfragen pro Minute, kein Token-Minutenlimit wie bei Groq
+        val NVIDIA = Provider("NVIDIA", "https://integrate.api.nvidia.com/v1/chat/completions",
+            listOf("openai/gpt-oss-120b", "meta/llama-3.3-70b-instruct", "openai/gpt-oss-20b"),
+            listOf("meta/llama-4-maverick-17b-128e-instruct", "meta/llama-3.2-90b-vision-instruct"), "max_tokens")
         // Mistral „Experiment“: kostenlos, sehr hohes Minutenlimit (ca. 1 Anfrage pro Sekunde)
         val MISTRAL = Provider("Mistral", "https://api.mistral.ai/v1/chat/completions",
             listOf("mistral-medium-latest", "mistral-small-latest"),
@@ -28,7 +32,7 @@ class Provider(
 }
 
 /**
- * OpenAI-kompatibler Client (Groq oder Mistral) mit denselben Handy-Werkzeugen.
+ * OpenAI-kompatibler Client (Groq, NVIDIA oder Mistral) mit denselben Handy-Werkzeugen.
  * Läuft blockierend – immer aus einem Hintergrund-Thread aufrufen.
  * quickFail = bei vollem Minutenlimit nicht warten, sondern sofort den nächsten Anbieter nehmen.
  */
@@ -137,7 +141,7 @@ class AiClient(
                 .put("parameters", d.optJSONObject("input_schema") ?: JSONObject().put("type", "object"))))
         }
         // Eingebaute Websuche der GPT-OSS-Modelle (wird abgeschaltet, falls nicht unterstützt)
-        if (webSearch && model.startsWith("openai/gpt-oss")) {
+        if (webSearch && provider === Provider.GROQ && model.startsWith("openai/gpt-oss")) {
             list.put(JSONObject().put("type", "browser_search"))
         }
         return list

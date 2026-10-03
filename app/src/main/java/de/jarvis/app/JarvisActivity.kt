@@ -52,7 +52,7 @@ class JarvisActivity : Activity() {
         val t = PhoneTools(this).also { tools = it }
         t.onCard = { a -> showCard(a) }
         if (!prefs.hasAnyKey) {
-            jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Groq-Schlüssel in der Jarvis-App ein."
+            jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den NVIDIA- oder Groq-Schlüssel in der Jarvis-App ein."
         } else {
             claude = Brains.build(prefs, t, Memory(this), chat = false)
         }

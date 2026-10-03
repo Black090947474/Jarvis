@@ -8,7 +8,13 @@ Sag „Hey Jarvis“, das Handy wacht auf, und du redest mit Claude. Funktionier
 
 Das Weckwort „Hey Jarvis“ wird komplett offline auf dem Handy erkannt und braucht kein Konto.
 
-**Groq (das Gehirn) – kostenlos**
+**NVIDIA (empfohlen, das Gehirn) – kostenlos, ohne Kreditkarte**
+NVIDIA hat kein so knappes Minutenlimit wie Groq (ca. 40 Anfragen pro Minute), daher kaum Pausen.
+1. Auf https://build.nvidia.com gehen und mit E-Mail anmelden (eventuell wird die Handynummer bestätigt).
+2. Oben rechts auf dein Profil → **API Keys** → **Generate API Key**, Schlüssel kopieren (beginnt mit `nvapi-`).
+3. In Jarvis bei „NVIDIA API-Key“ einfügen. Groq kannst du zusätzlich als Ersatz eintragen.
+
+**Groq – kostenlos, optional als Ersatz**
 1. Auf https://console.groq.com/keys gehen und mit GitHub oder Google anmelden.
 2. **Create API Key** antippen, Namen eingeben und den Schlüssel kopieren (beginnt mit `gsk_`, wird nur einmal angezeigt).
 3. Im Gratis-Tarif gibt es ein Minutenlimit; ist es voll, wartet Jarvis kurz („Kurze Pause“).

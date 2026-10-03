@@ -12,12 +12,16 @@ class Prefs(context: Context) {
         get() = sp.getString("mistral_key", "") ?: ""
         set(v) = sp.edit().putString("mistral_key", v.trim()).apply()
 
+    var nvidiaKey: String
+        get() = sp.getString("nvidia_key", "") ?: ""
+        set(v) = sp.edit().putString("nvidia_key", v.filter { it.isLetterOrDigit() && it.code < 128 || it == '_' || it == '-' }).apply()
+
     var groqKey: String
         get() = sp.getString("groq_key", "") ?: ""
         set(v) = sp.edit().putString("groq_key", v.filter { it.isLetterOrDigit() && it.code < 128 || it == '_' }).apply()
 
     /** Mindestens ein KI-Schlüssel eingetragen? */
-    val hasAnyKey get() = mistralKey.isNotBlank() || groqKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
+    val hasAnyKey get() = nvidiaKey.isNotBlank() || mistralKey.isNotBlank() || groqKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
 
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""

@@ -28,6 +28,7 @@ class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
     private lateinit var mistralInput: EditText
+    private lateinit var nvidiaInput: EditText
     private lateinit var groqInput: EditText
     private lateinit var geminiInput: EditText
     private lateinit var claudeInput: EditText
@@ -61,7 +62,10 @@ class MainActivity : Activity() {
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
-        groqInput = input("Groq API-Key (gsk_…)", prefs.groqKey, secret = true)
+        nvidiaInput = input("NVIDIA API-Key (nvapi-…, empfohlen)", prefs.nvidiaKey, secret = true)
+        col.addView(nvidiaInput)
+        col.addView(link("Kostenlos holen: build.nvidia.com → API Key", "https://build.nvidia.com/settings/api-keys"))
+        groqInput = input("Groq API-Key (gsk_…, optional als Ersatz)", prefs.groqKey, secret = true)
         col.addView(groqInput)
         col.addView(link("Kostenlos holen: console.groq.com/keys", "https://console.groq.com/keys"))
         mistralInput = input("Mistral API-Key (optional)", prefs.mistralKey, secret = true)
@@ -416,7 +420,7 @@ class MainActivity : Activity() {
             toggle.postDelayed({ refresh() }, 300)
             return
         }
-        if (!prefs.hasAnyKey) { toast("Bitte erst den Groq-Schlüssel eintragen"); return }
+        if (!prefs.hasAnyKey) { toast("Bitte erst den NVIDIA- oder Groq-Schlüssel eintragen"); return }
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
@@ -425,6 +429,7 @@ class MainActivity : Activity() {
 
     private fun save() {
         prefs.mistralKey = mistralInput.text.toString()
+        prefs.nvidiaKey = nvidiaInput.text.toString()
         prefs.groqKey = groqInput.text.toString()
         prefs.geminiKey = geminiInput.text.toString()
         prefs.anthropicKey = claudeInput.text.toString()
