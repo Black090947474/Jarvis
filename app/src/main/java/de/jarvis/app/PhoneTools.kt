@@ -43,6 +43,9 @@ class PhoneTools(private val activity: Activity) {
     /** Wird true, sobald eine andere App geöffnet wurde – dann beendet sich Jarvis nach der Antwort. */
     @Volatile var leftApp = false
 
+    /** Zeigt eine Ergebnis-Karte auf dem Jarvis-Bildschirm (wird von JarvisActivity gesetzt). */
+    var onCard: ((JSONObject) -> String)? = null
+
     /** Bei Anrufen soll Jarvis nicht in das Telefonat hineinreden. */
     @Volatile var silentExit = false
 
@@ -92,6 +95,8 @@ class PhoneTools(private val activity: Activity) {
         "latest_photo" -> latestPhoto(a.optString("who"))
         "count_photos" -> countPhotos()
         "toggle" -> toggle(a.optString("what"))
+        "show_card" -> onCard?.invoke(a) ?: "Fehler: Karten gehen hier nicht."
+        "build_website" -> buildWebsite(a.optString("title"), a.optString("html"))
         else -> "Fehler: Unbekanntes Werkzeug $name"
     }
 
@@ -494,6 +499,39 @@ class PhoneTools(private val activity: Activity) {
         } catch (_: Exception) { null }
     }
 
+    // ---------- Website bauen ----------
+
+    /** Speichert eine von der KI gebaute Website im Download-Ordner (Jarvis/) und öffnet sie im Browser. */
+    private fun buildWebsite(title: String, rawHtml: String): String {
+        if (Build.VERSION.SDK_INT < 29) return "Fehler: Websites bauen geht erst ab Android 10."
+        var html = rawHtml.trim().removePrefix("```html").removePrefix("```").removeSuffix("```").trim()
+        if (html.length < 40) return "Fehler: Die Website war leer. Bitte nochmal mit vollständigem HTML."
+        if (!html.contains("<html", ignoreCase = true)) {
+            html = "<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\">" +
+                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" +
+                android.text.TextUtils.htmlEncode(title) + "</title></head><body>" + html + "</body></html>"
+        }
+        val slug = title.lowercase(Locale.GERMANY).replace(Regex("[^a-z0-9äöüß]+"), "-").trim('-').take(40).ifBlank { "website" }
+        val name = "$slug-${SimpleDateFormat("HHmmss", Locale.GERMANY).format(java.util.Date())}.html"
+        val values = android.content.ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, "text/html")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/Jarvis")
+        }
+        val uri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: return "Fehler: Konnte die Datei nicht speichern."
+        ctx.contentResolver.openOutputStream(uri)?.use { it.write(html.toByteArray(Charsets.UTF_8)) }
+            ?: return "Fehler: Konnte die Datei nicht schreiben."
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, "text/html")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        if (isInstalled("com.android.chrome")) view.setPackage("com.android.chrome")
+        val r = launch(view, "Website „$title“ gebaut, unter Downloads/Jarvis/$name gespeichert und geöffnet.")
+        if (!r.startsWith("Fehler")) return r
+        view.setPackage(null)
+        val r2 = launch(view, "Website „$title“ gebaut und geöffnet.")
+        return if (r2.startsWith("Fehler")) "Website gespeichert unter Downloads/Jarvis/$name, aber kein Browser konnte sie öffnen." else r2
+    }
+
     // ---------- WLAN/Bluetooth/… schalten (über die Schnelleinstellungen) ----------
 
     private fun toggle(what: String): String {
@@ -585,7 +623,8 @@ class PhoneTools(private val activity: Activity) {
             "app_search" to "Suche in der App …", "camera" to "Öffne Kamera …",
             "notifications" to "Prüfe Nachrichten …", "screen" to "Bediene das Handy …",
             "location" to "Bestimme Standort …", "latest_photo" to "Hole dein Foto …",
-            "count_photos" to "Zähle Fotos …", "toggle" to "Schalte um …"
+            "count_photos" to "Zähle Fotos …", "toggle" to "Schalte um …",
+            "show_card" to "Erstelle Übersicht …", "build_website" to "Baue Website …"
         )
 
         /** Beschreibung aller Werkzeuge für Claude (JSON-Schema). */
@@ -656,7 +695,14 @@ class PhoneTools(private val activity: Activity) {
   "input_schema":{"type":"object","properties":{"who":{"type":"string","description":"Optional: an wen teilen"}}}},
  {"name":"count_photos","description":"Sagt, wie viele Fotos auf dem Handy sind.","input_schema":{"type":"object","properties":{}}},
  {"name":"toggle","description":"Schaltet eine Systemfunktion über die Schnelleinstellungen um (tippt selbst auf die Kachel). Braucht die volle Handy-Steuerung.",
-  "input_schema":{"type":"object","properties":{"what":{"type":"string","enum":["wifi","bluetooth","mobile_data","airplane","dnd","rotation","location","hotspot","flashlight"]}},"required":["what"]}}
+  "input_schema":{"type":"object","properties":{"what":{"type":"string","enum":["wifi","bluetooth","mobile_data","airplane","dnd","rotation","location","hotspot","flashlight"]}},"required":["what"]}},
+ {"name":"show_card","description":"Zeigt eine Ergebniskarte auf dem Bildschirm. Nutze sie für Pläne, Schritt-für-Schritt-Anleitungen, Strategien, Listen, Einkaufslisten, Vergleiche, Zahlen, Rezepte. Danach nur 1-2 Sätze dazu sagen statt alles vorzulesen.",
+  "input_schema":{"type":"object","properties":{"title":{"type":"string"},
+   "kind":{"type":"string","enum":["steps","checklist","stats","text"]},
+   "items":{"type":"array","items":{"type":"string"},"description":"Zeilen. Bei stats je 'Bezeichnung | Wert'"},
+   "note":{"type":"string","description":"Optionaler Hinweis unten"}},"required":["title","kind","items"]}},
+ {"name":"build_website","description":"Baut eine einseitige Website und öffnet sie im Browser. html = vollständiges, kompaktes HTML mit eingebettetem CSS, ohne externe Dateien oder Bilder-Links, modern, dunkel oder hell passend zum Thema, mobilfreundlich, auf Deutsch. Sie liegt nur auf dem Handy (Downloads/Jarvis), nicht online.",
+  "input_schema":{"type":"object","properties":{"title":{"type":"string"},"html":{"type":"string"}},"required":["title","html"]}}
 ]"""
     }
 }

@@ -110,6 +110,7 @@ class MainActivity : Activity() {
     private lateinit var designButton: Button
 
     private val designs = listOf(
+        "PULS" to "Puls – Leuchtkern, Ringe & Schallwelle",
         "NEXUS" to "Nexus – HUD mit Ringen & Reticle",
         "GLUT" to "Glut – rote, atmende Kugel",
         "AURORA" to "Aurora – bunte Farbwolken",

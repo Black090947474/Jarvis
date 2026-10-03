@@ -52,6 +52,7 @@ class JarvisActivity : Activity() {
             jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Groq-Schlüssel in der Jarvis-App ein."
         } else {
             val t = PhoneTools(this).also { tools = it }
+            t.onCard = { a -> showCard(a) }
             val mem = Memory(this)
             // Kostenlose zuerst (Groq, Gemini), Claude springt ein, falls beide nicht können
             val groq = prefs.groqKey.takeIf { it.isNotBlank() }
@@ -86,6 +87,8 @@ class JarvisActivity : Activity() {
     private class Theme(val bg: Int, val bg2: Int, val fg: Int, val muted: Int, val accent: Int, val center: Boolean)
 
     private fun theme(style: CoreView.Style) = when (style) {
+        CoreView.Style.PULS -> Theme(Color.rgb(6, 7, 15), Color.rgb(12, 8, 26), Color.rgb(232, 236, 255),
+            Color.rgb(124, 130, 168), Color.rgb(34, 224, 224), true)
         CoreView.Style.NEXUS -> Theme(Color.rgb(4, 9, 12), Color.rgb(2, 5, 7), Color.rgb(222, 244, 248),
             Color.rgb(96, 140, 150), Color.rgb(34, 224, 224), true)
         CoreView.Style.GLUT -> Theme(Color.rgb(8, 6, 7), Color.rgb(8, 6, 7), Color.rgb(244, 238, 234),
@@ -100,12 +103,17 @@ class JarvisActivity : Activity() {
 
     private lateinit var status: TextView
     private var clock: TextView? = null
+    private lateinit var cardScroll: android.widget.ScrollView
+    private lateinit var cardBox: LinearLayout
+    private var cardText = ""
+    private var cardShown = false
+    private var th: Theme? = null
 
     private fun buildUi() {
         val dp = resources.displayMetrics.density
         fun px(v: Int) = (v * dp).toInt()
         val style = CoreView.styleFrom(Prefs(this).design)
-        val th = theme(style)
+        val th = theme(style).also { this.th = it }
         val light = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
         val thin = android.graphics.Typeface.create("sans-serif-thin", android.graphics.Typeface.NORMAL)
         val align = if (th.center) Gravity.CENTER_HORIZONTAL else Gravity.START
@@ -117,7 +125,14 @@ class JarvisActivity : Activity() {
         status = TextView(this).apply {
             textSize = 12f; letterSpacing = 0.22f; setTextColor(th.accent); gravity = align
         }
-        core.onModeChanged = { m -> status.text = statusText(m) }
+        var headStatus: TextView? = null
+        core.onModeChanged = { m ->
+            status.text = statusText(m)
+            headStatus?.text = "● " + when (m) {
+                CoreView.Mode.IDLE -> "STANDBY"; CoreView.Mode.LISTENING -> "LISTENING"
+                CoreView.Mode.THINKING -> "PROCESSING"; CoreView.Mode.SPEAKING -> "SPEAKING"
+            }
+        }
         status.text = statusText(CoreView.Mode.IDLE)
         youText = TextView(this).apply { setTextColor(th.muted); textSize = 15f; gravity = align }
         jarvisText = TextView(this).apply {
@@ -145,6 +160,23 @@ class JarvisActivity : Activity() {
 
         // Kopfzeile
         when (style) {
+            CoreView.Style.PULS -> {
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                }
+                headStatus = TextView(this).apply {
+                    text = "● STANDBY"; textSize = 11f; letterSpacing = 0.22f; setTextColor(th.accent)
+                    typeface = android.graphics.Typeface.MONOSPACE
+                }
+                row.addView(headStatus, LinearLayout.LayoutParams(0, -2, 1f))
+                clock = TextView(this).apply {
+                    textSize = 11f; letterSpacing = 0.12f; setTextColor(th.muted); typeface = android.graphics.Typeface.MONOSPACE
+                }
+                row.addView(clock)
+                root.addView(row, lp())
+                root.addView(brand(0.5f, 14f), lp(14))
+                status.visibility = android.view.View.GONE   // Status steht schon oben
+            }
             CoreView.Style.NEXUS -> {
                 val row = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
@@ -185,9 +217,28 @@ class JarvisActivity : Activity() {
             }
             CoreView.Style.LINIE -> {}
         }
+        // (PULS-Kopfzeile oben bereits gebaut)
 
         // Kern
         root.addView(core, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        // Ergebnis-Karte (erscheint, wenn Jarvis einen Plan, eine Liste o. ä. zeigt)
+        cardBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(px(20), px(18), px(20), px(18))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 22 * dp
+                setColor(Color.argb(22, 255, 255, 255))
+                setStroke(px(1), Color.argb(90, Color.red(th.accent), Color.green(th.accent), Color.blue(th.accent)))
+            }
+            setOnClickListener { shareCard() }
+        }
+        cardScroll = android.widget.ScrollView(this).apply {
+            visibility = android.view.View.GONE
+            isVerticalScrollBarEnabled = false
+            addView(cardBox)
+        }
+        root.addView(cardScroll, LinearLayout.LayoutParams(-1, 0, 0f).apply { topMargin = px(8) })
         if (style == CoreView.Style.LINIE) root.addView(brand(0.6f, 15f), lp(0))
 
         // Text-Bereich
@@ -212,9 +263,83 @@ class JarvisActivity : Activity() {
         tickClock()
     }
 
+    // ---------- Ergebnis-Karten ----------
+
+    /** Wird von PhoneTools (show_card) auf dem Hauptthread aufgerufen. */
+    private fun showCard(a: org.json.JSONObject): String {
+        val t = th ?: return "Fehler: Bildschirm nicht bereit."
+        val dp = resources.displayMetrics.density
+        fun px(v: Int) = (v * dp).toInt()
+        val title = a.optString("title").ifBlank { "Ergebnis" }
+        val kind = a.optString("kind", "text")
+        val arr = a.optJSONArray("items") ?: org.json.JSONArray()
+        val items = (0 until arr.length()).map { arr.optString(it).trim() }.filter { it.isNotEmpty() }.take(30)
+        val note = a.optString("note").trim()
+
+        cardBox.removeAllViews()
+        cardBox.addView(TextView(this).apply {
+            text = title; textSize = 18f; setTextColor(t.fg)
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        })
+        val sb = StringBuilder(title).append("\n\n")
+        items.forEachIndexed { i, raw ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            when (kind) {
+                "stats" -> {
+                    val (l, v) = raw.split("|", limit = 2).let { it[0].trim() to (it.getOrNull(1)?.trim() ?: "") }
+                    row.addView(TextView(this).apply { text = l; textSize = 15f; setTextColor(t.muted) },
+                        LinearLayout.LayoutParams(0, -2, 1f))
+                    row.addView(TextView(this).apply {
+                        text = v; textSize = 16f; setTextColor(t.accent)
+                        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                    })
+                    sb.append("$l: $v\n")
+                }
+                else -> {
+                    val mark = when (kind) { "steps" -> "${i + 1}"; "checklist" -> "○"; else -> "•" }
+                    row.addView(TextView(this).apply {
+                        text = mark; textSize = 15f; setTextColor(t.accent); minWidth = px(26)
+                    })
+                    row.addView(TextView(this).apply {
+                        text = raw; textSize = 15f; setTextColor(t.fg); setLineSpacing(0f, 1.2f)
+                    }, LinearLayout.LayoutParams(0, -2, 1f))
+                    sb.append("$mark  $raw\n")
+                }
+            }
+            cardBox.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(if (i == 0) 14 else 9) })
+        }
+        if (note.isNotEmpty()) {
+            cardBox.addView(TextView(this).apply { text = note; textSize = 13f; setTextColor(t.muted) },
+                LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) })
+            sb.append("\n").append(note)
+        }
+        cardBox.addView(TextView(this).apply {
+            text = "Antippen zum Teilen"; textSize = 11f; letterSpacing = 0.1f
+            setTextColor(Color.argb(130, Color.red(t.muted), Color.green(t.muted), Color.blue(t.muted)))
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) })
+        cardText = sb.toString().trim()
+
+        // Kern kleiner, Karte groß
+        (core.layoutParams as LinearLayout.LayoutParams).weight = 0.55f
+        (cardScroll.layoutParams as LinearLayout.LayoutParams).weight = 1.45f
+        cardScroll.visibility = android.view.View.VISIBLE
+        cardScroll.requestLayout(); core.requestLayout()
+        cardScroll.scrollTo(0, 0)
+        cardShown = true
+        hint.text = "Karte antippen = teilen · Zurück = schließen"
+        return "Karte „$title“ wird angezeigt."
+    }
+
+    private fun shareCard() {
+        if (cardText.isBlank()) return
+        val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, cardText)
+        try { startActivity(Intent.createChooser(i, "Teilen")) } catch (_: Exception) {}
+    }
+
     private fun tickClock() {
         val c = clock ?: return
-        val fmt = if (CoreView.styleFrom(Prefs(this).design) == CoreView.Style.NEXUS)
+        val st = CoreView.styleFrom(Prefs(this).design)
+        val fmt = if (st == CoreView.Style.NEXUS || st == CoreView.Style.PULS)
             "EEE, dd. MMM · HH:mm:ss" else "HH:mm"
         c.text = java.text.SimpleDateFormat(fmt, Locale.GERMANY).format(java.util.Date()).uppercase(Locale.GERMANY)
         main.postDelayed({ if (!isFinishing) tickClock() },
@@ -340,7 +465,14 @@ class JarvisActivity : Activity() {
         silentTries++
         youText.text = ""
         // Nach einer Pause ohne Antwort verabschiedet sich Jarvis leise
-        if (silentTries >= 3) { core.mode = CoreView.Mode.IDLE; finish() }
+        if (silentTries >= 3) {
+            core.mode = CoreView.Mode.IDLE
+            if (cardShown) {
+                // Karte bleibt zum Lesen offen; nach 3 Minuten schließt Jarvis von selbst
+                hint.text = "Tippen = weiterreden · Karte antippen = teilen · Zurück = schließen"
+                main.postDelayed({ if (!isFinishing && !listening && !busy) finish() }, 180_000)
+            } else finish()
+        }
         else listen()
     }
 

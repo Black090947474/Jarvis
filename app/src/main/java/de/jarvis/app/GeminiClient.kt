@@ -145,7 +145,7 @@ class GeminiClient(
                 JSONArray().put(JSONObject().put("text", Persona.systemPrompt(userName, memory)))))
             .put("contents", contents)
             .put("tools", toolList())
-            .put("generationConfig", JSONObject().put("maxOutputTokens", 2048))
+            .put("generationConfig", JSONObject().put("maxOutputTokens", 4096))
 
         val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
         val conn = (url.openConnection() as HttpURLConnection).apply {

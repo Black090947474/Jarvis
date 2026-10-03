@@ -121,7 +121,7 @@ class ClaudeClient(
     private fun post(): JSONObject {
         val body = JSONObject()
             .put("model", model)
-            .put("max_tokens", 1024)
+            .put("max_tokens", 4000)
             .put("system", systemPrompt())
             .put("tools", toolList())
             .put("messages", messages)

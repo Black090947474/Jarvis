@@ -71,7 +71,7 @@ Unter **Stimme** in der Jarvis-App kannst du zwischen allen deutschen Stimmen au
 Mehr Stimmen bekommst du über *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache → Google Sprachausgabe → ⚙ → Sprachdaten installieren → Deutsch*.
 
 ### Design
-Unter **Design** wählst du, wie Jarvis aussieht, wenn er aufgeht: **Nexus** (HUD mit Ringen, Ticks und Reticle, Standard), **Nexus** (HUD mit Ringen, Reticle & Radar), **Glut** (rote, atmende Kugel), **Aurora** (bunte Farbwolken), **Linie** (weißer Ring, minimal) oder **Glas** (Uhrzeit, blaue Kugel, Milchglas-Karte).
+Unter **Design** wählst du, wie Jarvis aussieht, wenn er aufgeht: **Nexus** (HUD mit Ringen, Ticks und Reticle, Standard), **Puls** (Leuchtkern, Punkt-Ringe & Schallwelle), **Nexus** (HUD mit Ringen, Reticle & Radar), **Glut** (rote, atmende Kugel), **Aurora** (bunte Farbwolken), **Linie** (weißer Ring, minimal) oder **Glas** (Uhrzeit, blaue Kugel, Milchglas-Karte).
 
 ### Nachrichten & volle Steuerung freischalten
 Für „Nachrichten lesen & antworten“ und „Volle Handy-Steuerung“ tippst du in der Jarvis-App auf den Eintrag und schaltest Jarvis in der Liste ein.
@@ -120,6 +120,8 @@ Samsung beendet Hintergrund-Apps besonders gern:
 | „Wo bin ich?“, „Wie weit ist es nach Hause?“ | Standort (Standort-Berechtigung nötig) |
 | „Schick Max mein letztes Foto“, „Wie viele Fotos hab ich?“ | Fotos (Foto-Berechtigung nötig) |
 | „Mach das WLAN an“, „Schalt Bluetooth aus“, „Flugmodus an“ | Tippt in den Schnelleinstellungen selbst auf die Kachel (volle Steuerung nötig) |
+| „Mach mir einen Plan, wie ich für ein Fahrrad spare“, „Vergleich iPhone und Samsung“, „Einkaufsliste für Pizza“ | Zeigt eine **Ergebnis-Karte** auf dem Bildschirm (antippen = teilen) |
+| „Bau mir eine Website für meinen Gaming-Kanal“ | Baut eine einfache Website, speichert sie unter Downloads/Jarvis und öffnet sie (nur auf dem Handy, nicht online) |
 | „Wo bin ich?“, „Wie wird das Wetter hier?“ | Standort (Standort-Berechtigung nötig) |
 | „Schick Max mein letztes Foto“, „Wie viele Fotos hab ich?“ | Fotos (Foto-Berechtigung nötig) |
 | „Mach das WLAN an“, „Schalt Bluetooth aus“, „Flugmodus an“ | Schaltet die Kachel in den Schnelleinstellungen (volle Steuerung nötig) |

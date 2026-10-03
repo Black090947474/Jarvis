@@ -18,7 +18,7 @@ import kotlin.math.sin
 /** Die animierte Mitte des Jarvis-Bildschirms – in vier Designs. */
 class CoreView(context: Context, val style: Style) : View(context) {
 
-    enum class Style { NEXUS, GLUT, AURORA, LINIE, GLAS }
+    enum class Style { PULS, NEXUS, GLUT, AURORA, LINIE, GLAS }
     enum class Mode { IDLE, LISTENING, THINKING, SPEAKING }
 
     var onModeChanged: ((Mode) -> Unit)? = null
@@ -51,6 +51,7 @@ class CoreView(context: Context, val style: Style) : View(context) {
             Style.AURORA -> drawAurora(canvas, t, cx, cy, size)
             Style.LINIE -> drawLinie(canvas, t, cx, cy, size)
             Style.GLAS -> drawGlas(canvas, t, cx, cy, size)
+            Style.PULS -> drawPuls(canvas, t, cx, cy, size)
         }
         postInvalidateOnAnimation()
     }
@@ -251,6 +252,78 @@ class CoreView(context: Context, val style: Style) : View(context) {
         c.drawCircle(cx, cy, r, fill)
         fill.shader = null
     }
+
+    // ---------- Puls: Leuchtkern, Punkt-Ringe, Schallwelle ----------
+
+    private val dash = android.graphics.DashPathEffect(floatArrayOf(6f, 9f), 0f)
+    private val waveA = Color.rgb(34, 224, 224)
+    private val waveB = Color.rgb(140, 255, 160)
+
+    private fun drawPuls(c: Canvas, t: Float, cx: Float, cyMid: Float, size: Float) {
+        val cy = cyMid - size * 0.10f
+        val r = size * 0.27f
+        val tone = when (mode) {
+            Mode.THINKING -> Color.rgb(170, 120, 255)
+            Mode.IDLE -> Color.rgb(90, 110, 200)
+            else -> Color.rgb(111, 168, 255)
+        }
+        // weicher Schein
+        fill.shader = RadialGradient(cx, cy, r * 1.6f, intArrayOf(withAlpha(Color.rgb(91, 91, 255), 70), Color.TRANSPARENT),
+            floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, r * 1.6f, fill); fill.shader = null
+
+        // äußerer Punkt-Ring (dreht sich)
+        val spin = when (mode) { Mode.THINKING -> 70f; Mode.SPEAKING -> 30f; else -> 12f }
+        fill.color = tone
+        for (i in 0 until 56) {
+            val a = Math.toRadians((i * (360.0 / 56) + t * spin).toDouble())
+            fill.alpha = if (i % 4 == 0) 255 else 120
+            c.drawCircle(cx + (cos(a) * r).toFloat(), cy + (sin(a) * r).toFloat(), 1.4f * dp, fill)
+        }
+        fill.alpha = 255
+        // gestrichelter Ring (gegenläufig)
+        c.save(); c.rotate(-t * spin * 0.8f, cx, cy)
+        stroke.pathEffect = dash; stroke.color = withAlpha(tone, 170); stroke.strokeWidth = 1.5f * dp
+        c.drawCircle(cx, cy, r * 0.82f, stroke)
+        stroke.pathEffect = null; c.restore()
+        // innerer Ring
+        stroke.color = withAlpha(Color.WHITE, 120); stroke.strokeWidth = 1.2f * dp
+        c.drawCircle(cx, cy, r * 0.62f * (1f + pulse(t) * 0.5f), stroke)
+        // Leuchtkern
+        val cr = r * 0.40f * (1f + pulse(t))
+        fill.shader = RadialGradient(cx, cy, cr, intArrayOf(Color.WHITE, tone, Color.TRANSPARENT),
+            floatArrayOf(0f, 0.35f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, cr, fill); fill.shader = null
+
+        // Schallwelle darunter
+        val bars = 44
+        val w = size * 0.78f
+        val gap = w / bars
+        val bw = gap * 0.45f
+        val wy = cy + r * 1.55f
+        val maxH = size * 0.13f
+        for (i in 0 until bars) {
+            val f = i / (bars - 1f)
+            val env = sin(Math.PI * f).toFloat()         // in der Mitte am höchsten
+            val n = 0.5f + 0.5f * sin(t * 11f + i * 1.7f) * cos(t * 7f + i * 0.9f)
+            val amp = when (mode) {
+                Mode.IDLE -> 0.06f + 0.03f * n
+                Mode.LISTENING -> 0.08f + level * (0.4f + 0.6f * n)
+                Mode.THINKING -> 0.08f + 0.35f * maxOf(0f, sin(t * 5f - i * 0.35f))
+                Mode.SPEAKING -> 0.15f + 0.85f * n * abs(sin(t * 6f))
+            } * env
+            val h = maxOf(2f * dp, maxH * amp * 2f)
+            fill.color = blend(waveA, waveB, f)
+            val x = cx - w / 2 + i * gap
+            rect.set(x, wy - h / 2, x + bw, wy + h / 2)
+            c.drawRoundRect(rect, bw / 2, bw / 2, fill)
+        }
+    }
+
+    private fun blend(a: Int, b: Int, f: Float) = Color.rgb(
+        (Color.red(a) + (Color.red(b) - Color.red(a)) * f).toInt(),
+        (Color.green(a) + (Color.green(b) - Color.green(a)) * f).toInt(),
+        (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * f).toInt())
 
     private fun withAlpha(color: Int, a: Int) = Color.argb(a, Color.red(color), Color.green(color), Color.blue(color))
 

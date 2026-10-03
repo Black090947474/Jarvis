@@ -155,7 +155,7 @@ class GroqClient(
             .put("messages", all)
             .put("tools", toolList())
             .put("tool_choice", "auto")
-            .put("max_completion_tokens", 1024)
+            .put("max_completion_tokens", 3000)
             .apply { if (model.startsWith("openai/gpt-oss")) put("reasoning_effort", "low") }
 
         val conn = (URL("https://api.groq.com/openai/v1/chat/completions").openConnection() as HttpURLConnection).apply {
