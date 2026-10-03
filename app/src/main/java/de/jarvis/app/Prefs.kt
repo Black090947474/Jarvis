@@ -6,9 +6,8 @@ import android.content.Context
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("jarvis", Context.MODE_PRIVATE)
 
-    var groqKey: String
-        get() = sp.getString("groq_key", "") ?: ""
-        set(v) = sp.edit().putString("groq_key", v.trim()).apply()
+    init { if (sp.contains("groq_key")) sp.edit().remove("groq_key").apply() } // Groq wird nicht mehr benutzt
+
 
     var mistralKey: String
         get() = sp.getString("mistral_key", "") ?: ""
@@ -20,7 +19,7 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("github_key", v.trim()).apply()
 
     /** Mindestens ein KI-Schlüssel eingetragen? */
-    val hasAnyKey get() = groqKey.isNotBlank() || mistralKey.isNotBlank() || githubKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
+    val hasAnyKey get() = mistralKey.isNotBlank() || githubKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
 
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""

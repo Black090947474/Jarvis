@@ -365,7 +365,7 @@ class ChatActivity : Activity() {
                 val local = if (b64 == null) tools?.let { Offline.handle(it, text) } else null
                 when {
                     local != null -> local
-                    b == null -> "Trag zuerst deinen Mistral- oder Groq-Schlüssel in der Jarvis-App ein. Ohne Schlüssel verstehe ich nur einfache Befehle wie „Timer 10 Minuten“, „Erinnere mich in 20 Minuten an …“ oder „Was steht heute an?“."
+                    b == null -> "Trag zuerst deinen GitHub-Token in der Jarvis-App ein. Ohne Schlüssel verstehe ich nur einfache Befehle wie „Timer 10 Minuten“, „Erinnere mich in 20 Minuten an …“ oder „Was steht heute an?“."
                     offline -> "Du bist gerade offline. Ohne Internet gehen nur einfache Befehle: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."
                     else -> b.ask(text, { step -> main.post { thinking.text = step } }, b64)
                 }

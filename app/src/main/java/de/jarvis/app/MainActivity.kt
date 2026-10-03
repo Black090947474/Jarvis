@@ -27,7 +27,6 @@ import android.widget.Toast
 class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
-    private lateinit var groqInput: EditText
     private lateinit var mistralInput: EditText
     private lateinit var githubInput: EditText
     private lateinit var geminiInput: EditText
@@ -62,10 +61,7 @@ class MainActivity : Activity() {
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
-        groqInput = input("Groq API-Key (gsk_…)", prefs.groqKey, secret = true)
-        col.addView(groqInput)
-        col.addView(link("Kostenlos holen: console.groq.com/keys", "https://console.groq.com/keys"))
-        githubInput = input("GitHub-Token (Ersatz bei Groq-Limit, github_pat_…)", prefs.githubKey, secret = true)
+        githubInput = input("GitHub-Token (github_pat_…)", prefs.githubKey, secret = true)
         col.addView(githubInput)
         col.addView(link("Kostenlos: GitHub → Fine-grained Token → Models: Read", "https://github.com/settings/personal-access-tokens/new"))
         mistralInput = input("Mistral API-Key (optional)", prefs.mistralKey, secret = true)
@@ -420,7 +416,7 @@ class MainActivity : Activity() {
             toggle.postDelayed({ refresh() }, 300)
             return
         }
-        if (!prefs.hasAnyKey) { toast("Bitte erst einen Schlüssel (Mistral oder Groq) eintragen"); return }
+        if (!prefs.hasAnyKey) { toast("Bitte erst den GitHub-Token eintragen"); return }
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
@@ -428,7 +424,6 @@ class MainActivity : Activity() {
     }
 
     private fun save() {
-        prefs.groqKey = groqInput.text.toString()
         prefs.mistralKey = mistralInput.text.toString()
         prefs.githubKey = githubInput.text.toString()
         prefs.geminiKey = geminiInput.text.toString()

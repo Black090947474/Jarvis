@@ -8,13 +8,8 @@ Sag „Hey Jarvis“, das Handy wacht auf, und du redest mit Claude. Funktionier
 
 Das Weckwort „Hey Jarvis“ wird komplett offline auf dem Handy erkannt und braucht kein Konto.
 
-**Groq – kostenlos**
-1. Auf https://console.groq.com/keys gehen und mit GitHub oder Google anmelden.
-2. **Create API Key** antippen, Namen eingeben und den Schlüssel kopieren (beginnt mit `gsk_`, wird nur einmal angezeigt).
-3. Kostenlos sind ca. 1.000 Anfragen pro Tag.
-
-**GitHub-Token – kostenlos, Ersatz wenn Groq am Limit ist**
-Ist Groqs Minutenlimit voll, antwortet sofort GitHub Models (ca. 15 Anfragen pro Minute, 150 pro Tag) statt einer Pause.
+**GitHub-Token (das Gehirn) – kostenlos**
+Jarvis denkt mit GitHub Models (kostenlos mit deinem GitHub-Konto: ca. 15 Anfragen pro Minute und 150 pro Tag; eine Frage mit Handy-Aktion braucht meist 2–3 Anfragen).
 1. Auf https://github.com/settings/personal-access-tokens/new gehen (mit deinem GitHub-Konto angemeldet).
 2. Name z. B. „Jarvis“, Ablaufdatum wählen, bei **Permissions → Account permissions → Models** auf **Read-only** stellen.
 3. **Generate token**, Token kopieren (beginnt mit `github_pat_`) und in Jarvis bei „GitHub-Token“ einfügen.
@@ -22,7 +17,7 @@ Ist Groqs Minutenlimit voll, antwortet sofort GitHub Models (ca. 15 Anfragen pro
 **Mistral – optional** (nur falls dein Mistral-Konto API-Zugriff hat)
 
 **Gemini – optional, kostenlos, als Ersatz**
-Falls Groq am Limit ist, übernimmt Gemini, wenn du auch dafür einen Schlüssel einträgst.
+Ist das GitHub-Tageslimit erreicht, übernimmt Gemini, wenn du auch dafür einen Schlüssel einträgst.
 1. Auf https://aistudio.google.com/apikey mit deinem Google-Konto anmelden.
 2. Auf **„API-Schlüssel erstellen“** tippen und den Schlüssel kopieren (beginnt mit `AIza`).
 3. Im kostenlosen Tarif gibt es ein Tageslimit, und Google darf die Anfragen zur Verbesserung seiner Modelle nutzen.
@@ -67,7 +62,7 @@ Sind die kostenlosen Dienste am Limit oder gestört, übernimmt automatisch Clau
 ## 4. Einrichten (in der Jarvis-App)
 Ab Version 14 öffnet sich zuerst das **Dashboard** (Uhrzeit, Wetter, Termine, Erinnerungen, Aufgaben, Nachrichten, Schnellaktionen). Die bisherigen Einstellungen erreichst du dort über **⚙ Einstellungen**, die Freigaben über **🛡 Berechtigungen**.
 
-1. Den Groq-Schlüssel eintragen (Gemini und Claude nur, wenn du willst), optional deinen Namen → **Speichern**.
+1. Den GitHub-Token eintragen (Gemini und Claude nur, wenn du willst), optional deinen Namen → **Speichern**.
 2. Bei **Berechtigungen** alles antippen, bis überall ein grüner Haken ist:
    - Mikrofon, Benachrichtigungen
    - **Über anderen Apps einblenden** – damit Jarvis von selbst aufgehen darf
@@ -99,10 +94,10 @@ Auf dem Startbildschirm gibt es jetzt ein zweites Symbol **„Jarvis Chat“** (
 - **Bild-Symbol** = Foto aus der Galerie, **Kamera-Symbol** = neues Foto. Dann eine Frage dazu stellen, z. B. „Was ist das für eine Pflanze?“ oder „Erklär mir die Aufgabe“.
 - In der Galerie kannst du auch **Teilen → Jarvis Chat** wählen.
 - 🔈 oben = Antworten vorlesen lassen, ＋ = neuer Chat. Lange auf eine Antwort tippen = kopieren.
-- Der Verlauf bleibt auf deinem Handy gespeichert. Bilder gehen zum Beantworten an die KI (Groq).
+- Der Verlauf bleibt auf deinem Handy gespeichert. Bilder gehen zum Beantworten an die KI (GitHub Models).
 
 ### Zweites Handy: Station & Fernsteuerung
-1. Auf dem **zweiten Handy** Jarvis installieren (gleicher Link), Groq-Schlüssel eintragen und unten bei **Zweites Handy** auf **„Dieses Handy als Station starten“** tippen. Am besten ans Ladekabel legen – der Bildschirm bleibt an.
+1. Auf dem **zweiten Handy** Jarvis installieren (gleicher Link), GitHub-Token eintragen und unten bei **Zweites Handy** auf **„Dieses Handy als Station starten“** tippen. Am besten ans Ladekabel legen – der Bildschirm bleibt an.
 2. Auf der Station siehst du Uhrzeit, Datum, Akku und unten einen **6-stelligen Code** und eine Zahl wie 192.168.x.x.
 3. Auf dem **Haupthandy** bei **Zweites Handy** auf **„Station suchen & koppeln“** tippen und den Code eingeben.
 4. Fertig. Sag zum Haupthandy z. B. „Hey Jarvis, spiel auf dem zweiten Handy Musik“, „Mach auf der Station die Taschenlampe an“, „Stell auf dem anderen Handy einen Wecker auf 7“.
@@ -114,7 +109,7 @@ Für „Nachrichten lesen & antworten“ und „Volle Handy-Steuerung“ tippst 
 Ist der Schalter **ausgegraut** oder kommt „Eingeschränkte Einstellung“, sperrt Android das für Apps, die nicht aus dem Play Store kommen. So entsperrst du es:
 *Einstellungen → Apps → Jarvis → ⋮ (oben rechts) → „Eingeschränkte Einstellungen zulassen“*, dann nochmal versuchen.
 
-Wichtig: Mit diesen Rechten sieht Jarvis deine Nachrichten und den Bildschirm. Was er dafür liest, wird an die KI (z. B. Groq) geschickt. Schalte es nur ein, wenn du damit einverstanden bist.
+Wichtig: Mit diesen Rechten sieht Jarvis deine Nachrichten und den Bildschirm. Was er dafür liest, wird an die KI (z. B. GitHub Models) geschickt. Schalte es nur ein, wenn du damit einverstanden bist.
 
 ### Extra für Samsung (wichtig!)
 Samsung beendet Hintergrund-Apps besonders gern:
@@ -185,5 +180,5 @@ Ist das Handy gesperrt, kann Jarvis Wecker, Timer, Taschenlampe, Lautstärke und
 - „Hey Jarvis“ wird **offline auf dem Handy** erkannt (mit dem freien openWakeWord-Modell, Lizenz CC BY-NC-SA 4.0, also nur für private Nutzung). Erst nach dem Wake Word geht etwas ins Internet.
 - Spracherkennung und Stimme kommen von Google. Klingt die Stimme komisch: *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache* → „Google Sprachausgabe“ wählen und die deutsche Stimme laden.
 - Reagiert Jarvis zu oft oder zu selten, lässt sich die Schwelle im Code (`Prefs.kt`, `sensitivity`, Standard 0.5) anpassen.
-- Kosten: Mit Groq und Gemini im kostenlosen Tarif nichts. Nur wenn Claude einspringt, kostet eine Frage weniger als einen Cent (Websuche ca. einen Cent extra).
+- Kosten: Mit GitHub Models und Gemini im kostenlosen Tarif nichts. Nur wenn Claude einspringt, kostet eine Frage weniger als einen Cent (Websuche ca. einen Cent extra).
 - Deine Schlüssel liegen nur auf deinem Handy. Gib die App-Datei deshalb nicht an andere weiter, nachdem du sie eingerichtet hast.

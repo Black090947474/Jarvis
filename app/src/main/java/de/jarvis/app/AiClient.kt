@@ -6,7 +6,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Ein Anbieter mit OpenAI-kompatibler Schnittstelle (Groq, Mistral). */
+/** Ein Anbieter mit OpenAI-kompatibler Schnittstelle (GitHub Models, Mistral). */
 class Provider(
     val name: String,
     val url: String,
@@ -16,11 +16,7 @@ class Provider(
     val imageUrlAsString: Boolean = false,
 ) {
     companion object {
-        val GROQ = Provider("Groq", "https://api.groq.com/openai/v1/chat/completions",
-            listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "meta-llama/llama-4-scout-17b-16e-instruct",
-                "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"),
-            listOf("qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct"), "max_completion_tokens")
-        // GitHub Models: kostenlos mit GitHub-Konto (ca. 15 Anfragen/Minute, 150/Tag) – Ersatz, wenn Groq am Limit ist
+        // GitHub Models: kostenlos mit GitHub-Konto (ca. 15 Anfragen/Minute, 150/Tag) 
         val GITHUB = Provider("GitHub", "https://models.github.ai/inference/chat/completions",
             listOf("openai/gpt-4.1-mini", "openai/gpt-4o-mini"),
             listOf("openai/gpt-4.1-mini", "openai/gpt-4o-mini"), "max_tokens")
@@ -32,18 +28,18 @@ class Provider(
 }
 
 /**
- * OpenAI-kompatibler Client (Groq, GitHub Models oder Mistral) mit denselben Handy-Werkzeugen.
+ * OpenAI-kompatibler Client (GitHub Models oder Mistral) mit denselben Handy-Werkzeugen.
  * Läuft blockierend – immer aus einem Hintergrund-Thread aufrufen.
  * quickFail = bei vollem Minutenlimit nicht warten, sondern sofort den nächsten Anbieter nehmen.
  */
-class GroqClient(
+class AiClient(
     private val apiKey: String,
     model: String,
     private val userName: String,
     private val tools: PhoneTools,
     private val memory: Memory,
     private val chat: Boolean = false,
-    private val provider: Provider = Provider.GROQ,
+    private val provider: Provider = Provider.GITHUB,
     private val quickFail: Boolean = false,
 ) : Brain {
 
@@ -253,8 +249,7 @@ class GroqClient(
     class ApiException(val code: Int, val body: String, val retryAfter: Int = 5) : Exception("HTTP $code: $body")
 
     companion object {
-        const val DEFAULT_MODEL = "openai/gpt-oss-120b"
         private const val MAX_ROUNDS = 16
-        private const val MAX_MESSAGES = 30
+        private const val MAX_MESSAGES = 16  // GitHub Models: max. 8000 Tokens pro Anfrage
     }
 }

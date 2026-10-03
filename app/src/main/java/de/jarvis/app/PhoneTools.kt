@@ -47,7 +47,7 @@ class PhoneTools(private val activity: Activity) {
     /** Ergebnis-Text eines Werkzeugs gilt als Fehler (für is_error an die KI). */
     fun isError(result: String) = Res.isError(result)
 
-    /** Nur die Werkzeuge schicken, die zur Anfrage passen (spart Tokens beim kostenlosen Groq-Limit). */
+    /** Nur die Werkzeuge schicken, die zur Anfrage passen (spart Tokens beim kostenlosen Limit). */
     private val recentGroups = ArrayDeque<Set<String>>()
 
     /** Aktuelle Anfrage merken: Gruppen der letzten Anfragen bleiben aktiv (damit „Ja“ nach einer Rückfrage funktioniert). */
