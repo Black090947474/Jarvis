@@ -28,7 +28,7 @@ class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
     private lateinit var mistralInput: EditText
-    private lateinit var githubInput: EditText
+    private lateinit var groqInput: EditText
     private lateinit var geminiInput: EditText
     private lateinit var claudeInput: EditText
     private lateinit var nameInput: EditText
@@ -61,9 +61,9 @@ class MainActivity : Activity() {
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
-        githubInput = input("GitHub-Token (github_pat_…)", prefs.githubKey, secret = true)
-        col.addView(githubInput)
-        col.addView(link("Kostenlos: GitHub → Fine-grained Token → Models: Read", "https://github.com/settings/personal-access-tokens/new"))
+        groqInput = input("Groq API-Key (gsk_…)", prefs.groqKey, secret = true)
+        col.addView(groqInput)
+        col.addView(link("Kostenlos holen: console.groq.com/keys", "https://console.groq.com/keys"))
         mistralInput = input("Mistral API-Key (optional)", prefs.mistralKey, secret = true)
         col.addView(mistralInput)
         geminiInput = input("Gemini API-Key (optional)", prefs.geminiKey, secret = true)
@@ -416,7 +416,7 @@ class MainActivity : Activity() {
             toggle.postDelayed({ refresh() }, 300)
             return
         }
-        if (!prefs.hasAnyKey) { toast("Bitte erst den GitHub-Token eintragen"); return }
+        if (!prefs.hasAnyKey) { toast("Bitte erst den Groq-Schlüssel eintragen"); return }
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
@@ -425,7 +425,7 @@ class MainActivity : Activity() {
 
     private fun save() {
         prefs.mistralKey = mistralInput.text.toString()
-        prefs.githubKey = githubInput.text.toString()
+        prefs.groqKey = groqInput.text.toString()
         prefs.geminiKey = geminiInput.text.toString()
         prefs.anthropicKey = claudeInput.text.toString()
         prefs.userName = nameInput.text.toString()

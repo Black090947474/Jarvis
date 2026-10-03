@@ -6,7 +6,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Ein Anbieter mit OpenAI-kompatibler Schnittstelle (GitHub Models, Mistral). */
+/** Ein Anbieter mit OpenAI-kompatibler Schnittstelle (Groq, Mistral). */
 class Provider(
     val name: String,
     val url: String,
@@ -16,10 +16,10 @@ class Provider(
     val imageUrlAsString: Boolean = false,
 ) {
     companion object {
-        // GitHub Models: kostenlos mit GitHub-Konto (ca. 15 Anfragen/Minute, 150/Tag) 
-        val GITHUB = Provider("GitHub", "https://models.github.ai/inference/chat/completions",
-            listOf("openai/gpt-4.1-mini", "openai/gpt-4o-mini"),
-            listOf("openai/gpt-4.1-mini", "openai/gpt-4o-mini"), "max_tokens")
+        val GROQ = Provider("Groq", "https://api.groq.com/openai/v1/chat/completions",
+            listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "meta-llama/llama-4-scout-17b-16e-instruct",
+                "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"),
+            listOf("qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct"), "max_completion_tokens")
         // Mistral „Experiment“: kostenlos, sehr hohes Minutenlimit (ca. 1 Anfrage pro Sekunde)
         val MISTRAL = Provider("Mistral", "https://api.mistral.ai/v1/chat/completions",
             listOf("mistral-medium-latest", "mistral-small-latest"),
@@ -28,7 +28,7 @@ class Provider(
 }
 
 /**
- * OpenAI-kompatibler Client (GitHub Models oder Mistral) mit denselben Handy-Werkzeugen.
+ * OpenAI-kompatibler Client (Groq oder Mistral) mit denselben Handy-Werkzeugen.
  * Läuft blockierend – immer aus einem Hintergrund-Thread aufrufen.
  * quickFail = bei vollem Minutenlimit nicht warten, sondern sofort den nächsten Anbieter nehmen.
  */
@@ -39,7 +39,7 @@ class AiClient(
     private val tools: PhoneTools,
     private val memory: Memory,
     private val chat: Boolean = false,
-    private val provider: Provider = Provider.GITHUB,
+    private val provider: Provider = Provider.GROQ,
     private val quickFail: Boolean = false,
 ) : Brain {
 
@@ -183,9 +183,7 @@ class AiClient(
     } catch (_: Exception) { e.body.take(120) }
 
     private fun toUnavailable(e: ApiException) = Brain.Unavailable(when (e.code) {
-        401, 403 -> if (provider === Provider.GITHUB)
-            "Mein GitHub-Token funktioniert nicht. Er braucht die Berechtigung Models: Read-only. (${detail(e)})"
-            else "Mein ${provider.name}-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
+        401, 403 -> "Mein ${provider.name}-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
         413 -> "Die Anfrage war zu lang für ${provider.name}. Sag es bitte kürzer oder starte ein neues Gespräch."
         429 -> "Das kostenlose ${provider.name}-Kontingent ist gerade aufgebraucht. Versuch es etwas später nochmal."
         in 500..599 -> "${provider.name} ist gerade überlastet. Versuch es gleich nochmal."
@@ -261,6 +259,6 @@ class AiClient(
 
     companion object {
         private const val MAX_ROUNDS = 16
-        private const val MAX_MESSAGES = 16  // GitHub Models: max. 8000 Tokens pro Anfrage
+        private const val MAX_MESSAGES = 20
     }
 }
