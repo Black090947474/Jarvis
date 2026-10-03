@@ -55,6 +55,29 @@ class Prefs(context: Context) {
         get() = sp.getString("design", "NEXUS") ?: "NEXUS"
         set(v) = sp.edit().putString("design", v).apply()
 
+    // ---------- Zweites Handy ----------
+
+    /** Kopplungscode dieses Handys, wenn es als Station läuft (wird einmal zufällig erzeugt). */
+    val stationCode: String
+        get() = sp.getString("station_code", null) ?: (100000 + java.security.SecureRandom().nextInt(900000)).toString()
+            .also { sp.edit().putString("station_code", it).apply() }
+
+    var remoteHost: String
+        get() = sp.getString("remote_host", "") ?: ""
+        set(v) = sp.edit().putString("remote_host", v.trim()).apply()
+
+    var remotePort: Int
+        get() = sp.getInt("remote_port", StationLink.PORT)
+        set(v) = sp.edit().putInt("remote_port", v).apply()
+
+    var remoteCode: String
+        get() = sp.getString("remote_code", "") ?: ""
+        set(v) = sp.edit().putString("remote_code", v.trim()).apply()
+
+    var remoteName: String
+        get() = sp.getString("remote_name", "") ?: ""
+        set(v) = sp.edit().putString("remote_name", v.trim()).apply()
+
     /** Ob der Wake-Word-Dienst laufen soll (merkt sich den Schalter). */
     var listeningEnabled: Boolean
         get() = sp.getBoolean("listening_enabled", false)

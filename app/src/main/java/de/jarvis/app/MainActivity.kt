@@ -94,6 +94,8 @@ class MainActivity : Activity() {
             "„Such auf YouTube nach Minecraft“ · „Mach ein Selfie“ · „Lies meine Nachrichten vor“ · " +
             "„Antworte Lisa, dass ich gleich komme“ · „Öffne Insta und like das erste Bild“ · „Mach einen Screenshot“", 14f, Color.rgb(200, 200, 210)))
 
+        buildSecondPhoneSection(col)
+
         col.addView(section("Gedächtnis"))
         memoryList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(memoryList)
@@ -103,6 +105,84 @@ class MainActivity : Activity() {
             "aus Datenschutzgründen nicht, dass das Mikrofon von selbst wieder angeht.", 13f, MUTED))
 
         setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
+    }
+
+    // ---------- Zweites Handy ----------
+
+    private lateinit var pairStatus: TextView
+
+    private fun buildSecondPhoneSection(col: LinearLayout) {
+        col.addView(section("Zweites Handy"))
+        pairStatus = label("", 14f, Color.rgb(200, 200, 210))
+        col.addView(pairStatus)
+        updatePairStatus()
+        col.addView(button("Station suchen & koppeln") { pairStation() })
+        col.addView(button("Dieses Handy als Station starten", filled = false) {
+            startActivity(Intent(this, StationActivity::class.java))
+        })
+        col.addView(label(
+            "So geht's: Auf dem zweiten Handy Jarvis installieren und „Dieses Handy als Station starten“ tippen. " +
+            "Dann hier auf „Station suchen“ und den Code eingeben, der auf der Station steht. " +
+            "Beide Handys müssen im selben WLAN sein. Danach z. B.: „Hey Jarvis, spiel auf dem zweiten Handy Musik.“",
+            13f, MUTED))
+    }
+
+    private fun updatePairStatus() {
+        pairStatus.text = if (prefs.remoteCode.isNotBlank() && prefs.remoteHost.isNotBlank())
+            "✓ Gekoppelt mit ${prefs.remoteName.ifBlank { "Station" }} (${prefs.remoteHost})"
+        else "Noch kein zweites Handy gekoppelt."
+    }
+
+    private fun pairStation() {
+        toast("Suche Station im WLAN …")
+        Thread {
+            val f = StationLink.find(this, 6000)
+            runOnUiThread {
+                if (f != null) askCode(f.host, f.port, f.name)
+                else askIp()
+            }
+        }.start()
+    }
+
+    /** Falls die automatische Suche nichts findet: IP von der Station abtippen. */
+    private fun askIp() {
+        val ip = EditText(this).apply { hint = "z. B. 192.168.178.34"; inputType = InputType.TYPE_CLASS_PHONE }
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Keine Station gefunden")
+            .setMessage("Ist auf dem zweiten Handy die Station offen und sind beide im selben WLAN? " +
+                "Du kannst auch die Zahl hinter dem Code abtippen, die auf der Station steht:")
+            .setView(ip)
+            .setPositiveButton("Weiter") { _, _ ->
+                val h = ip.text.toString().trim()
+                if (h.isNotEmpty()) askCode(h, StationLink.PORT, "Station")
+            }
+            .setNegativeButton("Abbrechen", null)
+            .show()
+    }
+
+    private fun askCode(host: String, port: Int, name: String) {
+        val code = EditText(this).apply { hint = "6-stelliger Code"; inputType = InputType.TYPE_CLASS_NUMBER }
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Station gefunden: $name")
+            .setMessage("Gib den Code ein, der auf der Station steht:")
+            .setView(code)
+            .setPositiveButton("Koppeln") { _, _ ->
+                val c = code.text.toString().trim()
+                Thread {
+                    val r = try { StationLink.send(host, port, c, "ping", "{}") }
+                            catch (e: Exception) { false to "Nicht erreichbar (${e.message})" }
+                    runOnUiThread {
+                        if (r.first) {
+                            prefs.remoteHost = host; prefs.remotePort = port
+                            prefs.remoteCode = c; prefs.remoteName = name
+                            updatePairStatus()
+                            toast("Gekoppelt! Sag z. B. „Mach auf dem zweiten Handy die Taschenlampe an“")
+                        } else toast("Koppeln fehlgeschlagen: ${r.second}")
+                    }
+                }.start()
+            }
+            .setNegativeButton("Abbrechen", null)
+            .show()
     }
 
     // ---------- Fehlerbericht ----------

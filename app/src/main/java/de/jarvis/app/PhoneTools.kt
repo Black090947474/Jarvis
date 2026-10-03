@@ -60,6 +60,7 @@ class PhoneTools(private val activity: Activity) {
             "screen" -> return safe { screen(input) }
             "toggle" -> return safe { toggle(input.optString("what")) }
             "location" -> return safe { location() }
+            "second_phone" -> return safe { secondPhone(input) }
         }
         var result = "Fehler: Zeitüberschreitung"
         val latch = CountDownLatch(1)
@@ -508,6 +509,27 @@ class PhoneTools(private val activity: Activity) {
         } catch (_: Exception) { null }
     }
 
+    // ---------- Zweites Handy (Station) ----------
+
+    private fun secondPhone(a: JSONObject): String {
+        val p = Prefs(ctx)
+        if (p.remoteCode.isBlank() || p.remoteHost.isBlank())
+            return "Fehler: Es ist kein zweites Handy gekoppelt. Das geht in der Jarvis-App unter „Zweites Handy“."
+        val tool = a.optString("tool").ifBlank { return "Fehler: Kein Werkzeug angegeben." }
+        val args = a.optString("args").ifBlank { "{}" }
+        val res = try {
+            StationLink.send(p.remoteHost, p.remotePort, p.remoteCode, tool, args)
+        } catch (_: java.io.IOException) {
+            // IP hat sich evtl. geändert: Station im WLAN neu suchen und nochmal versuchen
+            val f = StationLink.find(ctx, 4000)
+                ?: return "Fehler: Das zweite Handy ist nicht erreichbar. Ist dort die Station geöffnet und sind beide im selben WLAN?"
+            p.remoteHost = f.host; p.remotePort = f.port
+            try { StationLink.send(f.host, f.port, p.remoteCode, tool, args) }
+            catch (e: Exception) { return "Fehler: Das zweite Handy antwortet nicht (${e.message})." }
+        }
+        return if (res.first) "Zweites Handy: ${res.second}" else "Fehler (zweites Handy): ${res.second}"
+    }
+
     // ---------- Website bauen ----------
 
     /** Speichert eine von der KI gebaute Website im Download-Ordner (Jarvis/) und öffnet sie im Browser. */
@@ -633,7 +655,8 @@ class PhoneTools(private val activity: Activity) {
             "notifications" to "Prüfe Nachrichten …", "screen" to "Bediene das Handy …",
             "location" to "Bestimme Standort …", "latest_photo" to "Hole dein Foto …",
             "count_photos" to "Zähle Fotos …", "toggle" to "Schalte um …",
-            "show_card" to "Erstelle Übersicht …", "build_website" to "Baue Website …"
+            "show_card" to "Erstelle Übersicht …", "build_website" to "Baue Website …",
+            "second_phone" to "Sende an zweites Handy …"
         )
 
         /** Beschreibung aller Werkzeuge für Claude (JSON-Schema). */
@@ -711,7 +734,10 @@ class PhoneTools(private val activity: Activity) {
    "items":{"type":"array","items":{"type":"string"},"description":"Zeilen. Bei stats je 'Bezeichnung | Wert'"},
    "note":{"type":"string","description":"Optionaler Hinweis unten"}},"required":["title","kind","items"]}},
  {"name":"build_website","description":"Baut eine einseitige Website und öffnet sie im Browser. html = vollständiges, kompaktes HTML mit eingebettetem CSS, ohne externe Dateien oder Bilder-Links, modern, dunkel oder hell passend zum Thema, mobilfreundlich, auf Deutsch. Sie liegt nur auf dem Handy (Downloads/Jarvis), nicht online.",
-  "input_schema":{"type":"object","properties":{"title":{"type":"string"},"html":{"type":"string"}},"required":["title","html"]}}
+  "input_schema":{"type":"object","properties":{"title":{"type":"string"},"html":{"type":"string"}},"required":["title","html"]}},
+ {"name":"second_phone","description":"Führt eines deiner Werkzeuge auf dem zweiten Handy des Nutzers (der Jarvis-Station) aus, wenn er 'auf dem zweiten Handy', 'auf der Station' oder 'am anderen Handy' sagt. tool = Werkzeugname (z. B. play_music, media_control, set_alarm, set_timer, flashlight, set_volume, open_app, app_search, battery, camera, toggle, screen, notifications), args = dessen Parameter als JSON-Text.",
+  "input_schema":{"type":"object","properties":{"tool":{"type":"string"},
+   "args":{"type":"string","description":"Parameter als JSON-Text, z. B. {\"on\":true} oder {\"query\":\"Drake\"}"}},"required":["tool","args"]}}
 ]"""
     }
 }
