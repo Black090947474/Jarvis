@@ -188,7 +188,7 @@ class GroqClient(
             .put("messages", all)
             .put("tools", toolList(model))
             .put("tool_choice", "auto")
-            .put("max_completion_tokens", 3000)
+            .put("max_completion_tokens", if (chat) 2000 else 1200)
             .apply { if (model.startsWith("openai/gpt-oss")) put("reasoning_effort", "low") }
 
         val conn = (URL("https://api.groq.com/openai/v1/chat/completions").openConnection() as HttpURLConnection).apply {
@@ -217,7 +217,9 @@ class GroqClient(
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-oss-120b"
         const val VISION_MODEL = "qwen/qwen3.8-27b"
-        private val FALLBACK_MODELS = listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b")
+        // Jedes Modell hat ein eigenes Gratis-Minutenlimit; ist eines voll, springt das nächste ein
+        private val FALLBACK_MODELS = listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b",
+            "meta-llama/llama-4-scout-17b-16e-instruct", "llama-3.3-70b-versatile", "qwen/qwen3.8-27b")
         private const val MAX_ROUNDS = 16
         private const val MAX_MESSAGES = 30
     }
