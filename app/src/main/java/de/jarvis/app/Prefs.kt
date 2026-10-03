@@ -88,6 +88,71 @@ class Prefs(context: Context) {
         get() = sp.getFloat("threshold", 0.5f)
         set(v) = sp.edit().putFloat("threshold", v.coerceIn(0.1f, 0.95f)).apply()
 
+    // ---------- Assistent: Kalender, Erinnerungen, Hinweise ----------
+
+    /** Puffer in Minuten zwischen Terminen (für freie Zeiten). */
+    var calendarBuffer: Int
+        get() = sp.getInt("cal_buffer", 15)
+        set(v) = sp.edit().putInt("cal_buffer", v.coerceIn(0, 120)).apply()
+
+    /** Funktionsschalter im Berechtigungszentrum (Standard: an). */
+    fun feature(key: String) = sp.getBoolean("feat_$key", true)
+    fun setFeature(key: String, on: Boolean) = sp.edit().putBoolean("feat_$key", on).apply()
+
+    /** Proaktive Hinweise (Termine, Konflikte, Tagesüberblick). Standard aus – kein Spam. */
+    var proactive: Boolean
+        get() = sp.getBoolean("proactive", false)
+        set(v) = sp.edit().putBoolean("proactive", v).apply()
+
+    var notifyEvents: Boolean
+        get() = sp.getBoolean("n_events", true)
+        set(v) = sp.edit().putBoolean("n_events", v).apply()
+    var notifyConflicts: Boolean
+        get() = sp.getBoolean("n_conflicts", true)
+        set(v) = sp.edit().putBoolean("n_conflicts", v).apply()
+    var notifyBriefing: Boolean
+        get() = sp.getBoolean("n_briefing", true)
+        set(v) = sp.edit().putBoolean("n_briefing", v).apply()
+
+    /** Uhrzeit des Tagesüberblicks, "HH:MM". */
+    var briefingTime: String
+        get() = sp.getString("briefing_time", "07:00") ?: "07:00"
+        set(v) = sp.edit().putString("briefing_time", v).apply()
+
+    /** Wie viele Minuten vor einem Termin erinnert wird. */
+    var eventLead: Int
+        get() = sp.getInt("event_lead", 30)
+        set(v) = sp.edit().putInt("event_lead", v.coerceIn(0, 240)).apply()
+
+    /** Zusätzliche Wegzeit (Minuten) bei Terminen mit Ort. */
+    var travelBuffer: Int
+        get() = sp.getInt("travel_buffer", 20)
+        set(v) = sp.edit().putInt("travel_buffer", v.coerceIn(0, 240)).apply()
+
+    // Zuhause (für „wenn ich zu Hause ankomme“)
+    val homeSet get() = sp.contains("home_lat")
+    val homeLat get() = sp.getFloat("home_lat", 0f).toDouble()
+    val homeLon get() = sp.getFloat("home_lon", 0f).toDouble()
+    fun setHome(lat: Double, lon: Double) = sp.edit().putFloat("home_lat", lat.toFloat()).putFloat("home_lon", lon.toFloat()).apply()
+
+    // Wetter-Cache (für Dashboard und offline)
+    var weatherCache: String
+        get() = sp.getString("weather_cache", "") ?: ""
+        set(v) = sp.edit().putString("weather_cache", v).apply()
+    var weatherTime: Long
+        get() = sp.getLong("weather_time", 0)
+        set(v) = sp.edit().putLong("weather_time", v).apply()
+
+    // Schon gemeldete Hinweise (damit nichts doppelt kommt). Format "key|zeit".
+    @Synchronized fun wasNotified(key: String) = notified().any { it.substringBefore('|') == key }
+    @Synchronized fun markNotified(key: String) =
+        sp.edit().putStringSet("notified", notified() + "$key|${System.currentTimeMillis()}").apply()
+    @Synchronized fun pruneNotified(now: Long) {
+        val keep = notified().filter { (it.substringAfterLast('|').toLongOrNull() ?: 0) > now - 8 * 86_400_000L }.toSet()
+        sp.edit().putStringSet("notified", keep).apply()
+    }
+    private fun notified(): Set<String> = HashSet(sp.getStringSet("notified", emptySet()) ?: emptySet())
+
     companion object {
         // Schnell und günstig – ideal für Sprachantworten. Kann in der App geändert werden.
         const val DEFAULT_MODEL = "claude-haiku-4-5-20251001"

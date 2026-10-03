@@ -32,7 +32,11 @@ class ClaudeClient(
         history.forEach { (r, t) -> messages.put(JSONObject().put("role", r).put("content", t)) }
     }
 
+    private var lastQuery = ""
+
     override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
+        lastQuery = userText
+        tools.noteQuery(userText)
         trimHistory()
         val rollback = messages.length()
         if (image != null) {
@@ -60,7 +64,7 @@ class ClaudeClient(
                                 .put("type", "tool_result")
                                 .put("tool_use_id", b.getString("id"))
                                 .put("content", out)
-                                .apply { if (out.startsWith("Fehler")) put("is_error", true) })
+                                .apply { if (tools.isError(out)) put("is_error", true) })
                         }
                         messages.put(JSONObject().put("role", "user").put("content", results))
                     }
@@ -100,7 +104,7 @@ class ClaudeClient(
 
     private fun toolList(): JSONArray {
         val list = JSONArray()
-        val defs = PhoneTools.DEFINITIONS
+        val defs = tools.definitionsFor(lastQuery)
         for (i in 0 until defs.length()) list.put(defs.get(i))
         if (webSearch) {
             list.put(JSONObject()

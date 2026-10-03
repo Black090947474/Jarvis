@@ -25,6 +25,8 @@ class JarvisApp : Application() {
             try { record(e) } catch (_: Throwable) {}
             previous?.uncaughtException(thread, e)
         }
+        // Erinnerungen und Hinweise nach App-Update/Start wieder einplanen
+        Thread { try { Scheduler.scheduleAll(this) } catch (_: Throwable) {} }.start()
     }
 
     private fun record(e: Throwable) {

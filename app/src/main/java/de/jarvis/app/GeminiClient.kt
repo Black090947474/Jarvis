@@ -31,7 +31,11 @@ class GeminiClient(
         }
     }
 
+    private var lastQuery = ""
+
     override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
+        lastQuery = userText
+        tools.noteQuery(userText)
         trimHistory()
         val rollback = contents.length()
         val userParts = JSONArray()
@@ -61,7 +65,7 @@ class GeminiClient(
                         onStep(tools.label(name))
                         val out = tools.execute(name, call.optJSONObject("args") ?: JSONObject())
                         val fr = JSONObject().put("name", name)
-                            .put("response", JSONObject().put(if (out.startsWith("Fehler")) "error" else "result", out))
+                            .put("response", JSONObject().put(if (tools.isError(out)) "error" else "result", out))
                         if (call.has("id")) fr.put("id", call.get("id"))
                         responses.put(JSONObject().put("functionResponse", fr))
                     } else if (p.has("text") && !p.optBoolean("thought", false)) {
@@ -137,7 +141,7 @@ class GeminiClient(
 
     private fun toolList(): JSONArray {
         val decls = JSONArray()
-        val defs = PhoneTools.DEFINITIONS
+        val defs = tools.definitionsFor(lastQuery)
         for (i in 0 until defs.length()) {
             val d = defs.getJSONObject(i)
             val f = JSONObject().put("name", d.getString("name")).put("description", d.getString("description"))

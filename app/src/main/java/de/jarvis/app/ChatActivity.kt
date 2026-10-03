@@ -345,7 +345,8 @@ class ChatActivity : Activity() {
         val text = input.text.toString().trim()
         val img = pendingImage
         if (text.isEmpty() && img == null) return
-        val b = brain ?: run { toast("Trag zuerst deinen Groq-Schlüssel in der Jarvis-App ein."); return }
+        val b = brain
+        if (b == null && tools == null) tools = PhoneTools(this).also { t -> t.onCard = { a -> addCardBubble(a); "Karte im Chat angezeigt." } }
 
         if (msgs.isEmpty()) list.removeAllViews()   // Begrüßung weg
         val userMsg = Msg("user", text, img?.name)
@@ -363,7 +364,14 @@ class ChatActivity : Activity() {
         main.post(dots)
         thread {
             val answer = try {
-                b.ask(text, { step -> main.post { thinking.text = step } }, b64)
+                val offline = b == null || !Offline.isOnline(this)
+                val local = if (offline && b64 == null) tools?.let { Offline.handle(it, text) } else null
+                when {
+                    local != null -> local + (if (b != null) "\n\n_(offline erledigt)_" else "")
+                    b == null -> "Trag zuerst deinen Groq-Schlüssel in der Jarvis-App ein. Ohne Schlüssel verstehe ich nur einfache Befehle wie „Timer 10 Minuten“, „Erinnere mich in 20 Minuten an …“ oder „Was steht heute an?“."
+                    offline -> "Du bist gerade offline. Ohne Internet gehen nur einfache Befehle: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."
+                    else -> b.ask(text, { step -> main.post { thinking.text = step } }, b64)
+                }
             } catch (e: Exception) { "Da ist etwas schiefgelaufen: ${e.message}" }
             main.post {
                 setBusy(false)

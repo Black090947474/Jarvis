@@ -77,6 +77,9 @@ class MainActivity : Activity() {
         buildVoiceSection(col)
 
         col.addView(section("2 · Berechtigungen"))
+        col.addView(button("Berechtigungszentrum öffnen (Kalender, Erinnerungen, Hinweise …)", filled = false) {
+            startActivity(Intent(this, PermissionsActivity::class.java))
+        })
         checklist = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(checklist)
 
@@ -95,7 +98,11 @@ class MainActivity : Activity() {
             "„Spiel Drake auf Spotify“ · „Nächstes Lied“ · „Lautstärke auf 30 Prozent“ · „Wie wird das Wetter?“ · " +
             "„Öffne TikTok“ · „Wie viel Akku hab ich?“ · „Merk dir …“ · " +
             "„Such auf YouTube nach Minecraft“ · „Mach ein Selfie“ · „Lies meine Nachrichten vor“ · " +
-            "„Antworte Lisa, dass ich gleich komme“ · „Öffne Insta und like das erste Bild“ · „Mach einen Screenshot“", 14f, Color.rgb(200, 200, 210)))
+            "„Antworte Lisa, dass ich gleich komme“ · „Öffne Insta und like das erste Bild“ · „Mach einen Screenshot“ · " +
+            "„Was steht heute an?“ · „Wann hab ich morgen Zeit?“ · „Verschieb Zahnarzt auf Freitag 15 Uhr“ · " +
+            "„Erinnere mich jeden Montag um 7 an Sport“ · „Erinnere mich, wenn ich zu Hause bin, an die Wäsche“ · " +
+            "„Neue Aufgabe: Mathe lernen bis Freitag, wichtig“ · „Wer hat mich zuletzt angerufen?“ · " +
+            "„Gibt's neue Mails?“ · „Helligkeit auf 40 Prozent“ · „Wo ist die nächste Apotheke?“", 14f, Color.rgb(200, 200, 210)))
 
         buildSecondPhoneSection(col)
 

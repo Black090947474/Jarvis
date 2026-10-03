@@ -11,8 +11,8 @@ android {
         applicationId = "de.jarvis.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "13.0"
+        versionCode = 15
+        versionName = "14.0"
         // Nur für moderne Handys (64-Bit ARM) – macht die App viel kleiner
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -33,4 +33,6 @@ android {
 dependencies {
     // ONNX Runtime: führt das openWakeWord-Modell "Hey Jarvis" offline auf dem Handy aus
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
+    // Geofencing für ortsbasierte Erinnerungen ("wenn ich zu Hause ankomme")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 }

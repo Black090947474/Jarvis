@@ -21,6 +21,15 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Assistent: Kalender, Anrufliste, Erinnerungen, Orte, Helligkeit -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 
@@ -39,6 +48,14 @@
         </intent>
         <package android:name="com.spotify.music" />
         <package android:name="com.whatsapp" />
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
     </queries>
 
     <application
@@ -49,14 +66,26 @@
         android:label="Jarvis"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
+        <!-- Startbildschirm: Dashboard -->
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".DashboardActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Einstellungen (Schlüssel, Stimme, Design …) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
+        <!-- Berechtigungszentrum -->
+        <activity
+            android:name=".PermissionsActivity"
+            android:exported="false" />
 
         <activity
             android:name=".JarvisActivity"
@@ -135,5 +164,15 @@
             android:name=".WakeWordService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <!-- Erinnerungen, Termin-Hinweise, Neustart -->
+        <receiver
+            android:name=".JarvisReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

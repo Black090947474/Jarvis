@@ -48,11 +48,12 @@ class JarvisActivity : Activity() {
         buildUi()
 
         val prefs = Prefs(this)
+        // Werkzeuge gibt es immer – einfache Befehle gehen auch ohne Schlüssel und offline
+        val t = PhoneTools(this).also { tools = it }
+        t.onCard = { a -> showCard(a) }
         if (prefs.groqKey.isBlank() && prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) {
             jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Groq-Schlüssel in der Jarvis-App ein."
         } else {
-            val t = PhoneTools(this).also { tools = it }
-            t.onCard = { a -> showCard(a) }
             val mem = Memory(this)
             // Kostenlose zuerst (Groq, Gemini), Claude springt ein, falls beide nicht können
             val groq = prefs.groqKey.takeIf { it.isNotBlank() }
@@ -366,7 +367,7 @@ class JarvisActivity : Activity() {
             listen()
             return
         }
-        if (claude == null) speak("Mir fehlt noch der API-Schlüssel.", ID_BYE)
+        if (claude == null) speak("Mir fehlt noch der API-Schlüssel. Timer, Wecker, Taschenlampe und Erinnerungen gehen trotzdem.", ID_LISTEN_AFTER)
     }
 
     /** Kurzer Ton als Zeichen "Ich höre" – statt einer Begrüßung, damit man direkt weiterreden kann. */
@@ -490,14 +491,23 @@ class JarvisActivity : Activity() {
             speak(listOf("Bis später.", "Gern geschehen.", "Jederzeit.").random(), ID_BYE)
             return
         }
-        val client = claude ?: return
+        val client = claude
+        val t = tools
         busy = true
         core.mode = CoreView.Mode.THINKING
         jarvisText.text = "…"
         tools?.leftApp = false
         tools?.silentExit = false
         thread {
-            val reply = client.ask(text, { step -> main.post { jarvisText.text = step } })
+            // Ohne Internet oder ohne Schlüssel: einfache Befehle direkt auf dem Handy ausführen
+            val offline = client == null || !Offline.isOnline(this)
+            val local = if (offline && t != null) Offline.handle(t, text)?.substringBefore("\n\n") else null
+            val reply = when {
+                local != null -> local
+                client == null -> "Dafür brauche ich einen KI-Schlüssel. Ohne geht nur: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."
+                offline -> "Ich bin gerade offline. Ohne Internet kann ich Timer, Wecker, Taschenlampe, Erinnerungen, deinen Tagesplan und den Akku."
+                else -> client.ask(text, { step -> main.post { jarvisText.text = step } })
+            }
             main.post {
                 busy = false
                 if (isFinishing) return@post

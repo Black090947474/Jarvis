@@ -33,7 +33,11 @@ class GroqClient(
         history.forEach { (r, t) -> messages.put(JSONObject().put("role", r).put("content", t)) }
     }
 
+    private var lastQuery = ""
+
     override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
+        lastQuery = userText
+        tools.noteQuery(userText)
         step = onStep
         trimHistory()
         val rollback = messages.length()
@@ -95,7 +99,7 @@ class GroqClient(
 
     private fun toolList(model: String): JSONArray {
         val list = JSONArray()
-        val defs = PhoneTools.DEFINITIONS
+        val defs = tools.definitionsFor(lastQuery)
         for (i in 0 until defs.length()) {
             val d = defs.getJSONObject(i)
             list.put(JSONObject().put("type", "function").put("function", JSONObject()

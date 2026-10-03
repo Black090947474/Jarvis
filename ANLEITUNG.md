@@ -57,6 +57,8 @@ Sind die kostenlosen Dienste am Limit oder gestört, übernimmt automatisch Clau
 ---
 
 ## 4. Einrichten (in der Jarvis-App)
+Ab Version 14 öffnet sich zuerst das **Dashboard** (Uhrzeit, Wetter, Termine, Erinnerungen, Aufgaben, Nachrichten, Schnellaktionen). Die bisherigen Einstellungen erreichst du dort über **⚙ Einstellungen**, die Freigaben über **🛡 Berechtigungen**.
+
 1. Den Groq-Schlüssel eintragen (Gemini und Claude nur, wenn du willst), optional deinen Namen → **Speichern**.
 2. Bei **Berechtigungen** alles antippen, bis überall ein grüner Haken ist:
    - Mikrofon, Benachrichtigungen
@@ -65,6 +67,16 @@ Sind die kostenlosen Dienste am Limit oder gestört, übernimmt automatisch Clau
    - **Akku-Optimierung aus** – sonst schläft Jarvis ein
    - **Kontakte** und **Direkt anrufen** – damit „Ruf Mama an“ funktioniert (optional)
 3. **Jarvis einschalten** drücken. Oben erscheint eine dauerhafte Benachrichtigung „Jarvis ist bereit“.
+
+### Berechtigungszentrum (Dashboard → 🛡 Berechtigungen)
+Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis sie braucht, und einen **Schalter**, mit dem du sie für Jarvis sperren kannst. Antippen öffnet den Android-Dialog bzw. die passende Einstellung. Jarvis umgeht nie Sicherheitsfunktionen von Android – erteilen und entziehen passiert immer bei Android selbst.
+- **Kalender** – Termine lesen, eintragen, verschieben, löschen (immer erst nach deinem „Ja“)
+- **Erinnerungen** – brauchen „Benachrichtigungen“ und „Wecker & Erinnerungen“
+- **Telefon & Anrufliste** – „Wer hat mich zuletzt angerufen?“
+- **Standort im Hintergrund** – nur für „Erinnere mich, wenn ich zu Hause bin“ (Android verlangt dafür „Immer erlauben“)
+- **Systemeinstellungen ändern** – für die Helligkeit
+- **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
+- **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
 ### Stimme einstellen
 Unter **Stimme** in der Jarvis-App kannst du zwischen allen deutschen Stimmen auf deinem Handy wählen (antippen zum Anhören), Tonhöhe und Tempo einstellen und den **KI-Hall** an- oder ausschalten. Standard: die natürlichste Stimme auf deinem Handy (meist eine Online-Stimme von Google), ohne Effekte.
@@ -123,14 +135,27 @@ Samsung beendet Hintergrund-Apps besonders gern:
 | „Ruf Mama an“ | Anruf startet (Kontakte-Berechtigung nötig) |
 | „Schreib Lisa auf WhatsApp, dass ich später komme“ | Nachricht ist fertig, du tippst nur noch auf Senden |
 | „Navigier mich zum Hauptbahnhof“ | Google Maps startet |
-| „Trag morgen 15 Uhr Zahnarzt ein“ | Termin ist ausgefüllt, du tippst auf Speichern |
+| „Was steht heute an?“, „Was hab ich diese Woche?“ | Termine, Erinnerungen und Aufgaben zusammengefasst |
+| „Trag morgen 15 Uhr Zahnarzt ein“ | Jarvis sagt, was er eintragen würde (+ Überschneidungen) und fragt „Soll ich?“ |
+| „Verschieb den Zahnarzt auf Freitag 16 Uhr“, „Lösch das Training am Mittwoch“ | Sucht den Termin, fragt nach, ändert/löscht erst nach „Ja“ (Serientermine nur in der Kalender-App) |
+| „Wann hab ich morgen Nachmittag zwei Stunden frei?“ | Freie Zeiten mit Puffer zwischen Terminen |
+| „Erinnere mich in 20 Minuten an die Wäsche“, „… jeden Montag um 7 an Sport“ | Jarvis-Erinnerung als Benachrichtigung, auch offline und nach Neustart |
+| „Erinnere mich 30 Minuten vor dem Zahnarzt“ | Erinnerung relativ zum Termin |
+| „Erinnere mich, wenn ich zu Hause ankomme, an den Müll“ | Ortsbasiert (Standort „Immer erlauben“ + Zuhause gespeichert) |
+| „Neue Aufgabe: Mathe lernen bis Freitag, wichtig, Kategorie Schule“ | Aufgabe mit Priorität, Datum, Kategorie, auf Wunsch Wiederholung und Erinnerung |
+| „Was muss ich noch erledigen?“, „Hake Mathe ab“ | Aufgabenliste / erledigt (auch im Dashboard antippen) |
+| „Wer hat mich zuletzt angerufen?“, „Hab ich verpasste Anrufe?“ | Anrufliste |
+| „Hab ich neue Mails?“, „Schreib eine Mail an …“ | Neue Mails aus den Benachrichtigungen; Entwürfe öffnen sich in der Mail-App, senden tust du |
+| „Wie wird das Wetter morgen?“ | Wetter (Open-Meteo, kostenlos) |
+| „Wo ist die nächste Apotheke?“ | Karte mit Treffern in deiner Nähe |
+| „Helligkeit auf 40 Prozent“ | Helligkeit (Freigabe „Systemeinstellungen ändern“) |
 | „Wie wird das Wetter?“, „Wer hat gestern gespielt?“ | Websuche, Antwort gesprochen |
 | „Wie viel Akku hab ich?“ | Akkustand |
 | „Merk dir, dass ich um 8 Uhr Schule habe“ | Wird dauerhaft gespeichert (in der App einsehbar und löschbar) |
 | „Such auf YouTube nach Minecraft“, „Zeig mir Pizza in der Nähe“ | Sucht direkt in YouTube, Google, Maps, TikTok, Instagram, Play Store, Netflix, Amazon, eBay, X, Reddit, Wikipedia |
 | „Mach ein Selfie“, „Starte ein Video“ | Kamera im richtigen Modus |
 | „Lies meine Nachrichten vor“, „Was hat Lisa geschrieben?“ | Liest neue Nachrichten vor (Benachrichtigungs-Zugriff nötig) |
-| „Antworte Lisa, dass ich gleich komme“ | Liest dir die Antwort vor, fragt „Abschicken?“ und schickt sie direkt |
+| „Antworte Lisa, dass ich gleich komme“ | Liest dir die Antwort vor, fragt „Soll ich senden?“ und schickt sie erst nach „Ja“ |
 | „Öffne Instagram und geh auf mein Profil“, „Scroll runter“, „Tipp auf Folgen“ | Bedient jede App wie du (Bedienungshilfe nötig) |
 | „Mach einen Screenshot“, „Geh zurück“, „Sperr das Handy“ | Sofort (Bedienungshilfe nötig) |
 | „Wo bin ich?“, „Wie weit ist es nach Hause?“ | Standort (Standort-Berechtigung nötig) |
@@ -138,11 +163,12 @@ Samsung beendet Hintergrund-Apps besonders gern:
 | „Mach das WLAN an“, „Schalt Bluetooth aus“, „Flugmodus an“ | Tippt in den Schnelleinstellungen selbst auf die Kachel (volle Steuerung nötig) |
 | „Mach mir einen Plan, wie ich für ein Fahrrad spare“, „Vergleich iPhone und Samsung“, „Einkaufsliste für Pizza“ | Zeigt eine **Ergebnis-Karte** auf dem Bildschirm (antippen = teilen) |
 | „Bau mir eine Website für meinen Gaming-Kanal“ | Baut eine einfache Website, speichert sie unter Downloads/Jarvis und öffnet sie (nur auf dem Handy, nicht online) |
-| „Wo bin ich?“, „Wie wird das Wetter hier?“ | Standort (Standort-Berechtigung nötig) |
-| „Schick Max mein letztes Foto“, „Wie viele Fotos hab ich?“ | Fotos (Foto-Berechtigung nötig) |
-| „Mach das WLAN an“, „Schalt Bluetooth aus“, „Flugmodus an“ | Schaltet die Kachel in den Schnelleinstellungen (volle Steuerung nötig) |
 
-Was Android **nicht** erlaubt, egal welche App: WLAN, Bluetooth oder mobile Daten selbst umschalten (Jarvis öffnet dir dann die passende Einstellung), Nachrichten ohne dein Antippen abschicken, Wecker löschen.
+Was Android **nicht** erlaubt, egal welche App: WLAN, Bluetooth oder mobile Daten direkt per Code umschalten (Jarvis tippt mit der vollen Steuerung auf die Kachel oder öffnet dir die Einstellung), SMS/WhatsApp ohne dein Antippen abschicken, Wecker löschen, alte E-Mails im Postfach lesen (dafür bräuchte es eine Anmeldung bei Google/Microsoft).
+
+**Ohne Internet** versteht Jarvis trotzdem: Timer, Wecker, Taschenlampe, „Erinnere mich in/um …“, „Was steht heute an?“ und den Akkustand. Erinnerungen und Aufgaben liegen nur auf deinem Handy.
+
+**Nachfragen:** Bevor Jarvis einen Termin einträgt, ändert oder löscht, eine Antwort oder Mail schickt, eine Aufgabe löscht oder Flugmodus/mobile Daten/Hotspot umschaltet, sagt er dir genau, was er tun würde, und wartet auf dein „Ja“.
 
 Ist das Handy gesperrt, kann Jarvis Wecker, Timer, Taschenlampe, Lautstärke und Musiksteuerung trotzdem sofort ausführen. Für Apps, Anrufe und Maps musst du kurz entsperren.
 

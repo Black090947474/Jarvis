@@ -22,6 +22,9 @@ import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
+import de.jarvis.app.tools.Res
+import de.jarvis.app.tools.ToolContext
+import de.jarvis.app.tools.ToolRegistry
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -39,6 +42,33 @@ class PhoneTools(private val activity: Activity) {
 
     private val ctx: Context get() = activity
     private val main = Handler(Looper.getMainLooper())
+    private val prefs = Prefs(activity)
+
+    /** Ergebnis-Text eines Werkzeugs gilt als Fehler (für is_error an die KI). */
+    fun isError(result: String) = Res.isError(result)
+
+    /** Nur die Werkzeuge schicken, die zur Anfrage passen (spart Tokens beim kostenlosen Groq-Limit). */
+    private val recentGroups = ArrayDeque<Set<String>>()
+
+    /** Aktuelle Anfrage merken: Gruppen der letzten Anfragen bleiben aktiv (damit „Ja“ nach einer Rückfrage funktioniert). */
+    @Synchronized fun noteQuery(query: String) {
+        recentGroups.addLast(ToolRegistry.groupsFor(query))
+        while (recentGroups.size > 3) recentGroups.removeFirst()
+    }
+
+    @Synchronized fun definitionsFor(query: String): JSONArray {
+        if (recentGroups.isEmpty()) noteQuery(query)
+        val groups = recentGroups.flatten().toSet()
+        val out = JSONArray()
+        for (i in 0 until DEFINITIONS.length()) {
+            val d = DEFINITIONS.getJSONObject(i)
+            val n = d.optString("name")
+            if (n == "add_calendar_event") continue // ersetzt durch calendar (mit Bestätigung)
+            if ((GROUP_OF[n] ?: "core") in groups) out.put(d)
+        }
+        for (t in ToolRegistry.all) if (t.group in groups && (t.feature == null || prefs.feature(t.feature!!))) out.put(t.definition)
+        return out
+    }
 
     /** Wird true, sobald eine andere App geöffnet wurde – dann beendet sich Jarvis nach der Antwort. */
     @Volatile var leftApp = false
@@ -54,6 +84,20 @@ class PhoneTools(private val activity: Activity) {
 
     /** Führt ein Werkzeug auf dem Hauptthread aus (aus einem Hintergrund-Thread aufrufen). */
     fun execute(name: String, input: JSONObject): String {
+        // Funktionsschalter aus dem Berechtigungszentrum respektieren
+        FEATURE_OF[name]?.let { f -> if (!prefs.feature(f)) return Res.disabled(FEATURE_NAMES[f] ?: f) }
+        // Neue, modulare Werkzeuge (Kalender, Erinnerungen, Aufgaben, Wetter …) laufen im Hintergrund-Thread
+        ToolRegistry.find(name)?.let { tool ->
+            tool.feature?.let { f -> if (!prefs.feature(f)) return Res.disabled(FEATURE_NAMES[f] ?: f) }
+            return safe { tool.run(ToolContext(activity), input) }
+        }
+        // Wichtige Aktionen nur nach Bestätigung
+        if (name == "notifications" && input.optString("action") == "reply" && !input.optBoolean("confirmed")) {
+            val m = JarvisNotificationListener.find(input.optInt("id", -1))
+            return Res.confirm("Antwort an ${m?.title ?: "den Absender"} (${m?.app ?: "App"}) senden: „${input.optString("text")}“.")
+        }
+        if (name == "toggle" && input.optString("what") in setOf("airplane", "mobile_data", "hotspot") && !input.optBoolean("confirmed"))
+            return Res.confirm("${mapOf("airplane" to "Flugmodus", "mobile_data" to "Mobile Daten", "hotspot" to "Hotspot")[input.optString("what")]} umschalten.")
         // Bildschirmsteuerung wartet auf Apps – darf nicht auf dem Hauptthread laufen
         // Was wartet (Bildschirm, Schnelleinstellungen, Ortsbestimmung), darf nicht auf dem Hauptthread laufen
         when (name) {
@@ -643,7 +687,35 @@ class PhoneTools(private val activity: Activity) {
     }
 
     companion object {
+        /** Gruppe je altem Werkzeug (core wird immer mitgeschickt). */
+        private val GROUP_OF = mapOf(
+            "set_alarm" to "core", "set_timer" to "core", "flashlight" to "core", "open_app" to "core",
+            "show_card" to "core", "battery" to "core", "remember" to "core", "set_volume" to "core", "media_control" to "core",
+            "play_music" to "core", "app_search" to "core",
+            "show_alarms" to "agenda",
+            "call" to "comm", "send_message" to "comm", "notifications" to "comm",
+            "navigate" to "device", "open_settings" to "device", "camera" to "device", "screen" to "device",
+            "location" to "device", "latest_photo" to "device", "count_photos" to "device", "toggle" to "device",
+            "open_url" to "info", "forget" to "info", "build_website" to "info", "second_phone" to "info",
+        )
+
+        /** Welcher Funktionsschalter (Berechtigungszentrum) ein altes Werkzeug sperrt. */
+        private val FEATURE_OF = mapOf(
+            "call" to "calls", "send_message" to "messages", "notifications" to "notifications_read",
+            "screen" to "screen", "toggle" to "screen", "location" to "location",
+            "latest_photo" to "photos", "count_photos" to "photos", "camera" to "camera",
+        )
+
+        val FEATURE_NAMES = mapOf(
+            "calendar" to "den Kalender", "reminders" to "Erinnerungen", "tasks" to "Aufgaben", "calls" to "Telefon und Anrufliste",
+            "messages" to "Nachrichten", "notifications_read" to "Benachrichtigungen", "screen" to "die Bildschirmsteuerung",
+            "location" to "den Standort", "photos" to "Fotos", "camera" to "die Kamera", "settings" to "Systemeinstellungen",
+        )
+
         private val LABELS = mapOf(
+            "calendar" to "Prüfe Kalender …", "agenda" to "Stelle deinen Tag zusammen …", "reminders" to "Erinnerung …",
+            "tasks" to "Aufgaben …", "call_log" to "Lese Anrufliste …", "email" to "Prüfe E-Mails …",
+            "weather" to "Hole Wetter …", "nearby" to "Suche in der Nähe …", "brightness" to "Helligkeit …",
             "set_alarm" to "Stelle Wecker …", "set_timer" to "Starte Timer …", "show_alarms" to "Öffne Wecker …",
             "flashlight" to "Taschenlampe …", "set_volume" to "Lautstärke …", "media_control" to "Musik …",
             "play_music" to "Suche Musik …", "open_app" to "Öffne App …", "call" to "Rufe an …",
@@ -717,7 +789,8 @@ class PhoneTools(private val activity: Activity) {
   "input_schema":{"type":"object","properties":{"action":{"type":"string","enum":["read","reply"]},
    "app":{"type":"string","description":"Optional bei read: nur diese App, z. B. WhatsApp"},
    "id":{"type":"integer","description":"Bei reply: id aus read"},
-   "text":{"type":"string","description":"Bei reply: Antworttext"}},"required":["action"]}},
+   "text":{"type":"string","description":"Bei reply: Antworttext"},
+   "confirmed":{"type":"boolean","description":"reply erst nach Ja des Nutzers mit true"}},"required":["action"]}},
  {"name":"screen","description":"Bedient die gerade offene App wie ein Mensch. read: sichtbare Elemente mit Nummern. tap: Element antippen (index oder text). type: Text ins Eingabefeld. enter: Eingabe bestätigen. scroll_down/scroll_up. back/home/recents/notifications/quick_settings/screenshot/lock. Nach tap/type/scroll kommt der neue Bildschirm zurück.",
   "input_schema":{"type":"object","properties":{"action":{"type":"string","enum":["read","tap","type","enter","scroll_down","scroll_up","back","home","recents","notifications","quick_settings","screenshot","lock"]},
    "index":{"type":"integer"},"text":{"type":"string"}},"required":["action"]}},
@@ -727,7 +800,8 @@ class PhoneTools(private val activity: Activity) {
   "input_schema":{"type":"object","properties":{"who":{"type":"string","description":"Optional: an wen teilen"}}}},
  {"name":"count_photos","description":"Sagt, wie viele Fotos auf dem Handy sind.","input_schema":{"type":"object","properties":{}}},
  {"name":"toggle","description":"Schaltet eine Systemfunktion über die Schnelleinstellungen um (tippt selbst auf die Kachel). Braucht die volle Handy-Steuerung.",
-  "input_schema":{"type":"object","properties":{"what":{"type":"string","enum":["wifi","bluetooth","mobile_data","airplane","dnd","rotation","location","hotspot","flashlight"]}},"required":["what"]}},
+  "input_schema":{"type":"object","properties":{"what":{"type":"string","enum":["wifi","bluetooth","mobile_data","airplane","dnd","rotation","location","hotspot","flashlight"]},
+   "confirmed":{"type":"boolean","description":"Bei airplane, mobile_data, hotspot erst nach Ja des Nutzers"}},"required":["what"]}},
  {"name":"show_card","description":"Zeigt eine Ergebniskarte auf dem Bildschirm. Nutze sie für Pläne, Schritt-für-Schritt-Anleitungen, Strategien, Listen, Einkaufslisten, Vergleiche, Zahlen, Rezepte. Danach nur 1-2 Sätze dazu sagen statt alles vorzulesen.",
   "input_schema":{"type":"object","properties":{"title":{"type":"string"},
    "kind":{"type":"string","enum":["steps","checklist","stats","text"]},
