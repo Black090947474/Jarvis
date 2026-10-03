@@ -16,7 +16,12 @@ class GroqClient(
     private val userName: String,
     private val tools: PhoneTools,
     private val memory: Memory,
+    private val chat: Boolean = false,
 ) : Brain {
+
+    /** Sobald ein Bild im Gespräch ist, antwortet das Bild-Modell (die anderen sehen keine Bilder). */
+    private var vision = false
+    private val visionModels = mutableListOf(VISION_MODEL)
 
     private val models = (listOf(model) + FALLBACK_MODELS).filter { it.isNotBlank() }.distinct().toMutableList()
     private val messages = JSONArray()  // Verlauf ohne System-Nachricht
@@ -24,11 +29,21 @@ class GroqClient(
 
     private var step: (String) -> Unit = {}
 
-    override fun ask(userText: String, onStep: (String) -> Unit): String {
+    override fun seed(history: List<Pair<String, String>>) {
+        history.forEach { (r, t) -> messages.put(JSONObject().put("role", r).put("content", t)) }
+    }
+
+    override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
         step = onStep
         trimHistory()
         val rollback = messages.length()
-        messages.put(JSONObject().put("role", "user").put("content", userText))
+        if (image != null) {
+            vision = true
+            messages.put(JSONObject().put("role", "user").put("content", JSONArray()
+                .put(JSONObject().put("type", "text").put("text", userText.ifBlank { "Was siehst du auf dem Bild?" }))
+                .put(JSONObject().put("type", "image_url")
+                    .put("image_url", JSONObject().put("url", "data:image/jpeg;base64,$image")))))
+        } else messages.put(JSONObject().put("role", "user").put("content", userText))
         try {
             repeat(MAX_ROUNDS) {
                 val resp = request()
@@ -42,7 +57,10 @@ class GroqClient(
                 if (calls != null && calls.length() > 0) clean.put("tool_calls", calls)
                 messages.put(clean)
 
-                if (calls == null || calls.length() == 0) return Persona.clean(msg.optString("content"))
+                if (calls == null || calls.length() == 0) {
+                    val text = msg.optString("content")
+                    return if (chat) Persona.cleanChat(text) else Persona.clean(text)
+                }
 
                 for (i in 0 until calls.length()) {
                     val c = calls.getJSONObject(i)
@@ -75,7 +93,7 @@ class GroqClient(
         repeat(cut) { messages.remove(0) }
     }
 
-    private fun toolList(): JSONArray {
+    private fun toolList(model: String): JSONArray {
         val list = JSONArray()
         val defs = PhoneTools.DEFINITIONS
         for (i in 0 until defs.length()) {
@@ -86,7 +104,7 @@ class GroqClient(
                 .put("parameters", d.optJSONObject("input_schema") ?: JSONObject().put("type", "object"))))
         }
         // Eingebaute Websuche der GPT-OSS-Modelle (wird abgeschaltet, falls nicht unterstützt)
-        if (webSearch && models.firstOrNull()?.startsWith("openai/gpt-oss") == true) {
+        if (webSearch && model.startsWith("openai/gpt-oss")) {
             list.put(JSONObject().put("type", "browser_search"))
         }
         return list
@@ -101,16 +119,17 @@ class GroqClient(
         for (attempt in 0..3) {
             var waitSec = 0
             var i = 0
-            while (i < models.size) {
+            val list = if (vision) visionModels else models
+            while (i < list.size) {
                 try {
-                    return post(models[i])
+                    return post(list[i])
                 } catch (e: ApiException) {
                     lastErr = e
                     when {
                         // Ein 400er kann von der eingebauten Websuche kommen: einmal ohne sie probieren
                         e.code == 400 && webSearch -> { webSearch = false; continue }
                         e.code == 429 -> { waitSec = if (waitSec == 0) e.retryAfter else minOf(waitSec, e.retryAfter); i++ }
-                        e.code == 404 || (e.code == 400 && e.body.contains("model", true)) -> models.removeAt(i)
+                        e.code == 404 || (e.code == 400 && e.body.contains("model", true)) -> list.removeAt(i)
                         else -> throw toUnavailable(e)
                     }
                 }
@@ -133,9 +152,12 @@ class GroqClient(
     })
 
     private fun post(model: String): JSONObject {
-        val all = JSONArray().put(JSONObject().put("role", "system").put("content", Persona.systemPrompt(userName, memory)))
+        val all = JSONArray().put(JSONObject().put("role", "system").put("content", Persona.systemPrompt(userName, memory, chat)))
         // Ältere Werkzeug-Ergebnisse (v. a. Bildschirminhalte) kürzen: spart viele Tokens,
         // damit das kostenlose Minutenlimit bei längeren Aufgaben nicht sofort voll ist.
+        // Nur das neueste Bild mitschicken (jedes Bild kostet viele Tokens); ältere werden zu Text
+        var lastImage = -1
+        for (i in 0 until messages.length()) if (messages.getJSONObject(i).opt("content") is JSONArray) lastImage = i
         var toolSeen = 0
         val keep = BooleanArray(messages.length())
         for (i in messages.length() - 1 downTo 0) {
@@ -144,6 +166,13 @@ class GroqClient(
         }
         for (i in 0 until messages.length()) {
             val m = messages.getJSONObject(i)
+            val arr = m.opt("content") as? JSONArray
+            if (arr != null && i != lastImage) {
+                val t = (0 until arr.length()).map { arr.getJSONObject(it) }
+                    .firstOrNull { it.optString("type") == "text" }?.optString("text").orEmpty()
+                all.put(JSONObject().put("role", "user").put("content", "[früheres Bild] $t"))
+                continue
+            }
             if (!keep[i]) {
                 val c = m.optString("content")
                 all.put(JSONObject(m.toString()).put("content",
@@ -153,7 +182,7 @@ class GroqClient(
         val body = JSONObject()
             .put("model", model)
             .put("messages", all)
-            .put("tools", toolList())
+            .put("tools", toolList(model))
             .put("tool_choice", "auto")
             .put("max_completion_tokens", 3000)
             .apply { if (model.startsWith("openai/gpt-oss")) put("reasoning_effort", "low") }
@@ -183,6 +212,7 @@ class GroqClient(
 
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-oss-120b"
+        const val VISION_MODEL = "qwen/qwen3.8-27b"
         private val FALLBACK_MODELS = listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b")
         private const val MAX_ROUNDS = 16
         private const val MAX_MESSAGES = 30

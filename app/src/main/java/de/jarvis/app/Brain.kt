@@ -6,7 +6,7 @@ import java.util.Locale
 
 /** Jarvis' Persönlichkeit und Regeln – gleich für Gemini und Claude. */
 object Persona {
-    fun systemPrompt(userName: String, memory: Memory): String {
+    fun systemPrompt(userName: String, memory: Memory, chat: Boolean = false): String {
         val now = SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMANY).format(Date())
         val name = if (userName.isNotBlank()) "Der Nutzer heißt $userName. " else ""
         val facts = memory.all()
@@ -17,10 +17,7 @@ object Persona {
             höflich, schlagfertig, mit einem Hauch britischem Butler-Humor. ${name}Jetzt ist es $now.
             Der Nutzer ist in Deutschland, sofern er nichts anderes sagt.
 
-            Deine Antworten werden laut vorgelesen:
-            - Antworte auf Deutsch, kurz und natürlich gesprochen (meist 1–2 Sätze).
-            - Kein Markdown, keine Aufzählungszeichen, keine Emojis, keine Links, keine Quellenangaben.
-            - Uhrzeiten so schreiben, wie man sie sagt, z. B. "halb acht" oder "sieben Uhr dreißig".
+            ${if (chat) CHAT_STYLE else VOICE_STYLE}
 
             Werkzeuge:
             - Du kannst das Handy wirklich steuern: Wecker, Timer, Taschenlampe, Lautstärke, Musik,
@@ -53,8 +50,31 @@ object Persona {
         """.trimIndent() + mem
     }
 
+    private val VOICE_STYLE = """
+            Deine Antworten werden laut vorgelesen:
+            - Antworte auf Deutsch, kurz und natürlich gesprochen (meist 1–2 Sätze).
+            - Kein Markdown, keine Aufzählungszeichen, keine Emojis, keine Links, keine Quellenangaben.
+            - Uhrzeiten so schreiben, wie man sie sagt, z. B. "halb acht" oder "sieben Uhr dreißig".
+        """.trimIndent()
+
+    private val CHAT_STYLE = """
+            Ihr schreibt im Jarvis-Chat; deine Antworten werden gelesen, nicht vorgelesen:
+            - Antworte auf Deutsch, klar und hilfreich. Ausführlich nur, wenn es nötig ist.
+            - Du darfst Absätze, **fett**, Überschriften mit # und Listen mit - benutzen.
+            - Schickt der Nutzer ein Bild, schau es dir genau an und beantworte seine Frage dazu.
+              Beschreibe nur, was wirklich zu sehen ist; rate nicht, wer eine Person ist.
+            - show_card brauchst du im Chat nicht; schreib Pläne und Listen direkt in die Antwort.
+        """.trimIndent()
+
+    /** Entfernt Denk-Notizen, die manche Modelle mitschicken. */
+    fun stripThinking(text: String): String =
+        text.replace(Regex("(?s)<think>.*?</think>"), "").replace(Regex("(?s)^.*?</think>"), "").trim()
+
+    /** Für den Chat: Formatierung bleibt, nur Denk-Notizen fliegen raus. */
+    fun cleanChat(text: String): String = stripThinking(text).ifEmpty { "Erledigt." }
+
     /** Entfernt Zeichen, die beim Vorlesen stören. */
-    fun clean(text: String): String = text
+    fun clean(text: String): String = stripThinking(text)
         .replace(Regex("[*#_`]"), "")
         .replace(Regex("\\s+"), " ")
         .trim()
@@ -64,7 +84,25 @@ object Persona {
 /** Ein "Gehirn" für Jarvis. */
 interface Brain {
     /** Gibt die gesprochene Antwort zurück. Wirft [Unavailable], wenn dieses Gehirn gerade nicht kann. */
-    fun ask(userText: String, onStep: (String) -> Unit): String
+    fun ask(userText: String, onStep: (String) -> Unit, image: String? = null): String
+
+    /** Früheren Verlauf (Rolle "user"/"assistant", Text) übernehmen, z. B. beim Öffnen des Chats. */
+    fun seed(history: List<Pair<String, String>>) {}
+
+    companion object {
+        /** Beginnt mit user, wechselt sich ab, endet mit assistant – so wollen es alle Anbieter. */
+        fun normalize(h: List<Pair<String, String>>): List<Pair<String, String>> {
+            val out = mutableListOf<Pair<String, String>>()
+            for ((r, t) in h) {
+                if (t.isBlank()) continue
+                if (out.isEmpty() && r != "user") continue
+                if (out.isNotEmpty() && out.last().first == r) out[out.lastIndex] = r to (out.last().second + "\n" + t)
+                else out += r to t
+            }
+            if (out.isNotEmpty() && out.last().first == "user") out.removeAt(out.lastIndex)
+            return out
+        }
+    }
 
     /** Kontingent leer, überlastet, Schlüssel ungültig o. ä. – ein anderes Gehirn soll übernehmen. */
     class Unavailable(val spoken: String) : Exception(spoken)
@@ -77,12 +115,17 @@ interface Brain {
 class BrainRouter(brains: List<Brain>) {
     private val order = brains.toMutableList()
 
-    fun ask(userText: String, onStep: (String) -> Unit): String {
+    fun seed(history: List<Pair<String, String>>) {
+        val h = Brain.normalize(history)
+        if (h.isNotEmpty()) order.forEach { it.seed(h) }
+    }
+
+    fun ask(userText: String, onStep: (String) -> Unit, image: String? = null): String {
         if (order.isEmpty()) return "Mir fehlt noch ein Schlüssel. Trag ihn bitte in der Jarvis-App ein."
         var first: Brain.Unavailable? = null
         for (b in order.toList()) {
             try {
-                return b.ask(userText, onStep)
+                return b.ask(userText, onStep, image)
             } catch (e: Brain.Unavailable) {
                 if (first == null) first = e   // der eigentliche Grund steht beim ersten Gehirn
                 if (order.size > 1) { order.remove(b); order.add(b) } // ans Ende stellen

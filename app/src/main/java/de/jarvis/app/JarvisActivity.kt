@@ -497,7 +497,7 @@ class JarvisActivity : Activity() {
         tools?.leftApp = false
         tools?.silentExit = false
         thread {
-            val reply = client.ask(text) { step -> main.post { jarvisText.text = step } }
+            val reply = client.ask(text, { step -> main.post { jarvisText.text = step } })
             main.post {
                 busy = false
                 if (isFinishing) return@post

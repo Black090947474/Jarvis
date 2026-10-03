@@ -54,6 +54,9 @@ class MainActivity : Activity() {
         })
         col.addView(label("Sag „Hey Jarvis“ – auch bei gesperrtem Handy.", 15f, MUTED))
         crashCard(col)
+        col.addView(button("Chat öffnen (Text & Bilder)") {
+            save(); startActivity(Intent(this, ChatActivity::class.java))
+        })
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))

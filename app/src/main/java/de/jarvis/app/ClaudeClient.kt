@@ -18,6 +18,7 @@ class ClaudeClient(
     private val userName: String,
     private val tools: PhoneTools,
     private val memory: Memory,
+    private val chat: Boolean = false,
 ) : Brain {
     /** Kompletter Verlauf dieser Sitzung im API-Format (inkl. Werkzeug-Ergebnisse). */
     private val messages = JSONArray()
@@ -27,10 +28,19 @@ class ClaudeClient(
      * Stellt eine Frage und gibt die gesprochene Antwort zurück.
      * [onStep] meldet, welches Werkzeug gerade läuft (für die Anzeige).
      */
-    override fun ask(userText: String, onStep: (String) -> Unit): String {
+    override fun seed(history: List<Pair<String, String>>) {
+        history.forEach { (r, t) -> messages.put(JSONObject().put("role", r).put("content", t)) }
+    }
+
+    override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
         trimHistory()
         val rollback = messages.length()
-        messages.put(JSONObject().put("role", "user").put("content", userText))
+        if (image != null) {
+            messages.put(JSONObject().put("role", "user").put("content", JSONArray()
+                .put(JSONObject().put("type", "image").put("source", JSONObject()
+                    .put("type", "base64").put("media_type", "image/jpeg").put("data", image)))
+                .put(JSONObject().put("type", "text").put("text", userText.ifBlank { "Was siehst du auf dem Bild?" }))))
+        } else messages.put(JSONObject().put("role", "user").put("content", userText))
         try {
             repeat(MAX_ROUNDS) {
                 val resp = request()
@@ -71,7 +81,7 @@ class ClaudeClient(
             val b = content.getJSONObject(i)
             if (b.optString("type") == "text") sb.append(b.optString("text"))
         }
-        return Persona.clean(sb.toString())
+        return if (chat) Persona.cleanChat(sb.toString()) else Persona.clean(sb.toString())
     }
 
     /** Hält den Verlauf kurz; schneidet nur an echten Nutzerfragen ab, nie mitten in Werkzeug-Runden. */
@@ -86,7 +96,7 @@ class ClaudeClient(
         repeat(cut) { messages.remove(0) }
     }
 
-    private fun systemPrompt(): String = Persona.systemPrompt(userName, memory)
+    private fun systemPrompt(): String = Persona.systemPrompt(userName, memory, chat)
 
     private fun toolList(): JSONArray {
         val list = JSONArray()

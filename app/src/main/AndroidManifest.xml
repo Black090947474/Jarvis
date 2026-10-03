@@ -69,6 +69,40 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".ChatActivity"
+            android:exported="true"
+            android:label="Jarvis Chat"
+            android:launchMode="singleTask"
+            android:taskAffinity="de.jarvis.app.chat"
+            android:windowSoftInputMode="adjustResize">
+            <!-- "Teilen → Jarvis Chat" aus Galerie und anderen Apps -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- Eigenes App-Symbol "Jarvis Chat" auf dem Startbildschirm -->
+        <activity-alias
+            android:name=".ChatLauncher"
+            android:targetActivity=".ChatActivity"
+            android:exported="true"
+            android:label="Jarvis Chat"
+            android:icon="@drawable/ic_jarvis_chat"
+            android:roundIcon="@drawable/ic_jarvis_chat">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity
             android:name=".StationActivity"
             android:exported="false"
             android:launchMode="singleTask"

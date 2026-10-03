@@ -16,6 +16,7 @@ class GeminiClient(
     private val userName: String,
     private val tools: PhoneTools,
     private val memory: Memory,
+    private val chat: Boolean = false,
 ) : Brain {
 
     /** Modelle, die der Reihe nach probiert werden, falls eines nicht existiert oder am Limit ist. */
@@ -23,11 +24,21 @@ class GeminiClient(
     private val contents = JSONArray()   // Verlauf im Gemini-Format
     private var googleSearch = true
 
-    override fun ask(userText: String, onStep: (String) -> Unit): String {
+    override fun seed(history: List<Pair<String, String>>) {
+        history.forEach { (r, t) ->
+            contents.put(JSONObject().put("role", if (r == "user") "user" else "model")
+                .put("parts", JSONArray().put(JSONObject().put("text", t))))
+        }
+    }
+
+    override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
         trimHistory()
         val rollback = contents.length()
-        contents.put(JSONObject().put("role", "user")
-            .put("parts", JSONArray().put(JSONObject().put("text", userText))))
+        val userParts = JSONArray()
+        if (image != null) userParts.put(JSONObject().put("inlineData",
+            JSONObject().put("mimeType", "image/jpeg").put("data", image)))
+        userParts.put(JSONObject().put("text", userText.ifBlank { "Was siehst du auf dem Bild?" }))
+        contents.put(JSONObject().put("role", "user").put("parts", userParts))
         try {
             repeat(MAX_ROUNDS) {
                 val resp = request()
@@ -57,7 +68,7 @@ class GeminiClient(
                         text.append(p.optString("text"))
                     }
                 }
-                if (responses.length() == 0) return Persona.clean(text.toString())
+                if (responses.length() == 0) return if (chat) Persona.cleanChat(text.toString()) else Persona.clean(text.toString())
                 contents.put(JSONObject().put("role", "user").put("parts", responses))
             }
             return "Das war mir zu verschachtelt. Sag es mir bitte nochmal einfacher."
@@ -142,7 +153,7 @@ class GeminiClient(
     private fun post(model: String): JSONObject {
         val body = JSONObject()
             .put("systemInstruction", JSONObject().put("parts",
-                JSONArray().put(JSONObject().put("text", Persona.systemPrompt(userName, memory)))))
+                JSONArray().put(JSONObject().put("text", Persona.systemPrompt(userName, memory, chat)))))
             .put("contents", contents)
             .put("tools", toolList())
             .put("generationConfig", JSONObject().put("maxOutputTokens", 4096))

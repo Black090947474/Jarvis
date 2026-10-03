@@ -73,6 +73,14 @@ Mehr Stimmen bekommst du über *Einstellungen → Allgemeine Verwaltung → Text
 ### Design
 Unter **Design** wählst du, wie Jarvis aussieht, wenn er aufgeht: **Nexus** (HUD mit Ringen, Ticks und Reticle, Standard), **Puls** (Leuchtkern, Punkt-Ringe & Schallwelle), **Nexus** (HUD mit Ringen, Reticle & Radar), **Glut** (rote, atmende Kugel), **Aurora** (bunte Farbwolken), **Linie** (weißer Ring, minimal) oder **Glas** (Uhrzeit, blaue Kugel, Milchglas-Karte).
 
+### Chat mit Bildern
+Auf dem Startbildschirm gibt es jetzt ein zweites Symbol **„Jarvis Chat“** (auch über „Chat öffnen“ in der Jarvis-App).
+- Schreiben, oder auf das **Mikrofon** tippen und sprechen.
+- **Bild-Symbol** = Foto aus der Galerie, **Kamera-Symbol** = neues Foto. Dann eine Frage dazu stellen, z. B. „Was ist das für eine Pflanze?“ oder „Erklär mir die Aufgabe“.
+- In der Galerie kannst du auch **Teilen → Jarvis Chat** wählen.
+- 🔈 oben = Antworten vorlesen lassen, ＋ = neuer Chat. Lange auf eine Antwort tippen = kopieren.
+- Der Verlauf bleibt auf deinem Handy gespeichert. Bilder gehen zum Beantworten an die KI (Groq).
+
 ### Zweites Handy: Station & Fernsteuerung
 1. Auf dem **zweiten Handy** Jarvis installieren (gleicher Link), Groq-Schlüssel eintragen und unten bei **Zweites Handy** auf **„Dieses Handy als Station starten“** tippen. Am besten ans Ladekabel legen – der Bildschirm bleibt an.
 2. Auf der Station siehst du Uhrzeit, Datum, Akku und unten einen **6-stelligen Code** und eine Zahl wie 192.168.x.x.
