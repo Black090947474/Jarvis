@@ -52,7 +52,7 @@ class Prefs(context: Context) {
 
     /** Design des Gesprächsbildschirms: GLUT, AURORA, LINIE oder GLAS. */
     var design: String
-        get() = sp.getString("design", "GLUT") ?: "GLUT"
+        get() = sp.getString("design", "NEXUS") ?: "NEXUS"
         set(v) = sp.edit().putString("design", v).apply()
 
     /** Ob der Wake-Word-Dienst laufen soll (merkt sich den Schalter). */

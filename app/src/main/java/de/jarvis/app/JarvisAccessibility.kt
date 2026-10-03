@@ -142,6 +142,28 @@ class JarvisAccessibility : AccessibilityService() {
         return if (ok) after(if (down) "Nach unten gescrollt." else "Nach oben gescrollt.") else "Fehler: Scrollen ging nicht."
     }
 
+    /** Öffnet die Schnelleinstellungen und tippt die passende Kachel an. */
+    fun toggleTile(tile: String): String {
+        performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+        Thread.sleep(800)
+        // Manche Kacheln stehen erst auf der zweiten Seite – zweimal versuchen
+        repeat(2) { page ->
+            val root = rootInActiveWindow
+            if (root != null) {
+                val hit = root.findAccessibilityNodeInfosByText(tile)
+                    .firstOrNull { it.isVisibleToUser }
+                if (hit != null) {
+                    val target = if (hit.isClickable) hit else clickableParent(hit)
+                    val ok = target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true || tapAt(hit)
+                    if (ok) { Thread.sleep(400); performGlobalAction(GLOBAL_ACTION_HOME); return "$tile umgeschaltet." }
+                }
+            }
+            if (page == 0) { swipe(true); Thread.sleep(500) }
+        }
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        return "Fehler: Kachel „$tile“ nicht in den Schnelleinstellungen gefunden."
+    }
+
     fun global(action: String): String {
         val (id, msg) = when (action) {
             "back" -> GLOBAL_ACTION_BACK to "Zurück."

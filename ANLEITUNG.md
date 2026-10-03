@@ -71,7 +71,7 @@ Unter **Stimme** in der Jarvis-App kannst du zwischen allen deutschen Stimmen au
 Mehr Stimmen bekommst du über *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache → Google Sprachausgabe → ⚙ → Sprachdaten installieren → Deutsch*.
 
 ### Design
-Unter **Design** wählst du, wie Jarvis aussieht, wenn er aufgeht: **Glut** (rote, atmende Kugel), **Aurora** (bunte Farbwolken), **Linie** (weißer Ring, minimal) oder **Glas** (Uhrzeit, blaue Kugel, Milchglas-Karte).
+Unter **Design** wählst du, wie Jarvis aussieht, wenn er aufgeht: **Nexus** (HUD mit Ringen, Ticks und Reticle, Standard), **Glut** (rote, atmende Kugel), **Aurora** (bunte Farbwolken), **Linie** (weißer Ring, minimal) oder **Glas** (Uhrzeit, blaue Kugel, Milchglas-Karte).
 
 ### Nachrichten & volle Steuerung freischalten
 Für „Nachrichten lesen & antworten“ und „Volle Handy-Steuerung“ tippst du in der Jarvis-App auf den Eintrag und schaltest Jarvis in der Liste ein.
@@ -117,6 +117,9 @@ Samsung beendet Hintergrund-Apps besonders gern:
 | „Antworte Lisa, dass ich gleich komme“ | Liest dir die Antwort vor, fragt „Abschicken?“ und schickt sie direkt |
 | „Öffne Instagram und geh auf mein Profil“, „Scroll runter“, „Tipp auf Folgen“ | Bedient jede App wie du (Bedienungshilfe nötig) |
 | „Mach einen Screenshot“, „Geh zurück“, „Sperr das Handy“ | Sofort (Bedienungshilfe nötig) |
+| „Wo bin ich?“, „Wie wird das Wetter hier?“ | Standort (Standort-Berechtigung nötig) |
+| „Schick Max mein letztes Foto“, „Wie viele Fotos hab ich?“ | Fotos (Foto-Berechtigung nötig) |
+| „Mach das WLAN an“, „Schalt Bluetooth aus“, „Flugmodus an“ | Schaltet die Kachel in den Schnelleinstellungen (volle Steuerung nötig) |
 
 Was Android **nicht** erlaubt, egal welche App: WLAN, Bluetooth oder mobile Daten selbst umschalten (Jarvis öffnet dir dann die passende Einstellung), Nachrichten ohne dein Antippen abschicken, Wecker löschen.
 

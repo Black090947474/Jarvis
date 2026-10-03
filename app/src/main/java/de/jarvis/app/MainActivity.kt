@@ -110,6 +110,7 @@ class MainActivity : Activity() {
     private lateinit var designButton: Button
 
     private val designs = listOf(
+        "NEXUS" to "Nexus – HUD mit Ringen & Reticle",
         "GLUT" to "Glut – rote, atmende Kugel",
         "AURORA" to "Aurora – bunte Farbwolken",
         "LINIE" to "Linie – weißer Ring, minimal",
@@ -256,6 +257,12 @@ class MainActivity : Activity() {
         addCheck("Direkt anrufen", hasPerm(Manifest.permission.CALL_PHONE)) {
             askPerm(Manifest.permission.CALL_PHONE)
         }
+        addCheck("Standort", hasPerm(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            askPerm(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+        val photoPerm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES
+                        else Manifest.permission.READ_EXTERNAL_STORAGE
+        addCheck("Fotos (teilen, zählen)", hasPerm(photoPerm)) { askPerm(photoPerm) }
         addCheck("Nachrichten lesen & antworten", secureListHas("enabled_notification_listeners")) {
             restrictedHint()
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
@@ -305,10 +312,11 @@ class MainActivity : Activity() {
             "„Eingeschränkte Einstellungen zulassen“. Danach nochmal hier antippen.", Toast.LENGTH_LONG).show()
     }
 
-    private fun askPerm(p: String) {
+    private fun askPerm(vararg perms: String) {
+        val p = perms.first()
         if (shouldShowRequestPermissionRationale(p) || !asked.contains(p)) {
             asked += p
-            requestPermissions(arrayOf(p), 2)
+            requestPermissions(perms.toList().toTypedArray(), 2)
         } else {
             // Schon einmal abgelehnt → App-Einstellungen öffnen
             startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))

@@ -88,6 +88,10 @@ class PhoneTools(private val activity: Activity) {
         "app_search" -> appSearch(a.optString("app"), a.optString("query"))
         "camera" -> camera(a.optString("mode", "photo"))
         "notifications" -> notifications(a)
+        "location" -> location()
+        "latest_photo" -> latestPhoto(a.optString("who"))
+        "count_photos" -> countPhotos()
+        "toggle" -> toggle(a.optString("what"))
         else -> "Fehler: Unbekanntes Werkzeug $name"
     }
 
@@ -427,6 +431,85 @@ class PhoneTools(private val activity: Activity) {
         }
     }
 
+    // ---------- Standort ----------
+
+    @Suppress("MissingPermission")
+    private fun location(): String {
+        if (ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+            return "Fehler: Jarvis darf den Standort nicht nutzen. Der Nutzer kann das in der Jarvis-App erlauben."
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        val loc = try {
+            listOf(android.location.LocationManager.GPS_PROVIDER, android.location.LocationManager.NETWORK_PROVIDER)
+                .mapNotNull { if (lm.isProviderEnabled(it)) lm.getLastKnownLocation(it) else null }
+                .maxByOrNull { it.time }
+        } catch (_: Exception) { null } ?: return "Fehler: Kein Standort verfügbar. Ist der Standort eingeschaltet?"
+        val place = try {
+            @Suppress("DEPRECATION")
+            android.location.Geocoder(ctx, Locale.GERMANY).getFromLocation(loc.latitude, loc.longitude, 1)
+                ?.firstOrNull()?.let { listOfNotNull(it.thoroughfare, it.locality ?: it.subAdminArea).joinToString(", ") }
+        } catch (_: Exception) { null }
+        return "Standort: ${place?.takeIf { it.isNotBlank() } ?: "%.4f, %.4f".format(loc.latitude, loc.longitude)} " +
+            "(Koordinaten %.5f, %.5f)".format(loc.latitude, loc.longitude)
+    }
+
+    // ---------- Fotos ----------
+
+    private fun latestPhoto(who: String): String {
+        val uri = newestImage() ?: return "Fehler: Kein Foto gefunden oder keine Foto-Berechtigung."
+        if (who.isBlank()) {
+            return launch(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "image/*")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Dein letztes Foto ist geöffnet.")
+        }
+        val i = Intent(Intent.ACTION_SEND).setType("image/*").putExtra(Intent.EXTRA_STREAM, uri)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        return launch(Intent.createChooser(i, "Foto senden an $who"),
+            "Teilen-Fenster für dein letztes Foto ist offen. Wähl $who und tippe auf Senden.")
+    }
+
+    private fun countPhotos(): String {
+        if (!canReadImages()) return "Fehler: Jarvis darf die Fotos nicht sehen. Der Nutzer kann das in der Jarvis-App erlauben."
+        return try {
+            ctx.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Images.Media._ID), null, null, null)?.use {
+                "Du hast ${it.count} Fotos auf dem Handy."
+            } ?: "Fehler: Fotos nicht lesbar."
+        } catch (e: Exception) { "Fehler: ${e.message}" }
+    }
+
+    private fun canReadImages(): Boolean {
+        val perm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES
+                   else Manifest.permission.READ_EXTERNAL_STORAGE
+        return ctx.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun newestImage(): Uri? {
+        if (!canReadImages()) return null
+        return try {
+            ctx.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.Images.Media._ID), null, null,
+                "${MediaStore.Images.Media.DATE_ADDED} DESC")?.use { c ->
+                if (c.moveToFirst()) android.content.ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI, c.getLong(0)) else null
+            }
+        } catch (_: Exception) { null }
+    }
+
+    // ---------- WLAN/Bluetooth/… schalten (über die Schnelleinstellungen) ----------
+
+    private fun toggle(what: String): String {
+        val acc = JarvisAccessibility.instance
+            ?: return "Fehler: Dafür braucht Jarvis die volle Handy-Steuerung (Bedienungshilfe). Sonst kann ich dir nur die Einstellungen öffnen."
+        val tile = when (what) {
+            "wifi" -> "WLAN"; "bluetooth" -> "Bluetooth"; "mobile_data" -> "Mobile Daten"
+            "flashlight" -> return flashlight(true)
+            "airplane" -> "Flugmodus"; "dnd" -> "Nicht stören"; "rotation" -> "Autom. drehen"
+            "location" -> "Standort"; "hotspot" -> "Hotspot"; "torch" -> return flashlight(true)
+            else -> what
+        }
+        if (!leftApp) { onMain { activity.moveTaskToBack(true) }; leftApp = true; Thread.sleep(500) }
+        return acc.toggleTile(tile)
+    }
+
     // ---------- Bildschirmsteuerung ----------
 
     private fun screen(a: JSONObject): String {
@@ -500,7 +583,9 @@ class PhoneTools(private val activity: Activity) {
             "open_settings" to "Öffne Einstellungen …", "remember" to "Merke mir das …", "forget" to "Vergesse das …",
             "web_search" to "Suche im Internet …",
             "app_search" to "Suche in der App …", "camera" to "Öffne Kamera …",
-            "notifications" to "Prüfe Nachrichten …", "screen" to "Bediene das Handy …"
+            "notifications" to "Prüfe Nachrichten …", "screen" to "Bediene das Handy …",
+            "location" to "Bestimme Standort …", "latest_photo" to "Hole dein Foto …",
+            "count_photos" to "Zähle Fotos …", "toggle" to "Schalte um …"
         )
 
         /** Beschreibung aller Werkzeuge für Claude (JSON-Schema). */
@@ -564,7 +649,14 @@ class PhoneTools(private val activity: Activity) {
    "text":{"type":"string","description":"Bei reply: Antworttext"}},"required":["action"]}},
  {"name":"screen","description":"Bedient die gerade offene App wie ein Mensch. read: sichtbare Elemente mit Nummern. tap: Element antippen (index oder text). type: Text ins Eingabefeld. enter: Eingabe bestätigen. scroll_down/scroll_up. back/home/recents/notifications/quick_settings/screenshot/lock. Nach tap/type/scroll kommt der neue Bildschirm zurück.",
   "input_schema":{"type":"object","properties":{"action":{"type":"string","enum":["read","tap","type","enter","scroll_down","scroll_up","back","home","recents","notifications","quick_settings","screenshot","lock"]},
-   "index":{"type":"integer"},"text":{"type":"string"}},"required":["action"]}}
+   "index":{"type":"integer"},"text":{"type":"string"}},"required":["action"]}},
+ {"name":"location","description":"Bestimmt den aktuellen Standort des Nutzers (Adresse und Koordinaten). Nützlich für Wetter hier, Weg nach Hause usw.",
+  "input_schema":{"type":"object","properties":{}}},
+ {"name":"latest_photo","description":"Öffnet das neueste Foto oder bereitet es zum Teilen vor. Mit who: Teilen-Fenster, der Nutzer wählt den Empfänger und tippt auf Senden.",
+  "input_schema":{"type":"object","properties":{"who":{"type":"string","description":"Optional: an wen teilen"}}}},
+ {"name":"count_photos","description":"Sagt, wie viele Fotos auf dem Handy sind.","input_schema":{"type":"object","properties":{}}},
+ {"name":"toggle","description":"Schaltet eine Systemfunktion über die Schnelleinstellungen um (tippt selbst auf die Kachel). Braucht die volle Handy-Steuerung.",
+  "input_schema":{"type":"object","properties":{"what":{"type":"string","enum":["wifi","bluetooth","mobile_data","airplane","dnd","rotation","location","hotspot","flashlight"]}},"required":["what"]}}
 ]"""
     }
 }

@@ -86,6 +86,8 @@ class JarvisActivity : Activity() {
     private class Theme(val bg: Int, val bg2: Int, val fg: Int, val muted: Int, val accent: Int, val center: Boolean)
 
     private fun theme(style: CoreView.Style) = when (style) {
+        CoreView.Style.NEXUS -> Theme(Color.rgb(4, 9, 12), Color.rgb(2, 5, 7), Color.rgb(222, 244, 248),
+            Color.rgb(96, 140, 150), Color.rgb(34, 224, 224), true)
         CoreView.Style.GLUT -> Theme(Color.rgb(8, 6, 7), Color.rgb(8, 6, 7), Color.rgb(244, 238, 234),
             Color.rgb(156, 138, 132), Color.rgb(232, 69, 60), true)
         CoreView.Style.AURORA -> Theme(Color.rgb(7, 10, 20), Color.rgb(7, 10, 20), Color.rgb(234, 240, 255),
@@ -143,6 +145,23 @@ class JarvisActivity : Activity() {
 
         // Kopfzeile
         when (style) {
+            CoreView.Style.NEXUS -> {
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                }
+                row.addView(TextView(this).apply {
+                    text = "J.A.R.V.I.S"; textSize = 16f; letterSpacing = 0.34f
+                    typeface = thin; setTextColor(th.fg)
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                row.addView(TextView(this).apply {
+                    text = "● ONLINE"; textSize = 10f; letterSpacing = 0.18f; setTextColor(th.accent)
+                })
+                root.addView(row, lp())
+                clock = TextView(this).apply {
+                    textSize = 11f; letterSpacing = 0.1f; setTextColor(th.muted)
+                }
+                root.addView(clock, lp(2))
+            }
             CoreView.Style.GLUT -> root.addView(brand(0.42f, 13f), lp())
             CoreView.Style.AURORA -> {
                 val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -195,8 +214,11 @@ class JarvisActivity : Activity() {
 
     private fun tickClock() {
         val c = clock ?: return
-        c.text = java.text.SimpleDateFormat("HH:mm", Locale.GERMANY).format(java.util.Date())
-        main.postDelayed({ if (!isFinishing) tickClock() }, 15_000)
+        val fmt = if (CoreView.styleFrom(Prefs(this).design) == CoreView.Style.NEXUS)
+            "EEE, dd. MMM · HH:mm:ss" else "HH:mm"
+        c.text = java.text.SimpleDateFormat(fmt, Locale.GERMANY).format(java.util.Date()).uppercase(Locale.GERMANY)
+        main.postDelayed({ if (!isFinishing) tickClock() },
+            if (fmt.contains("ss")) 1_000 else 15_000)
     }
 
     private fun statusText(m: CoreView.Mode) = when (m) {
