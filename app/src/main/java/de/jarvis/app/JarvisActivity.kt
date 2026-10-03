@@ -493,7 +493,8 @@ class JarvisActivity : Activity() {
         thread {
             // Ohne Internet oder ohne Schlüssel: einfache Befehle direkt auf dem Handy ausführen
             val offline = client == null || !Offline.isOnline(this)
-            val local = if (offline && t != null) Offline.handle(t, text)?.substringBefore("\n\n") else null
+            // Einfache Befehle (Timer, Wecker, Taschenlampe, Erinnerung, Tagesplan, Akku) immer direkt: schneller, schont das Limit
+            val local = if (t != null) Offline.handle(t, text)?.substringBefore("\n\n") else null
             val reply = when {
                 local != null -> local
                 client == null -> "Dafür brauche ich einen KI-Schlüssel. Ohne geht nur: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."

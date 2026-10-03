@@ -18,6 +18,8 @@ object Offline {
 
     /** Versucht den Befehl lokal auszuführen. null = nicht erkannt (dann braucht es die KI). Im Hintergrund aufrufen. */
     fun handle(tools: PhoneTools, text: String): String? {
+        val low = text.lowercase()
+        if (listOf("zweite", "station", "anderen handy", "und dann", " und ").any { low.contains(it) } && !low.startsWith("erinner")) return null
         val c = LocalCommands.parse(text) ?: return null
         return Res.spoken(tools.execute(c.tool, JSONObject(c.args)))
     }

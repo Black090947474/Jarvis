@@ -14,8 +14,13 @@ class Prefs(context: Context) {
         get() = sp.getString("mistral_key", "") ?: ""
         set(v) = sp.edit().putString("mistral_key", v.trim()).apply()
 
+    /** GitHub-Token (Berechtigung „Models: read“) für GitHub Models. */
+    var githubKey: String
+        get() = sp.getString("github_key", "") ?: ""
+        set(v) = sp.edit().putString("github_key", v.trim()).apply()
+
     /** Mindestens ein KI-Schlüssel eingetragen? */
-    val hasAnyKey get() = groqKey.isNotBlank() || mistralKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
+    val hasAnyKey get() = groqKey.isNotBlank() || mistralKey.isNotBlank() || githubKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
 
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""

@@ -20,6 +20,10 @@ class Provider(
             listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "meta-llama/llama-4-scout-17b-16e-instruct",
                 "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"),
             listOf("qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct"), "max_completion_tokens")
+        // GitHub Models: kostenlos mit GitHub-Konto (ca. 15 Anfragen/Minute, 150/Tag) – Ersatz, wenn Groq am Limit ist
+        val GITHUB = Provider("GitHub", "https://models.github.ai/inference/chat/completions",
+            listOf("openai/gpt-4.1-mini", "openai/gpt-4o-mini"),
+            listOf("openai/gpt-4.1-mini", "openai/gpt-4o-mini"), "max_tokens")
         // Mistral „Experiment“: kostenlos, sehr hohes Minutenlimit (ca. 1 Anfrage pro Sekunde)
         val MISTRAL = Provider("Mistral", "https://api.mistral.ai/v1/chat/completions",
             listOf("mistral-medium-latest", "mistral-small-latest"),
@@ -28,7 +32,7 @@ class Provider(
 }
 
 /**
- * OpenAI-kompatibler Client (Groq oder Mistral) mit denselben Handy-Werkzeugen.
+ * OpenAI-kompatibler Client (Groq, GitHub Models oder Mistral) mit denselben Handy-Werkzeugen.
  * Läuft blockierend – immer aus einem Hintergrund-Thread aufrufen.
  * quickFail = bei vollem Minutenlimit nicht warten, sondern sofort den nächsten Anbieter nehmen.
  */
@@ -82,7 +86,7 @@ class GroqClient(
 
                 // Nur die Felder zurückgeben, die die Schnittstelle erwartet
                 val clean = JSONObject().put("role", "assistant")
-                    .put("content", if (msg.isNull("content")) (if (provider === Provider.GROQ) JSONObject.NULL else "") else msg.optString("content"))
+                    .put("content", if (msg.isNull("content")) (if (provider === Provider.MISTRAL) "" else JSONObject.NULL) else msg.optString("content"))
                 if (calls != null && calls.length() > 0) clean.put("tool_calls", calls)
                 messages.put(clean)
 

@@ -8,17 +8,18 @@ Sag „Hey Jarvis“, das Handy wacht auf, und du redest mit Claude. Funktionier
 
 Das Weckwort „Hey Jarvis“ wird komplett offline auf dem Handy erkannt und braucht kein Konto.
 
-**Mistral (empfohlen) – kostenlos, kaum Pausen**
-Mistral hat im Gratis-Plan ein viel höheres Minutenlimit als Groq. Ist ein Mistral-Schlüssel eingetragen, antwortet zuerst Mistral; Groq springt ein, wenn Mistral nicht kann (und umgekehrt).
-1. Auf https://console.mistral.ai anmelden (Handynummer wird zur Bestätigung abgefragt, keine Kreditkarte).
-2. Den kostenlosen Plan **„Experiment“** wählen.
-3. Unter **API Keys** → **Create new key**, Schlüssel kopieren und in Jarvis bei „Mistral API-Key“ einfügen.
-4. Hinweis: Im Gratis-Plan darf Mistral Anfragen zur Verbesserung seiner Modelle nutzen. Abschalten kannst du das in der Mistral-Konsole unter den Datenschutz-Einstellungen.
-
 **Groq – kostenlos**
 1. Auf https://console.groq.com/keys gehen und mit GitHub oder Google anmelden.
 2. **Create API Key** antippen, Namen eingeben und den Schlüssel kopieren (beginnt mit `gsk_`, wird nur einmal angezeigt).
 3. Kostenlos sind ca. 1.000 Anfragen pro Tag.
+
+**GitHub-Token – kostenlos, Ersatz wenn Groq am Limit ist**
+Ist Groqs Minutenlimit voll, antwortet sofort GitHub Models (ca. 15 Anfragen pro Minute, 150 pro Tag) statt einer Pause.
+1. Auf https://github.com/settings/personal-access-tokens/new gehen (mit deinem GitHub-Konto angemeldet).
+2. Name z. B. „Jarvis“, Ablaufdatum wählen, bei **Permissions → Account permissions → Models** auf **Read-only** stellen.
+3. **Generate token**, Token kopieren (beginnt mit `github_pat_`) und in Jarvis bei „GitHub-Token“ einfügen.
+
+**Mistral – optional** (nur falls dein Mistral-Konto API-Zugriff hat)
 
 **Gemini – optional, kostenlos, als Ersatz**
 Falls Groq am Limit ist, übernimmt Gemini, wenn du auch dafür einen Schlüssel einträgst.
