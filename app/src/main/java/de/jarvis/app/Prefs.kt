@@ -16,7 +16,7 @@ class Prefs(context: Context) {
     /** GitHub-Token (Berechtigung „Models: read“) für GitHub Models. */
     var githubKey: String
         get() = sp.getString("github_key", "") ?: ""
-        set(v) = sp.edit().putString("github_key", v.trim()).apply()
+        set(v) = sp.edit().putString("github_key", v.filter { it.isLetterOrDigit() && it.code < 128 || it == '_' }).apply()
 
     /** Mindestens ein KI-Schlüssel eingetragen? */
     val hasAnyKey get() = mistralKey.isNotBlank() || githubKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()

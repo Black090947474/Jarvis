@@ -33,7 +33,7 @@ class Provider(
  * quickFail = bei vollem Minutenlimit nicht warten, sondern sofort den nächsten Anbieter nehmen.
  */
 class AiClient(
-    private val apiKey: String,
+    rawKey: String,
     model: String,
     private val userName: String,
     private val tools: PhoneTools,
@@ -42,6 +42,9 @@ class AiClient(
     private val provider: Provider = Provider.GITHUB,
     private val quickFail: Boolean = false,
 ) : Brain {
+
+    /** Beim Kopieren am Handy rutschen oft Leerzeichen, Zeilenumbrüche oder unsichtbare Zeichen mit hinein. */
+    private val apiKey = rawKey.filter { it.isLetterOrDigit() && it.code < 128 || it == '_' || it == '-' || it == '.' }
 
     /** Sobald ein Bild im Gespräch ist, antwortet ein Bild-Modell. */
     private var vision = false
@@ -108,7 +111,8 @@ class AiClient(
         } catch (e: IOException) {
             rollbackTo(rollback); throw Brain.Unavailable("Ich erreiche das Internet gerade nicht.")
         } catch (e: Exception) {
-            rollbackTo(rollback); throw Brain.Unavailable("Bei ${provider.name} ist etwas schiefgelaufen.")
+            android.util.Log.w("Jarvis", "${provider.name}", e)
+            rollbackTo(rollback); throw Brain.Unavailable("Bei ${provider.name} ist etwas schiefgelaufen (${e.javaClass.simpleName}: ${e.message?.take(80)}).")
         }
     }
 
@@ -174,11 +178,18 @@ class AiClient(
         throw toUnavailable(lastErr ?: ApiException(0, ""))
     }
 
+    private fun detail(e: ApiException): String = try {
+        val o = JSONObject(e.body); (o.optJSONObject("error")?.optString("message") ?: o.optString("message")).take(120)
+    } catch (_: Exception) { e.body.take(120) }
+
     private fun toUnavailable(e: ApiException) = Brain.Unavailable(when (e.code) {
-        401, 403 -> "Mein ${provider.name}-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
+        401, 403 -> if (provider === Provider.GITHUB)
+            "Mein GitHub-Token funktioniert nicht. Er braucht die Berechtigung Models: Read-only. (${detail(e)})"
+            else "Mein ${provider.name}-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
+        413 -> "Die Anfrage war zu lang für ${provider.name}. Sag es bitte kürzer oder starte ein neues Gespräch."
         429 -> "Das kostenlose ${provider.name}-Kontingent ist gerade aufgebraucht. Versuch es etwas später nochmal."
         in 500..599 -> "${provider.name} ist gerade überlastet. Versuch es gleich nochmal."
-        else -> "Bei ${provider.name} ist etwas schiefgelaufen, Fehler ${e.code}."
+        else -> "Bei ${provider.name} ist etwas schiefgelaufen, Fehler ${e.code}: ${detail(e)}"
     })
 
     private var lastPost = 0L
