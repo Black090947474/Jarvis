@@ -27,7 +27,6 @@ import android.widget.Toast
 class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
-    private lateinit var picoInput: EditText
     private lateinit var claudeInput: EditText
     private lateinit var nameInput: EditText
     private lateinit var modelInput: EditText
@@ -52,13 +51,10 @@ class MainActivity : Activity() {
             text = "JARVIS"; textSize = 34f; setTextColor(RED)
             typeface = Typeface.create("sans-serif-black", Typeface.NORMAL); letterSpacing = 0.15f
         })
-        col.addView(label("Sag „Jarvis“ – auch bei gesperrtem Handy.", 15f, MUTED))
+        col.addView(label("Sag „Hey Jarvis“ – auch bei gesperrtem Handy.", 15f, MUTED))
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
-        picoInput = input("Picovoice AccessKey", prefs.picovoiceKey, secret = true)
-        col.addView(picoInput)
-        col.addView(link("Kostenlos holen: console.picovoice.ai", "https://console.picovoice.ai/"))
         claudeInput = input("Claude API-Key (sk-ant-…)", prefs.anthropicKey, secret = true)
         col.addView(claudeInput)
         col.addView(link("Holen unter: console.anthropic.com", "https://console.anthropic.com/settings/keys"))
@@ -146,16 +142,14 @@ class MainActivity : Activity() {
             toggle.postDelayed({ refresh() }, 300)
             return
         }
-        if (prefs.picovoiceKey.isBlank()) { toast("Bitte erst den Picovoice-Schlüssel eintragen"); return }
         if (prefs.anthropicKey.isBlank()) { toast("Bitte erst den Claude-API-Key eintragen"); return }
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
-        toast("Sag einfach „Jarvis“")
+        toast("Sag einfach „Hey Jarvis“")
     }
 
     private fun save() {
-        prefs.picovoiceKey = picoInput.text.toString()
         prefs.anthropicKey = claudeInput.text.toString()
         prefs.userName = nameInput.text.toString()
         prefs.model = modelInput.text.toString()

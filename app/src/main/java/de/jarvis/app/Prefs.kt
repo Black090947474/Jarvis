@@ -6,10 +6,6 @@ import android.content.Context
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("jarvis", Context.MODE_PRIVATE)
 
-    var picovoiceKey: String
-        get() = sp.getString("picovoice_key", "") ?: ""
-        set(v) = sp.edit().putString("picovoice_key", v.trim()).apply()
-
     var anthropicKey: String
         get() = sp.getString("anthropic_key", "") ?: ""
         set(v) = sp.edit().putString("anthropic_key", v.trim()).apply()
@@ -27,9 +23,10 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("listening_enabled", false)
         set(v) = sp.edit().putBoolean("listening_enabled", v).apply()
 
+    /** Ab welcher Sicherheit (0..1) "Hey Jarvis" als erkannt gilt. Kleiner = reagiert leichter. */
     var sensitivity: Float
-        get() = sp.getFloat("sensitivity", 0.6f)
-        set(v) = sp.edit().putFloat("sensitivity", v.coerceIn(0.1f, 0.95f)).apply()
+        get() = sp.getFloat("threshold", 0.5f)
+        set(v) = sp.edit().putFloat("threshold", v.coerceIn(0.1f, 0.95f)).apply()
 
     companion object {
         // Schnell und günstig – ideal für Sprachantworten. Kann in der App geändert werden.

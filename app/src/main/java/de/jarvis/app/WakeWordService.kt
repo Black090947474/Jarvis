@@ -1,8 +1,5 @@
 package de.jarvis.app
 
-import ai.picovoice.porcupine.Porcupine
-import ai.picovoice.porcupine.PorcupineException
-import ai.picovoice.porcupine.PorcupineManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -20,12 +17,12 @@ import android.provider.Settings
 import android.util.Log
 
 /**
- * Läuft dauerhaft im Hintergrund und hört (offline) auf das Wort "Jarvis".
+ * Läuft dauerhaft im Hintergrund und hört (offline) auf "Hey Jarvis".
  * Bei Erkennung wird das Mikrofon freigegeben und der Gesprächsbildschirm geöffnet.
  */
 class WakeWordService : Service() {
 
-    private var porcupine: PorcupineManager? = null
+    private var engine: WakeWordEngine? = null
     private val main = Handler(Looper.getMainLooper())
     private var paused = false
 
@@ -44,7 +41,7 @@ class WakeWordService : Service() {
             return START_NOT_STICKY
         }
         try {
-            goForeground("Sag „Jarvis“, um zu reden")
+            goForeground(READY_TEXT)
         } catch (e: Exception) {
             // Android verbietet z. B. nach einem Neustart, das Mikrofon aus dem Hintergrund zu öffnen
             Log.w(TAG, "Vordergrund-Start nicht erlaubt", e)
@@ -67,32 +64,20 @@ class WakeWordService : Service() {
     // ---------- Wake Word ----------
 
     private fun startListening() {
-        if (porcupine != null) return
-        val prefs = Prefs(this)
-        if (prefs.picovoiceKey.isBlank()) {
-            updateStatus("Picovoice-Schlüssel fehlt – bitte in der App eintragen")
-            return
-        }
         try {
-            porcupine = PorcupineManager.Builder()
-                .setAccessKey(prefs.picovoiceKey)
-                .setKeyword(Porcupine.BuiltInKeyword.JARVIS)
-                .setSensitivity(prefs.sensitivity)
-                .setErrorCallback { e -> Log.e(TAG, "Porcupine-Fehler", e) }
-                .build(applicationContext) { _ -> main.post { onWakeWord() } }
-            porcupine?.start()
-            updateStatus("Sag „Jarvis“, um zu reden")
-        } catch (e: PorcupineException) {
+            val e = engine ?: WakeWordEngine(applicationContext, Prefs(this).sensitivity) {
+                main.post { onWakeWord() }
+            }.also { engine = it }
+            e.start()
+            updateStatus(READY_TEXT)
+        } catch (e: Exception) {
             Log.e(TAG, "Start fehlgeschlagen", e)
-            porcupine = null
-            updateStatus("Fehler: ${e.message ?: "Picovoice-Schlüssel prüfen"}")
+            updateStatus("Fehler beim Starten der Spracherkennung")
         }
     }
 
     private fun stopListening() {
-        try { porcupine?.stop() } catch (_: PorcupineException) {}
-        porcupine?.delete()
-        porcupine = null
+        engine?.stop()
     }
 
     /** Vom Gesprächsbildschirm aufgerufen: Mikrofon wird gleich anderweitig gebraucht. */
@@ -187,7 +172,8 @@ class WakeWordService : Service() {
     }
 
     override fun onDestroy() {
-        stopListening()
+        engine?.close()
+        engine = null
         main.removeCallbacksAndMessages(null)
         if (instance === this) instance = null
         super.onDestroy()
@@ -196,6 +182,7 @@ class WakeWordService : Service() {
     companion object {
         private const val TAG = "JarvisWake"
         const val ACTION_STOP = "de.jarvis.app.STOP"
+        const val READY_TEXT = "Sag „Hey Jarvis“, um zu reden"
         const val CH_STATUS = "status"
         const val CH_WAKE = "wake"
         const val NOTIF_STATUS = 1
