@@ -22,7 +22,10 @@ class GroqClient(
     private val messages = JSONArray()  // Verlauf ohne System-Nachricht
     private var webSearch = true
 
+    private var step: (String) -> Unit = {}
+
     override fun ask(userText: String, onStep: (String) -> Unit): String {
+        step = onStep
         trimHistory()
         val rollback = messages.length()
         messages.put(JSONObject().put("role", "user").put("content", userText))
@@ -95,7 +98,7 @@ class GroqClient(
      */
     private fun request(): JSONObject {
         var lastErr: ApiException? = null
-        for (attempt in 0..1) {
+        for (attempt in 0..3) {
             var waitSec = 0
             var i = 0
             while (i < models.size) {
@@ -106,13 +109,18 @@ class GroqClient(
                     when {
                         // Ein 400er kann von der eingebauten Websuche kommen: einmal ohne sie probieren
                         e.code == 400 && webSearch -> { webSearch = false; continue }
-                        e.code == 429 -> { waitSec = maxOf(waitSec, e.retryAfter); i++ }
+                        e.code == 429 -> { waitSec = if (waitSec == 0) e.retryAfter else minOf(waitSec, e.retryAfter); i++ }
                         e.code == 404 || (e.code == 400 && e.body.contains("model", true)) -> models.removeAt(i)
                         else -> throw toUnavailable(e)
                     }
                 }
             }
-            if (attempt == 0 && lastErr?.code == 429 && waitSec in 1..20) Thread.sleep(waitSec * 1000L) else break
+            // Alle Modelle kurz am Minutenlimit: warten statt aufgeben
+            if (lastErr?.code == 429 && attempt < 3) {
+                val w = waitSec.coerceIn(3, 30)
+                step("Kurze Pause, Gratis-Limit … ($w s)")
+                Thread.sleep(w * 1000L)
+            } else break
         }
         throw toUnavailable(lastErr ?: ApiException(0, ""))
     }
@@ -126,13 +134,29 @@ class GroqClient(
 
     private fun post(model: String): JSONObject {
         val all = JSONArray().put(JSONObject().put("role", "system").put("content", Persona.systemPrompt(userName, memory)))
-        for (i in 0 until messages.length()) all.put(messages.get(i))
+        // Ältere Werkzeug-Ergebnisse (v. a. Bildschirminhalte) kürzen: spart viele Tokens,
+        // damit das kostenlose Minutenlimit bei längeren Aufgaben nicht sofort voll ist.
+        var toolSeen = 0
+        val keep = BooleanArray(messages.length())
+        for (i in messages.length() - 1 downTo 0) {
+            if (messages.getJSONObject(i).optString("role") == "tool") { toolSeen++; keep[i] = toolSeen <= 2 }
+            else keep[i] = true
+        }
+        for (i in 0 until messages.length()) {
+            val m = messages.getJSONObject(i)
+            if (!keep[i]) {
+                val c = m.optString("content")
+                all.put(JSONObject(m.toString()).put("content",
+                    if (c.length > 160) c.take(140) + " … [älterer Inhalt gekürzt]" else c))
+            } else all.put(m)
+        }
         val body = JSONObject()
             .put("model", model)
             .put("messages", all)
             .put("tools", toolList())
             .put("tool_choice", "auto")
             .put("max_completion_tokens", 1024)
+            .apply { if (model.startsWith("openai/gpt-oss")) put("reasoning_effort", "low") }
 
         val conn = (URL("https://api.groq.com/openai/v1/chat/completions").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -160,7 +184,7 @@ class GroqClient(
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-oss-120b"
         private val FALLBACK_MODELS = listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b")
-        private const val MAX_ROUNDS = 8
+        private const val MAX_ROUNDS = 16
         private const val MAX_MESSAGES = 30
     }
 }

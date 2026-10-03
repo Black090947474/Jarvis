@@ -151,7 +151,7 @@ class ClaudeClient(
         is ApiException -> when (e.code) {
             401 -> "Mein API-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
             400 -> if (e.body.contains("credit", ignoreCase = true))
-                "Dein Anthropic-Guthaben ist leer. Bitte lade es in der Console auf."
+                "Claude meldet, dass das Anthropic-Guthaben nicht reicht."
             else "Die Anfrage wurde abgelehnt. Vielleicht stimmt der Modellname nicht."
             404 -> "Das eingestellte Modell gibt es nicht. Bitte prüf den Modellnamen."
             429 -> "Ich bekomme gerade zu viele Anfragen. Versuch es gleich nochmal."

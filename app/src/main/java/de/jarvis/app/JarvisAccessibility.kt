@@ -51,7 +51,9 @@ class JarvisAccessibility : AccessibilityService() {
                 n.isClickable || clickableParent(n) != null -> " (antippbar)"
                 else -> ""
             }
-            val line = "[$i] $label$kind\n"
+            val name = label.ifBlank { idName(n)?.let { "„$it“" } ?: "Knopf ohne Namen" } +
+                if (label.isBlank()) " (${where(n)})" else ""
+            val line = "[$i] $name$kind\n"
             if (sb.length + line.length > maxChars) { sb.append("… (gekürzt)\n"); return sb.toString() }
             sb.append(line)
         }
@@ -61,7 +63,8 @@ class JarvisAccessibility : AccessibilityService() {
 
     private fun collect(n: AccessibilityNodeInfo?, out: MutableList<AccessibilityNodeInfo>, depth: Int) {
         if (n == null || depth > 40 || out.size >= 80) return
-        if (n.isVisibleToUser && (label(n).isNotBlank() || n.isEditable)) out += n
+        val unnamedButton = n.isClickable && label(n).isBlank() && !hasLabeledChild(n, 0)
+        if (n.isVisibleToUser && (label(n).isNotBlank() || n.isEditable || unnamedButton)) out += n
         for (i in 0 until n.childCount) collect(n.getChild(i), out, depth + 1)
     }
 
@@ -71,6 +74,27 @@ class JarvisAccessibility : AccessibilityService() {
         val h = if (Build.VERSION.SDK_INT >= 26) n.hintText?.toString()?.trim().orEmpty() else ""
         return listOf(t, d.takeIf { it != t }.orEmpty(), if (t.isEmpty()) h else "")
             .filter { it.isNotEmpty() }.joinToString(" – ").replace('\n', ' ').take(120)
+    }
+
+    private fun hasLabeledChild(n: AccessibilityNodeInfo, depth: Int): Boolean {
+        if (depth > 4) return false
+        for (i in 0 until n.childCount) {
+            val c = n.getChild(i) ?: continue
+            if (label(c).isNotBlank() || hasLabeledChild(c, depth + 1)) return true
+        }
+        return false
+    }
+
+    private fun idName(n: AccessibilityNodeInfo): String? =
+        n.viewIdResourceName?.substringAfter(":id/")?.replace('_', ' ')?.takeIf { it.isNotBlank() }
+
+    /** Grobe Lage auf dem Bildschirm, z. B. "unten Mitte". */
+    private fun where(n: AccessibilityNodeInfo): String {
+        val r = Rect().also { n.getBoundsInScreen(it) }
+        val dm = resources.displayMetrics
+        val v = when { r.centerY() < dm.heightPixels / 3 -> "oben"; r.centerY() > dm.heightPixels * 2 / 3 -> "unten"; else -> "Mitte" }
+        val h = when { r.centerX() < dm.widthPixels / 3 -> "links"; r.centerX() > dm.widthPixels * 2 / 3 -> "rechts"; else -> "Mitte" }
+        return if (v == h) "Mitte" else "$v $h"
     }
 
     private fun appName(pkg: CharSequence?): String = try {
