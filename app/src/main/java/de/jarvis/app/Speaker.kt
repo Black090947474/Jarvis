@@ -77,13 +77,15 @@ class Speaker(
             .sortedWith(compareBy({ it.isNetworkConnectionRequired }, { it.name }))
     } catch (_: Exception) { emptyList() }
 
-    /** Bevorzugt eine männliche Stimme, falls das Handy das verrät; sonst die Standardstimme. */
+    /**
+     * Wählt die natürlichste Stimme: Online-Stimmen (neuronale Google-Stimmen) klingen deutlich
+     * menschlicher als die Offline-Stimmen; männlich bevorzugt, falls das Handy das verrät.
+     */
     private fun pickDefault(voices: List<Voice>): Voice? {
-        fun isMale(v: Voice) = v.name.lowercase().let { (it.contains("male") && !it.contains("female")) || it.contains("#male") }
-        return voices.firstOrNull { isMale(it) && !it.isNetworkConnectionRequired }
-            ?: voices.firstOrNull { isMale(it) }
-            ?: voices.firstOrNull { it.name.contains("de-de-x-deg") }  // Google: männlich
-            ?: voices.firstOrNull { it.name.contains("de-de-x-deb") }
+        fun isMale(v: Voice) = v.name.lowercase().let { (it.contains("male") && !it.contains("female")) || it.contains("de-de-x-deg") }
+        return voices.sortedWith(compareByDescending<Voice> { isMale(it) }
+            .thenByDescending { it.quality }
+            .thenByDescending { it.isNetworkConnectionRequired }).firstOrNull()
     }
 
     fun preview(voice: Voice?, text: String) {

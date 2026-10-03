@@ -81,39 +81,129 @@ class JarvisActivity : Activity() {
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window.statusBarColor = Color.BLACK
-        window.navigationBarColor = Color.BLACK
     }
+
+    private class Theme(val bg: Int, val bg2: Int, val fg: Int, val muted: Int, val accent: Int, val center: Boolean)
+
+    private fun theme(style: CoreView.Style) = when (style) {
+        CoreView.Style.GLUT -> Theme(Color.rgb(8, 6, 7), Color.rgb(8, 6, 7), Color.rgb(244, 238, 234),
+            Color.rgb(156, 138, 132), Color.rgb(232, 69, 60), true)
+        CoreView.Style.AURORA -> Theme(Color.rgb(7, 10, 20), Color.rgb(7, 10, 20), Color.rgb(234, 240, 255),
+            Color.rgb(131, 144, 176), Color.rgb(61, 224, 208), false)
+        CoreView.Style.LINIE -> Theme(Color.BLACK, Color.BLACK, Color.WHITE,
+            Color.rgb(122, 122, 122), Color.rgb(200, 200, 200), true)
+        CoreView.Style.GLAS -> Theme(Color.rgb(30, 36, 48), Color.rgb(11, 13, 18), Color.rgb(241, 243, 247),
+            Color.rgb(140, 147, 163), Color.rgb(143, 176, 255), false)
+    }
+
+    private lateinit var status: TextView
+    private var clock: TextView? = null
 
     private fun buildUi() {
         val dp = resources.displayMetrics.density
-        core = CoreView(this)
-        youText = TextView(this).apply {
-            setTextColor(Color.rgb(170, 170, 180)); textSize = 16f; gravity = Gravity.CENTER
+        fun px(v: Int) = (v * dp).toInt()
+        val style = CoreView.styleFrom(Prefs(this).design)
+        val th = theme(style)
+        val light = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+        val thin = android.graphics.Typeface.create("sans-serif-thin", android.graphics.Typeface.NORMAL)
+        val align = if (th.center) Gravity.CENTER_HORIZONTAL else Gravity.START
+
+        window.statusBarColor = th.bg
+        window.navigationBarColor = th.bg2
+
+        core = CoreView(this, style)
+        status = TextView(this).apply {
+            textSize = 12f; letterSpacing = 0.22f; setTextColor(th.accent); gravity = align
         }
+        core.onModeChanged = { m -> status.text = statusText(m) }
+        status.text = statusText(CoreView.Mode.IDLE)
+        youText = TextView(this).apply { setTextColor(th.muted); textSize = 15f; gravity = align }
         jarvisText = TextView(this).apply {
-            setTextColor(Color.WHITE); textSize = 19f; gravity = Gravity.CENTER
-            setLineSpacing(0f, 1.15f)
+            setTextColor(th.fg); textSize = if (style == CoreView.Style.GLAS) 20f else 23f
+            typeface = light; gravity = align; setLineSpacing(0f, 1.25f)
         }
         hint = TextView(this).apply {
-            setTextColor(Color.rgb(110, 110, 120)); textSize = 13f; gravity = Gravity.CENTER
-            text = "Tippen = nochmal zuhören · Zurück = beenden"
+            setTextColor(Color.argb(150, Color.red(th.muted), Color.green(th.muted), Color.blue(th.muted)))
+            textSize = 12f; gravity = align
+            text = "Tippen = nochmal zuhören · „Danke“ = beenden"
         }
-        val texts = LinearLayout(this).apply {
+        fun brand(spacing: Float, size: Float) = TextView(this).apply {
+            text = "JARVIS"; textSize = size; letterSpacing = spacing; typeface = thin
+            setTextColor(th.muted); gravity = Gravity.CENTER_HORIZONTAL
+        }
+        fun lp(top: Int = 0) = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(top) }
+
+        val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding((24 * dp).toInt(), 0, (24 * dp).toInt(), (32 * dp).toInt())
-            addView(youText)
-            addView(jarvisText, LinearLayout.LayoutParams(-1, -2).apply { topMargin = (12 * dp).toInt() })
-            addView(hint, LinearLayout.LayoutParams(-1, -2).apply { topMargin = (24 * dp).toInt() })
-        }
-        val root = FrameLayout(this).apply {
-            setBackgroundColor(Color.rgb(5, 5, 9))
-            addView(core, FrameLayout.LayoutParams(-1, (resources.displayMetrics.heightPixels * 0.55f).toInt(),
-                Gravity.TOP))
-            addView(texts, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
+            setPadding(px(30), px(52), px(30), px(36))
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(th.bg, th.bg2))
             setOnClickListener { onTap() }
         }
+
+        // Kopfzeile
+        when (style) {
+            CoreView.Style.GLUT -> root.addView(brand(0.42f, 13f), lp())
+            CoreView.Style.AURORA -> {
+                val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                row.addView(TextView(this).apply {
+                    text = "JARVIS"; textSize = 15f; letterSpacing = 0.3f; setTextColor(th.fg)
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                clock = TextView(this).apply { textSize = 13f; setTextColor(th.muted) }
+                row.addView(clock)
+                root.addView(row, lp())
+            }
+            CoreView.Style.GLAS -> {
+                clock = TextView(this).apply {
+                    textSize = 46f; typeface = light; setTextColor(th.fg); gravity = Gravity.CENTER_HORIZONTAL
+                }
+                root.addView(clock, lp())
+                root.addView(TextView(this).apply {
+                    text = java.text.SimpleDateFormat("EEEE, d. MMMM", Locale.GERMANY).format(java.util.Date())
+                    textSize = 13f; setTextColor(th.muted); gravity = Gravity.CENTER_HORIZONTAL
+                }, lp(2))
+            }
+            CoreView.Style.LINIE -> {}
+        }
+
+        // Kern
+        root.addView(core, LinearLayout.LayoutParams(-1, 0, 1f))
+        if (style == CoreView.Style.LINIE) root.addView(brand(0.6f, 15f), lp(0))
+
+        // Text-Bereich
+        val texts = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            if (style == CoreView.Style.GLAS) {
+                setPadding(px(22), px(20), px(22), px(18))
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 28 * dp
+                    setColor(Color.argb(20, 255, 255, 255))
+                    setStroke(px(1), Color.argb(32, 255, 255, 255))
+                }
+            }
+        }
+        texts.addView(status, lp())
+        texts.addView(youText, lp(12))
+        texts.addView(jarvisText, lp(10))
+        texts.addView(hint, lp(22))
+        root.addView(texts, lp(16))
+
         setContentView(root)
+        tickClock()
+    }
+
+    private fun tickClock() {
+        val c = clock ?: return
+        c.text = java.text.SimpleDateFormat("HH:mm", Locale.GERMANY).format(java.util.Date())
+        main.postDelayed({ if (!isFinishing) tickClock() }, 15_000)
+    }
+
+    private fun statusText(m: CoreView.Mode) = when (m) {
+        CoreView.Mode.IDLE -> "BEREIT"
+        CoreView.Mode.LISTENING -> "ICH HÖRE ZU"
+        CoreView.Mode.THINKING -> "DENKE NACH"
+        CoreView.Mode.SPEAKING -> "SPRICHT"
     }
 
     // ---------- Sprachausgabe ----------

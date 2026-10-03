@@ -1,99 +1,163 @@
 package de.jarvis.app
 
-import android.animation.ValueAnimator
 import android.content.Context
-import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
+import android.os.SystemClock
 import android.view.View
-import android.view.animation.LinearInterpolator
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
-/** Der leuchtende, pulsierende "Kern" von Jarvis. */
-class CoreView(context: Context) : View(context) {
+/** Die animierte Mitte des Jarvis-Bildschirms – in vier Designs. */
+class CoreView(context: Context, val style: Style) : View(context) {
 
+    enum class Style { GLUT, AURORA, LINIE, GLAS }
     enum class Mode { IDLE, LISTENING, THINKING, SPEAKING }
 
-    var mode: Mode = Mode.IDLE
-        set(value) { field = value; invalidate() }
+    var onModeChanged: ((Mode) -> Unit)? = null
 
-    /** Lautstärke vom Mikrofon (0..1), lässt den Kern beim Zuhören mitpulsieren. */
+    var mode: Mode = Mode.IDLE
+        set(value) {
+            if (field != value) { field = value; onModeChanged?.invoke(value) }
+            invalidate()
+        }
+
+    /** Lautstärke vom Mikrofon (0..1), lässt den Kern beim Zuhören mitgehen. */
     var level: Float = 0f
         set(value) { field = field * 0.6f + value.coerceIn(0f, 1f) * 0.4f }
 
-    private var t = 0f
-    private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = 1000
-        repeatCount = ValueAnimator.INFINITE
-        interpolator = LinearInterpolator()
-        addUpdateListener { t += 0.016f; invalidate() }
-    }
-
-    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        maskFilter = BlurMaskFilter(30f, BlurMaskFilter.Blur.NORMAL)
-    }
+    private val dp = resources.displayMetrics.density
+    private val start = SystemClock.uptimeMillis()
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val arc = RectF()
-
-    init { setLayerType(LAYER_TYPE_SOFTWARE, null) } // nötig für den Glow-Effekt
-
-    override fun onAttachedToWindow() { super.onAttachedToWindow(); animator.start() }
-    override fun onDetachedFromWindow() { animator.cancel(); super.onDetachedFromWindow() }
-
-    private fun color(): Int = when (mode) {
-        Mode.IDLE -> Color.rgb(140, 30, 40)
-        Mode.LISTENING -> Color.rgb(255, 45, 60)
-        Mode.THINKING -> Color.rgb(255, 140, 40)
-        Mode.SPEAKING -> Color.rgb(60, 200, 255)
-    }
+    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val clip = Path()
+    private val rect = RectF()
 
     override fun onDraw(canvas: Canvas) {
+        val t = (SystemClock.uptimeMillis() - start) / 1000f
         val cx = width / 2f
         val cy = height / 2f
-        val base = min(width, height) * 0.30f
-        val c = color()
-
-        val pulse = when (mode) {
-            Mode.IDLE -> 0.03f * sin(t * 1.5f)
-            Mode.LISTENING -> 0.04f * sin(t * 4f) + level * 0.25f
-            Mode.THINKING -> 0.02f * sin(t * 8f)
-            Mode.SPEAKING -> 0.08f * sin(t * 9f) * sin(t * 2.3f)
+        val size = min(width, height).toFloat()
+        when (style) {
+            Style.GLUT -> drawGlut(canvas, t, cx, cy, size)
+            Style.AURORA -> drawAurora(canvas, t, cx, cy, size)
+            Style.LINIE -> drawLinie(canvas, t, cx, cy, size)
+            Style.GLAS -> drawGlas(canvas, t, cx, cy, size)
         }
-        val r = base * (1f + pulse)
+        postInvalidateOnAnimation()
+    }
 
-        // Äußerer Glow
-        glow.color = c; glow.alpha = 120; glow.strokeWidth = 24f
-        canvas.drawCircle(cx, cy, r * 1.15f, glow)
+    /** Wie stark der Kern gerade "atmet". */
+    private fun pulse(t: Float): Float = when (mode) {
+        Mode.IDLE -> 0.03f * sin(t * 1.9f)
+        Mode.LISTENING -> 0.03f * sin(t * 2.4f) + level * 0.18f
+        Mode.THINKING -> 0.025f * sin(t * 7f)
+        Mode.SPEAKING -> 0.07f * abs(sin(t * 6.5f)) * (0.6f + 0.4f * sin(t * 1.7f))
+    }
 
-        // Ringe
-        ring.color = c
-        for (i in 0..3) {
-            ring.alpha = 220 - i * 50
-            ring.strokeWidth = (6 - i).toFloat()
-            canvas.drawCircle(cx, cy, r * (1.15f - i * 0.17f), ring)
+    // ---------- 1 · Glut ----------
+
+    private fun drawGlut(c: Canvas, t: Float, cx: Float, cy: Float, size: Float) {
+        val accent = when (mode) {
+            Mode.THINKING -> Color.rgb(240, 138, 60)
+            Mode.IDLE -> Color.rgb(160, 40, 36)
+            else -> Color.rgb(232, 69, 60)
         }
+        val r = size * 0.19f * (1f + pulse(t))
+        val haloR = r * 2.1f * (1f + 0.08f * sin(t * 1.9f))
+        fill.shader = RadialGradient(cx, cy, haloR, intArrayOf(withAlpha(accent, 110), Color.TRANSPARENT),
+            floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, haloR, fill)
+        fill.shader = RadialGradient(cx - r * 0.24f, cy - r * 0.36f, r * 1.35f,
+            intArrayOf(Color.rgb(255, 233, 220), accent, Color.rgb(74, 13, 18)),
+            floatArrayOf(0f, 0.42f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, r, fill)
+        fill.shader = null
+    }
 
-        // Rotierende Bögen (beim Nachdenken schneller)
-        val speed = if (mode == Mode.THINKING) 400f else 60f
-        ring.alpha = 255; ring.strokeWidth = 5f
-        for (i in 0..2) {
-            val rr = r * (1.32f + i * 0.08f)
-            arc.set(cx - rr, cy - rr, cx + rr, cy + rr)
-            val start = (t * speed * (if (i % 2 == 0) 1 else -1) + i * 120f) % 360f
-            canvas.drawArc(arc, start, 50f + i * 15f, false, ring)
+    // ---------- 2 · Aurora ----------
+
+    private fun drawAurora(c: Canvas, t: Float, cx: Float, cy: Float, size: Float) {
+        val r = size * 0.27f * (1f + pulse(t) * 0.7f)
+        val speed = when (mode) { Mode.THINKING -> 2.6f; Mode.SPEAKING -> 1.6f; else -> 1f }
+        val tt = t * speed
+        c.save()
+        clip.reset(); clip.addCircle(cx, cy, r, Path.Direction.CW)
+        c.clipPath(clip)
+        blob(c, cx - r * 0.25f + r * 0.22f * sin(tt * 1.05f), cy - r * 0.15f + r * 0.18f * cos(tt * 0.9f),
+            r * 0.95f, Color.rgb(61, 224, 208), 230)
+        blob(c, cx + r * 0.28f + r * 0.2f * cos(tt * 0.85f), cy + r * 0.05f + r * 0.22f * sin(tt * 1.1f),
+            r * 0.95f, Color.rgb(106, 91, 255), 240)
+        blob(c, cx + r * 0.05f * sin(tt * 1.3f), cy + r * 0.35f + r * 0.2f * cos(tt * 1.2f),
+            r * 0.8f, Color.rgb(255, 111, 174), 170)
+        c.restore()
+        // feiner Rand
+        stroke.color = withAlpha(Color.WHITE, 26); stroke.strokeWidth = 1f * dp
+        c.drawCircle(cx, cy, r, stroke)
+    }
+
+    private fun blob(c: Canvas, x: Float, y: Float, r: Float, color: Int, alpha: Int) {
+        fill.shader = RadialGradient(x, y, r, intArrayOf(withAlpha(color, alpha), withAlpha(color, 0)),
+            floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(x, y, r, fill)
+        fill.shader = null
+    }
+
+    // ---------- 3 · Linie ----------
+
+    private val barHeights = floatArrayOf(34f, 54f, 70f, 48f, 30f)
+
+    private fun drawLinie(c: Canvas, t: Float, cx: Float, cy: Float, size: Float) {
+        val r = size * 0.25f * (1f + 0.02f * sin(t * 2.4f) + if (mode == Mode.LISTENING) level * 0.06f else 0f)
+        stroke.color = Color.WHITE
+        stroke.alpha = if (mode == Mode.IDLE) 150 else 235
+        stroke.strokeWidth = 1.5f * dp
+        c.drawCircle(cx, cy, r, stroke)
+        fill.color = Color.WHITE
+        val bw = 3f * dp
+        val gap = 5f * dp
+        val total = barHeights.size * bw + (barHeights.size - 1) * gap
+        for (i in barHeights.indices) {
+            val f = when (mode) {
+                Mode.IDLE -> 0.22f
+                Mode.LISTENING -> 0.22f + (level * 0.78f) * (0.6f + 0.4f * abs(sin(t * 9f + i)))
+                Mode.THINKING -> 0.22f + 0.3f * (0.5f + 0.5f * sin(t * 6f - i * 0.9f))
+                Mode.SPEAKING -> 0.25f + 0.75f * abs(sin(t * 6.5f + i * 0.7f))
+            }
+            val h = barHeights[i] * dp * f
+            val x = cx - total / 2 + i * (bw + gap)
+            rect.set(x, cy - h / 2, x + bw, cy + h / 2)
+            c.drawRoundRect(rect, bw / 2, bw / 2, fill)
         }
+    }
 
-        // Leuchtender Kern
-        val coreR = r * 0.38f
-        fill.shader = RadialGradient(cx, cy, coreR, intArrayOf(Color.WHITE, c, Color.TRANSPARENT),
-            floatArrayOf(0f, 0.45f, 1f), Shader.TileMode.CLAMP)
-        canvas.drawCircle(cx, cy, coreR, fill)
+    // ---------- 4 · Glas ----------
+
+    private fun drawGlas(c: Canvas, t: Float, cx: Float, cy0: Float, size: Float) {
+        val cy = cy0 + 10f * dp * sin(t * 1.6f)
+        val r = size * 0.2f * (1f + pulse(t))
+        val glowR = r * 2.2f
+        fill.shader = RadialGradient(cx, cy + r * 0.5f, glowR,
+            intArrayOf(Color.argb(if (mode == Mode.THINKING) 150 else 110, 77, 124, 255), Color.TRANSPARENT),
+            floatArrayOf(0f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy + r * 0.5f, glowR, fill)
+        fill.shader = RadialGradient(cx - r * 0.3f, cy - r * 0.4f, r * 1.5f,
+            intArrayOf(Color.WHITE, Color.rgb(185, 212, 255), Color.rgb(77, 124, 255), Color.rgb(26, 42, 102)),
+            floatArrayOf(0f, 0.3f, 0.7f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, r, fill)
+        fill.shader = null
+    }
+
+    private fun withAlpha(color: Int, a: Int) = Color.argb(a, Color.red(color), Color.green(color), Color.blue(color))
+
+    companion object {
+        fun styleFrom(name: String): Style = Style.entries.firstOrNull { it.name == name } ?: Style.GLUT
     }
 }

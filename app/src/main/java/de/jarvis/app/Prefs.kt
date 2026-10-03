@@ -37,18 +37,23 @@ class Prefs(context: Context) {
 
     /** Tonhöhe: 1.0 = normal, kleiner = tiefer. */
     var voicePitch: Float
-        get() = sp.getFloat("voice_pitch", 0.82f)
-        set(v) = sp.edit().putFloat("voice_pitch", v.coerceIn(0.5f, 1.5f)).apply()
+        get() = sp.getFloat("voice_pitch2", 1.0f)
+        set(v) = sp.edit().putFloat("voice_pitch2", v.coerceIn(0.5f, 1.5f)).apply()
 
     /** Tempo: 1.0 = normal. */
     var voiceRate: Float
-        get() = sp.getFloat("voice_rate", 0.95f)
-        set(v) = sp.edit().putFloat("voice_rate", v.coerceIn(0.6f, 1.6f)).apply()
+        get() = sp.getFloat("voice_rate2", 1.0f)
+        set(v) = sp.edit().putFloat("voice_rate2", v.coerceIn(0.6f, 1.6f)).apply()
 
     /** Leichter Raumhall für den KI-Sound. */
     var voiceEffect: Boolean
-        get() = sp.getBoolean("voice_effect", true)
-        set(v) = sp.edit().putBoolean("voice_effect", v).apply()
+        get() = sp.getBoolean("voice_effect2", false)
+        set(v) = sp.edit().putBoolean("voice_effect2", v).apply()
+
+    /** Design des Gesprächsbildschirms: GLUT, AURORA, LINIE oder GLAS. */
+    var design: String
+        get() = sp.getString("design", "GLUT") ?: "GLUT"
+        set(v) = sp.edit().putString("design", v).apply()
 
     /** Ob der Wake-Word-Dienst laufen soll (merkt sich den Schalter). */
     var listeningEnabled: Boolean

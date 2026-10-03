@@ -107,6 +107,28 @@ class MainActivity : Activity() {
     // ---------- Stimme ----------
 
     private var speaker: Speaker? = null
+    private lateinit var designButton: Button
+
+    private val designs = listOf(
+        "GLUT" to "Glut – rote, atmende Kugel",
+        "AURORA" to "Aurora – bunte Farbwolken",
+        "LINIE" to "Linie – weißer Ring, minimal",
+        "GLAS" to "Glas – Uhrzeit, blaue Kugel, Milchglas")
+
+    private fun designLabel() = "Design: " + (designs.firstOrNull { it.first == prefs.design }?.second ?: designs[0].second)
+
+    private fun chooseDesign() {
+        val current = designs.indexOfFirst { it.first == prefs.design }.coerceAtLeast(0)
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Design wählen")
+            .setSingleChoiceItems(designs.map { it.second }.toTypedArray(), current) { d, which ->
+                prefs.design = designs[which].first
+                designButton.text = designLabel()
+                d.dismiss()
+                toast("Probier es aus: „Jetzt mit Jarvis reden“")
+            }
+            .show()
+    }
     private lateinit var voiceButton: Button
 
     private fun buildVoiceSection(col: LinearLayout) {
@@ -126,6 +148,10 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) }
         })
         col.addView(button("Probe hören", filled = false) { previewVoice() })
+
+        col.addView(section("Design"))
+        designButton = button(designLabel(), filled = false) { chooseDesign() }
+        col.addView(designButton)
     }
 
     private fun voiceLabel(v: android.speech.tts.Voice, i: Int): String {
@@ -141,7 +167,7 @@ class MainActivity : Activity() {
     private fun updateVoiceButton() {
         val voices = speaker?.germanVoices().orEmpty()
         val i = voices.indexOfFirst { it.name == prefs.voiceName }
-        voiceButton.text = if (i >= 0) "Stimme: ${voiceLabel(voices[i], i).substringBefore("\n")}" else "Stimme: automatisch (tief, männlich)"
+        voiceButton.text = if (i >= 0) "Stimme: ${voiceLabel(voices[i], i).substringBefore("\n")}" else "Stimme: automatisch (natürlichste)"
     }
 
     private fun chooseVoice() {
@@ -151,7 +177,7 @@ class MainActivity : Activity() {
             toast("Keine deutschen Stimmen gefunden. Installier die Google-Sprachausgabe.")
             return
         }
-        val labels = (listOf("Automatisch (tief, männlich)") + voices.mapIndexed { i, v -> voiceLabel(v, i) }).toTypedArray()
+        val labels = (listOf("Automatisch (natürlichste)") + voices.mapIndexed { i, v -> voiceLabel(v, i) }).toTypedArray()
         val current = voices.indexOfFirst { it.name == prefs.voiceName } + 1
         android.app.AlertDialog.Builder(this)
             .setTitle("Stimme wählen – antippen zum Anhören")
