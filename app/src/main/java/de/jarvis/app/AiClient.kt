@@ -22,7 +22,8 @@ class Provider(
             listOf("qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct"), "max_completion_tokens")
         // NVIDIA NIM (build.nvidia.com): kostenlos ohne Kreditkarte, ca. 40 Anfragen pro Minute, kein Token-Minutenlimit wie bei Groq
         val NVIDIA = Provider("NVIDIA", "https://integrate.api.nvidia.com/v1/chat/completions",
-            listOf("openai/gpt-oss-120b", "meta/llama-3.3-70b-instruct", "openai/gpt-oss-20b"),
+            listOf("meta/llama-3.3-70b-instruct", "qwen/qwen3-next-80b-a3b-instruct", "moonshotai/kimi-k2-instruct",
+                "openai/gpt-oss-120b", "deepseek-ai/deepseek-v4-flash", "openai/gpt-oss-20b"),
             listOf("meta/llama-4-maverick-17b-128e-instruct", "meta/llama-3.2-90b-vision-instruct"), "max_tokens")
         // Mistral „Experiment“: kostenlos, sehr hohes Minutenlimit (ca. 1 Anfrage pro Sekunde)
         val MISTRAL = Provider("Mistral", "https://api.mistral.ai/v1/chat/completions",
@@ -167,7 +168,8 @@ class AiClient(
                         e.code == 400 && webSearch -> { webSearch = false; continue }
                         e.code == 429 && quickFail && i == list.size - 1 -> throw toUnavailable(e)
                         e.code == 429 -> { waitSec = if (waitSec == 0) e.retryAfter else minOf(waitSec, e.retryAfter); i++ }
-                        e.code == 404 || (e.code == 400 && e.body.contains("model", true)) -> list.removeAt(i)
+                        // Modell gibt es (dort) nicht mehr: 404/410 → nächstes Modell probieren
+                        e.code == 404 || e.code == 410 || (e.code in listOf(400, 422) && e.body.contains("model", true)) -> list.removeAt(i)
                         else -> throw toUnavailable(e)
                     }
                 }
@@ -184,7 +186,7 @@ class AiClient(
 
     private fun detail(e: ApiException): String = try {
         val o = JSONObject(e.body); (o.optJSONObject("error")?.optString("message") ?: o.optString("message")).take(120)
-    } catch (_: Exception) { e.body.take(120) }
+    } catch (_: Exception) { e.body.take(120) }.ifBlank { "keine Details" }
 
     private fun toUnavailable(e: ApiException) = Brain.Unavailable(when (e.code) {
         401, 403 -> "Mein ${provider.name}-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
