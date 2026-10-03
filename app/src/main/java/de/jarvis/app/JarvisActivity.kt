@@ -34,7 +34,7 @@ class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var recognizer: SpeechRecognizer? = null
-    private var claude: ClaudeClient? = null
+    private var claude: BrainRouter? = null
     private var tools: PhoneTools? = null
     private val main = Handler(Looper.getMainLooper())
 
@@ -51,11 +51,17 @@ class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
         buildUi()
 
         val prefs = Prefs(this)
-        if (prefs.anthropicKey.isBlank()) {
-            jarvisText.text = "Mir fehlt noch der Claude-API-Schlüssel. Trag ihn in der Jarvis-App ein."
+        if (prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) {
+            jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Gemini-Schlüssel in der Jarvis-App ein."
         } else {
-            tools = PhoneTools(this)
-            claude = ClaudeClient(prefs.anthropicKey, prefs.model, prefs.userName, tools!!, Memory(this))
+            val t = PhoneTools(this).also { tools = it }
+            val mem = Memory(this)
+            // Gemini zuerst (kostenlos), Claude springt ein, falls Gemini nicht kann
+            val gemini = prefs.geminiKey.takeIf { it.isNotBlank() }
+                ?.let { GeminiClient(it, prefs.geminiModel, prefs.userName, t, mem) }
+            val claudeBrain = prefs.anthropicKey.takeIf { it.isNotBlank() }
+                ?.let { ClaudeClient(it, prefs.model, prefs.userName, t, mem) }
+            claude = BrainRouter(gemini ?: claudeBrain, if (gemini != null) claudeBrain else null)
         }
         tts = TextToSpeech(this, this)
         // Sofort zuhören: "Jarvis, stell den Wecker auf 7" funktioniert in einem Satz.

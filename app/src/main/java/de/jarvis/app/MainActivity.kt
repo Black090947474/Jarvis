@@ -27,9 +27,9 @@ import android.widget.Toast
 class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
+    private lateinit var geminiInput: EditText
     private lateinit var claudeInput: EditText
     private lateinit var nameInput: EditText
-    private lateinit var modelInput: EditText
     private lateinit var toggle: Button
     private lateinit var checklist: LinearLayout
     private lateinit var memoryList: LinearLayout
@@ -55,13 +55,14 @@ class MainActivity : Activity() {
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
-        claudeInput = input("Claude API-Key (sk-ant-…)", prefs.anthropicKey, secret = true)
+        geminiInput = input("Gemini API-Key (AIza…)", prefs.geminiKey, secret = true)
+        col.addView(geminiInput)
+        col.addView(link("Kostenlos holen: aistudio.google.com/apikey", "https://aistudio.google.com/apikey"))
+        claudeInput = input("Claude API-Key (optional, als Ersatz)", prefs.anthropicKey, secret = true)
         col.addView(claudeInput)
-        col.addView(link("Holen unter: console.anthropic.com", "https://console.anthropic.com/settings/keys"))
+        col.addView(link("Optional, kostet Guthaben: console.anthropic.com", "https://console.anthropic.com/settings/keys"))
         nameInput = input("Dein Name (optional)", prefs.userName)
         col.addView(nameInput)
-        modelInput = input("Modell", prefs.model)
-        col.addView(modelInput)
         col.addView(button("Speichern") { save(); toast("Gespeichert") })
 
         // --- Schritt 2: Berechtigungen ---
@@ -142,7 +143,7 @@ class MainActivity : Activity() {
             toggle.postDelayed({ refresh() }, 300)
             return
         }
-        if (prefs.anthropicKey.isBlank()) { toast("Bitte erst den Claude-API-Key eintragen"); return }
+        if (prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) { toast("Bitte erst den Gemini-Schlüssel eintragen"); return }
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
@@ -150,9 +151,9 @@ class MainActivity : Activity() {
     }
 
     private fun save() {
+        prefs.geminiKey = geminiInput.text.toString()
         prefs.anthropicKey = claudeInput.text.toString()
         prefs.userName = nameInput.text.toString()
-        prefs.model = modelInput.text.toString()
     }
 
     private fun hasPerm(p: String) = checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED

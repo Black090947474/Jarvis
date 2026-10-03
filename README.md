@@ -4,16 +4,21 @@ Sag „Hey Jarvis“, das Handy wacht auf, und du redest mit Claude. Funktionier
 
 ---
 
-## 1. Claude-Schlüssel besorgen
+## 1. Schlüssel besorgen
 
 Das Weckwort „Hey Jarvis“ wird komplett offline auf dem Handy erkannt und braucht kein Konto.
 
-**Claude (das Gehirn) – bezahlt nach Nutzung**
-1. Auf https://console.anthropic.com/ ein Konto anlegen.
-2. Unter *Billing* ein paar Euro Guthaben aufladen (5 € reichen lange).
-3. Unter *API Keys* einen Schlüssel erstellen und kopieren (beginnt mit `sk-ant-`).
+**Gemini (das Gehirn) – kostenlos**
+1. Auf https://aistudio.google.com/apikey mit deinem Google-Konto anmelden.
+2. Auf **„API-Schlüssel erstellen“** tippen und den Schlüssel kopieren (beginnt mit `AIza`).
+3. Im kostenlosen Tarif gibt es ein Tageslimit, und Google darf die Anfragen zur Verbesserung seiner Modelle nutzen.
 
-> Gib den Schlüssel niemandem und lade sie nicht ins Internet hoch. Du trägst ihn erst in der fertigen App ein.
+**Claude – optional, als Ersatz (kostet Guthaben)**
+Ist Gemini am Tageslimit oder gestört, übernimmt automatisch Claude, falls du auch dafür einen Schlüssel einträgst.
+1. Auf https://console.anthropic.com/ ein Konto anlegen und unter *Billing* Guthaben aufladen.
+2. Unter *API Keys* einen Schlüssel erstellen (beginnt mit `sk-ant-`).
+
+> Gib die Schlüssel niemandem und lade sie nicht ins Internet hoch. Du trägst sie erst in der fertigen App ein.
 
 ---
 
@@ -46,7 +51,7 @@ Das Weckwort „Hey Jarvis“ wird komplett offline auf dem Handy erkannt und br
 ---
 
 ## 4. Einrichten (in der Jarvis-App)
-1. Den Claude-Schlüssel eintragen, optional deinen Namen → **Speichern**.
+1. Den Gemini-Schlüssel eintragen (Claude nur, wenn du willst), optional deinen Namen → **Speichern**.
 2. Bei **Berechtigungen** alles antippen, bis überall ein grüner Haken ist:
    - Mikrofon, Benachrichtigungen
    - **Über anderen Apps einblenden** – damit Jarvis von selbst aufgehen darf
@@ -96,6 +101,5 @@ Ist das Handy gesperrt, kann Jarvis Wecker, Timer, Taschenlampe, Lautstärke und
 - „Hey Jarvis“ wird **offline auf dem Handy** erkannt (mit dem freien openWakeWord-Modell, Lizenz CC BY-NC-SA 4.0, also nur für private Nutzung). Erst nach dem Wake Word geht etwas ins Internet.
 - Spracherkennung und Stimme kommen von Google. Klingt die Stimme komisch: *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache* → „Google Sprachausgabe“ wählen und die deutsche Stimme laden.
 - Reagiert Jarvis zu oft oder zu selten, lässt sich die Schwelle im Code (`Prefs.kt`, `sensitivity`, Standard 0.5) anpassen.
-- Kosten: Mit dem voreingestellten Modell (Claude Haiku) kostet eine typische Frage weniger als einen Cent. Eine Websuche kostet zusätzlich etwa einen Cent.
-- Für schlauere (aber langsamere und teurere) Antworten kannst du in der App das Modell auf `claude-sonnet-5-5` ändern.
+- Kosten: Mit Gemini im kostenlosen Tarif nichts. Nur wenn Claude einspringt, kostet eine Frage weniger als einen Cent (Websuche ca. einen Cent extra).
 - Deine Schlüssel liegen nur auf deinem Handy. Gib die App-Datei deshalb nicht an andere weiter, nachdem du sie eingerichtet hast.

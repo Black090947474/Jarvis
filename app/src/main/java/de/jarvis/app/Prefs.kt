@@ -6,6 +6,14 @@ import android.content.Context
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("jarvis", Context.MODE_PRIVATE)
 
+    var geminiKey: String
+        get() = sp.getString("gemini_key", "") ?: ""
+        set(v) = sp.edit().putString("gemini_key", v.trim()).apply()
+
+    var geminiModel: String
+        get() = sp.getString("gemini_model", GeminiClient.DEFAULT_MODEL) ?: GeminiClient.DEFAULT_MODEL
+        set(v) = sp.edit().putString("gemini_model", v.trim().ifEmpty { GeminiClient.DEFAULT_MODEL }).apply()
+
     var anthropicKey: String
         get() = sp.getString("anthropic_key", "") ?: ""
         set(v) = sp.edit().putString("anthropic_key", v.trim()).apply()

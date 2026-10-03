@@ -5,9 +5,6 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Claude-API mit Werkzeugen: Claude entscheidet selbst, ob es eine Handy-Funktion
@@ -21,7 +18,7 @@ class ClaudeClient(
     private val userName: String,
     private val tools: PhoneTools,
     private val memory: Memory,
-) {
+) : Brain {
     /** Kompletter Verlauf dieser Sitzung im API-Format (inkl. Werkzeug-Ergebnisse). */
     private val messages = JSONArray()
     private var webSearch = true
@@ -30,7 +27,7 @@ class ClaudeClient(
      * Stellt eine Frage und gibt die gesprochene Antwort zurück.
      * [onStep] meldet, welches Werkzeug gerade läuft (für die Anzeige).
      */
-    fun ask(userText: String, onStep: (String) -> Unit = {}): String {
+    override fun ask(userText: String, onStep: (String) -> Unit): String {
         trimHistory()
         val rollback = messages.length()
         messages.put(JSONObject().put("role", "user").put("content", userText))
@@ -64,7 +61,7 @@ class ClaudeClient(
             return "Das war mir zu verschachtelt. Sag es mir bitte nochmal einfacher."
         } catch (e: Exception) {
             while (messages.length() > rollback) messages.remove(messages.length() - 1)
-            return friendlyError(e)
+            throw Brain.Unavailable(friendlyError(e))
         }
     }
 
@@ -74,11 +71,7 @@ class ClaudeClient(
             val b = content.getJSONObject(i)
             if (b.optString("type") == "text") sb.append(b.optString("text"))
         }
-        return sb.toString()
-            .replace(Regex("[*#_`]"), "")          // falls doch Markdown kommt: nicht vorlesen
-            .replace(Regex("\\s+"), " ")
-            .trim()
-            .ifEmpty { "Erledigt." }
+        return Persona.clean(sb.toString())
     }
 
     /** Hält den Verlauf kurz; schneidet nur an echten Nutzerfragen ab, nie mitten in Werkzeug-Runden. */
@@ -93,35 +86,7 @@ class ClaudeClient(
         repeat(cut) { messages.remove(0) }
     }
 
-    private fun systemPrompt(): String {
-        val now = SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMANY).format(Date())
-        val name = if (userName.isNotBlank()) "Der Nutzer heißt $userName. " else ""
-        val facts = memory.all()
-        val mem = if (facts.isEmpty()) "" else
-            "\nDas hat dir der Nutzer zum Merken gesagt:\n" + facts.joinToString("\n") { "- $it" }
-        return """
-            Du bist JARVIS, der persönliche Sprachassistent auf dem Android-Handy des Nutzers –
-            höflich, schlagfertig, mit einem Hauch britischem Butler-Humor. ${name}Jetzt ist es $now.
-            Der Nutzer ist in Deutschland, sofern er nichts anderes sagt.
-
-            Deine Antworten werden laut vorgelesen:
-            - Antworte auf Deutsch, kurz und natürlich gesprochen (meist 1–2 Sätze).
-            - Kein Markdown, keine Aufzählungszeichen, keine Emojis, keine Links, keine Quellenangaben.
-            - Uhrzeiten so schreiben, wie man sie sagt, z. B. "halb acht" oder "sieben Uhr dreißig".
-
-            Werkzeuge:
-            - Du kannst das Handy wirklich steuern: Wecker, Timer, Taschenlampe, Lautstärke, Musik,
-              Apps öffnen, anrufen, Nachrichten vorbereiten, Navigation, Termine, Akku, Einstellungen.
-            - Nutze die Websuche für alles Aktuelle: Wetter, Nachrichten, Öffnungszeiten, Sportergebnisse, Preise.
-            - Handle direkt, ohne nachzufragen, wenn klar ist, was gemeint ist. "Weck mich um 7" heißt 07:00;
-              ist "morgen früh um halb 8" gemeint, nimm 07:30. Nur bei echter Mehrdeutigkeit kurz nachfragen.
-            - Behaupte nie, etwas getan zu haben, das ein Werkzeug nicht bestätigt hat. Meldet ein Werkzeug
-              einen Fehler oder dass der Nutzer noch tippen muss, sag das ehrlich.
-            - Was kein Werkzeug kann (z. B. WLAN selbst umschalten, Nachrichten ohne Antippen senden,
-              Wecker löschen), sag kurz, was stattdessen geht.
-            - Nutze "remember" nur, wenn der Nutzer ausdrücklich will, dass du dir etwas merkst.
-        """.trimIndent() + mem
-    }
+    private fun systemPrompt(): String = Persona.systemPrompt(userName, memory)
 
     private fun toolList(): JSONArray {
         val list = JSONArray()
