@@ -4,6 +4,9 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,3 +30,14 @@ jobs:
         with:
           name: Jarvis-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      # Zusätzlich als "Release", damit man die APK am Handy direkt herunterladen kann
+      - name: Als Release veröffentlichen
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Jarvis.apk
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest Jarvis.apk --title "Jarvis – neueste Version" \
+            --notes "Jarvis.apk antippen, herunterladen und installieren."
