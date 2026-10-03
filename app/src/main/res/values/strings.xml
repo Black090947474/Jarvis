@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_description">Damit kann Jarvis auf deinen Sprachbefehl hin in Apps lesen, tippen, schreiben und scrollen. Jarvis wird nur aktiv, wenn du ihm einen Befehl gibst.</string>
+</resources>

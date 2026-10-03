@@ -89,21 +89,30 @@ class GroqClient(
         return list
     }
 
+    /**
+     * Probiert die Modelle der Reihe nach. Das kostenlose Kontingent zählt pro Modell und Minute –
+     * ist eines kurz am Limit (429), wird das nächste genommen; sind alle am Limit, kurz warten.
+     */
     private fun request(): JSONObject {
         var lastErr: ApiException? = null
-        while (models.isNotEmpty()) {
-            try {
-                return post(models.first())
-            } catch (e: ApiException) {
-                lastErr = e
-                when {
-                    // Ein 400er kann von der eingebauten Websuche kommen: einmal ohne sie probieren
-                    e.code == 400 && webSearch -> webSearch = false
-                    e.code == 404 || e.code == 429 ||
-                        (e.code == 400 && e.body.contains("model", true) && e.body.contains("not", true)) -> models.removeAt(0)
-                    else -> throw toUnavailable(e)
+        for (attempt in 0..1) {
+            var waitSec = 0
+            var i = 0
+            while (i < models.size) {
+                try {
+                    return post(models[i])
+                } catch (e: ApiException) {
+                    lastErr = e
+                    when {
+                        // Ein 400er kann von der eingebauten Websuche kommen: einmal ohne sie probieren
+                        e.code == 400 && webSearch -> { webSearch = false; continue }
+                        e.code == 429 -> { waitSec = maxOf(waitSec, e.retryAfter); i++ }
+                        e.code == 404 || (e.code == 400 && e.body.contains("model", true)) -> models.removeAt(i)
+                        else -> throw toUnavailable(e)
+                    }
                 }
             }
+            if (attempt == 0 && lastErr?.code == 429 && waitSec in 1..20) Thread.sleep(waitSec * 1000L) else break
         }
         throw toUnavailable(lastErr ?: ApiException(0, ""))
     }
@@ -138,14 +147,15 @@ class GroqClient(
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
-            if (code !in 200..299) throw ApiException(code, text)
+            if (code !in 200..299) throw ApiException(code, text,
+                conn.getHeaderField("retry-after")?.toDoubleOrNull()?.let { Math.ceil(it).toInt() } ?: 5)
             return JSONObject(text)
         } finally {
             conn.disconnect()
         }
     }
 
-    class ApiException(val code: Int, val body: String) : Exception("HTTP $code: $body")
+    class ApiException(val code: Int, val body: String, val retryAfter: Int = 5) : Exception("HTTP $code: $body")
 
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-oss-120b"

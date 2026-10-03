@@ -87,7 +87,9 @@ class MainActivity : Activity() {
             "„Weck mich morgen um halb sieben“ · „Timer 10 Minuten“ · „Taschenlampe an“ · " +
             "„Ruf Mama an“ · „Schreib Lisa auf WhatsApp, dass ich später komme“ · „Navigier mich nach Hause“ · " +
             "„Spiel Drake auf Spotify“ · „Nächstes Lied“ · „Lautstärke auf 30 Prozent“ · „Wie wird das Wetter?“ · " +
-            "„Öffne TikTok“ · „Wie viel Akku hab ich?“ · „Merk dir …“", 14f, Color.rgb(200, 200, 210)))
+            "„Öffne TikTok“ · „Wie viel Akku hab ich?“ · „Merk dir …“ · " +
+            "„Such auf YouTube nach Minecraft“ · „Mach ein Selfie“ · „Lies meine Nachrichten vor“ · " +
+            "„Antworte Lisa, dass ich gleich komme“ · „Öffne Insta und like das erste Bild“ · „Mach einen Screenshot“", 14f, Color.rgb(200, 200, 210)))
 
         col.addView(section("Gedächtnis"))
         memoryList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -133,6 +135,14 @@ class MainActivity : Activity() {
         addCheck("Direkt anrufen", hasPerm(Manifest.permission.CALL_PHONE)) {
             askPerm(Manifest.permission.CALL_PHONE)
         }
+        addCheck("Nachrichten lesen & antworten", secureListHas("enabled_notification_listeners")) {
+            restrictedHint()
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+        addCheck("Volle Handy-Steuerung (Bedienungshilfe)", secureListHas(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)) {
+            restrictedHint()
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
         refreshMemory()
 
         val running = WakeWordService.isRunning
@@ -162,6 +172,17 @@ class MainActivity : Activity() {
     }
 
     private fun hasPerm(p: String) = checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED
+
+    /** Prüft, ob Jarvis in einer System-Liste (Benachrichtigungszugriff, Bedienungshilfen) eingetragen ist. */
+    private fun secureListHas(key: String): Boolean =
+        (Settings.Secure.getString(contentResolver, key) ?: "").contains(packageName)
+
+    /** Android sperrt diese Rechte bei Apps, die nicht aus dem Play Store kommen – so entsperrt man sie. */
+    private fun restrictedHint() {
+        Toast.makeText(this,
+            "Ausgegraut oder „Eingeschränkte Einstellung“? Dann: Einstellungen → Apps → Jarvis → ⋮ (oben rechts) → " +
+            "„Eingeschränkte Einstellungen zulassen“. Danach nochmal hier antippen.", Toast.LENGTH_LONG).show()
+    }
 
     private fun askPerm(p: String) {
         if (shouldShowRequestPermissionRationale(p) || !asked.contains(p)) {

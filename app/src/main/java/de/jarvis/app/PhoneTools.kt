@@ -51,6 +51,8 @@ class PhoneTools(private val activity: Activity) {
 
     /** Führt ein Werkzeug auf dem Hauptthread aus (aus einem Hintergrund-Thread aufrufen). */
     fun execute(name: String, input: JSONObject): String {
+        // Bildschirmsteuerung wartet auf Apps – darf nicht auf dem Hauptthread laufen
+        if (name == "screen") return try { screen(input) } catch (e: Exception) { "Fehler: ${e.message}" }
         var result = "Fehler: Zeitüberschreitung"
         val latch = CountDownLatch(1)
         main.post {
@@ -83,6 +85,9 @@ class PhoneTools(private val activity: Activity) {
         "open_settings" -> openSettings(a.optString("page"))
         "remember" -> remember(a.optString("fact"))
         "forget" -> forget(a.optString("fact"))
+        "app_search" -> appSearch(a.optString("app"), a.optString("query"))
+        "camera" -> camera(a.optString("mode", "photo"))
+        "notifications" -> notifications(a)
         else -> "Fehler: Unbekanntes Werkzeug $name"
     }
 
@@ -348,6 +353,112 @@ class PhoneTools(private val activity: Activity) {
         return if (removed > 0) "$removed Eintrag/Einträge vergessen." else "Dazu war nichts gespeichert."
     }
 
+    // ---------- In Apps suchen ----------
+
+    private fun appSearch(app: String, q: String): String {
+        if (q.isBlank()) return "Fehler: Kein Suchbegriff."
+        val e = Uri.encode(q)
+        fun web(url: String, msg: String) = launch(Intent(Intent.ACTION_VIEW, Uri.parse(url)), msg)
+        fun tryFirst(i: Intent, url: String, msg: String): String {
+            val r = launch(i, msg)
+            return if (r.startsWith("Fehler")) web(url, msg) else r
+        }
+        return when (app.lowercase()) {
+            "youtube" -> tryFirst(Intent(Intent.ACTION_SEARCH).setPackage("com.google.android.youtube").putExtra("query", q),
+                "https://www.youtube.com/results?search_query=$e", "YouTube sucht nach „$q“.")
+            "google" -> tryFirst(Intent(Intent.ACTION_WEB_SEARCH).putExtra(android.app.SearchManager.QUERY, q),
+                "https://www.google.com/search?q=$e", "Google sucht nach „$q“.")
+            "maps" -> launch(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$e")), "Google Maps zeigt „$q“.")
+            "playstore" -> tryFirst(Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=$e")),
+                "https://play.google.com/store/search?q=$e", "Play Store sucht nach „$q“.")
+            "tiktok" -> web("https://www.tiktok.com/search?q=$e", "TikTok sucht nach „$q“.")
+            "instagram" -> if (!q.trim().contains(' '))
+                web("https://www.instagram.com/_u/${Uri.encode(q.trim().removePrefix("@"))}", "Instagram-Profil $q geöffnet.")
+                else web("https://www.instagram.com/explore/tags/${Uri.encode(q.replace(" ", ""))}", "Instagram zeigt #$q.")
+            "netflix" -> web("https://www.netflix.com/search?q=$e", "Netflix sucht nach „$q“.")
+            "amazon" -> web("https://www.amazon.de/s?k=$e", "Amazon sucht nach „$q“.")
+            "ebay" -> web("https://www.ebay.de/sch/i.html?_nkw=$e", "eBay sucht nach „$q“.")
+            "x", "twitter" -> web("https://x.com/search?q=$e", "X sucht nach „$q“.")
+            "reddit" -> web("https://www.reddit.com/search/?q=$e", "Reddit sucht nach „$q“.")
+            "wikipedia" -> web("https://de.wikipedia.org/w/index.php?search=$e", "Wikipedia sucht nach „$q“.")
+            "spotify" -> playMusic(q, "spotify")
+            else -> web("https://www.google.com/search?q=$e", "Google sucht nach „$q“.")
+        }
+    }
+
+    // ---------- Kamera ----------
+
+    private fun camera(mode: String): String {
+        val i = when (mode) {
+            "video" -> Intent(MediaStore.INTENT_ACTION_VIDEO_CAMERA)
+            else -> Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+        }
+        if (mode == "selfie") {
+            i.putExtra("android.intent.extras.CAMERA_FACING", 1)
+                .putExtra("android.intent.extras.LENS_FACING_FRONT", 1)
+                .putExtra("android.intent.extra.USE_FRONT_CAMERA", true)
+        }
+        val what = when (mode) { "video" -> "Videokamera"; "selfie" -> "Selfie-Kamera"; else -> "Kamera" }
+        return launch(i, "$what ist offen. Auslösen musst du selbst (oder Jarvis tippt per Bildschirmsteuerung).")
+    }
+
+    // ---------- Benachrichtigungen ----------
+
+    private fun notifications(a: JSONObject): String {
+        if (!JarvisNotificationListener.isConnected)
+            return "Fehler: Jarvis hat keinen Zugriff auf Benachrichtigungen. Der Nutzer kann ihn in der Jarvis-App erlauben."
+        return when (a.optString("action")) {
+            "reply" -> {
+                val m = JarvisNotificationListener.find(a.optInt("id", -1))
+                    ?: return "Fehler: Nachricht mit dieser id nicht gefunden. Erst mit read nachsehen."
+                val text = a.optString("text").ifBlank { return "Fehler: Kein Antworttext." }
+                JarvisNotificationListener.reply(ctx, m, text)
+            }
+            else -> {
+                val list = JarvisNotificationListener.recent(a.optString("app").ifBlank { null })
+                if (list.isEmpty()) return "Keine neuen Benachrichtigungen."
+                val now = System.currentTimeMillis()
+                list.joinToString("\n") { m ->
+                    val min = ((now - m.time) / 60000).coerceAtLeast(0)
+                    val ago = if (min < 1) "gerade eben" else if (min < 60) "vor $min Min." else "vor ${min / 60} Std."
+                    "id ${m.id} | ${m.app} | ${m.title}: ${m.text} | $ago" + if (m.reply != null) " | Antworten möglich" else ""
+                }
+            }
+        }
+    }
+
+    // ---------- Bildschirmsteuerung ----------
+
+    private fun screen(a: JSONObject): String {
+        val acc = JarvisAccessibility.instance
+            ?: return "Fehler: Bildschirmsteuerung ist aus. Der Nutzer kann sie in der Jarvis-App einschalten."
+        val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        if (km.isKeyguardLocked) return "Fehler: Das Handy ist gesperrt. Der Nutzer muss es erst entsperren."
+        // Jarvis' eigenen Bildschirm in den Hintergrund schieben, damit die App sichtbar ist
+        if (!leftApp) {
+            onMain { activity.moveTaskToBack(true) }
+            leftApp = true
+            Thread.sleep(700)
+        }
+        val index = if (a.has("index") && !a.isNull("index")) a.optInt("index") else null
+        val text = a.optString("text").takeIf { it.isNotBlank() }
+        return when (val action = a.optString("action")) {
+            "read" -> acc.read()
+            "tap" -> acc.tap(index, text)
+            "type" -> acc.type(text ?: return "Fehler: Kein Text angegeben.", index)
+            "enter" -> acc.enter()
+            "scroll_down" -> acc.scroll(true)
+            "scroll_up" -> acc.scroll(false)
+            else -> acc.global(action)
+        }
+    }
+
+    private fun onMain(block: () -> Unit) {
+        val latch = CountDownLatch(1)
+        main.post { try { block() } finally { latch.countDown() } }
+        latch.await(3, TimeUnit.SECONDS)
+    }
+
     // ---------- Starten von Apps ----------
 
     /** Startet etwas, das keine Oberfläche zeigt (Wecker/Timer im Hintergrund stellen). */
@@ -387,7 +498,9 @@ class PhoneTools(private val activity: Activity) {
             "send_message" to "Schreibe Nachricht …", "navigate" to "Starte Navigation …",
             "open_url" to "Öffne Seite …", "add_calendar_event" to "Lege Termin an …", "battery" to "Prüfe Akku …",
             "open_settings" to "Öffne Einstellungen …", "remember" to "Merke mir das …", "forget" to "Vergesse das …",
-            "web_search" to "Suche im Internet …"
+            "web_search" to "Suche im Internet …",
+            "app_search" to "Suche in der App …", "camera" to "Öffne Kamera …",
+            "notifications" to "Prüfe Nachrichten …", "screen" to "Bediene das Handy …"
         )
 
         /** Beschreibung aller Werkzeuge für Claude (JSON-Schema). */
@@ -437,7 +550,21 @@ class PhoneTools(private val activity: Activity) {
  {"name":"remember","description":"Speichert dauerhaft eine Information über den Nutzer, wenn er ausdrücklich sagt, dass Jarvis sich etwas merken soll.",
   "input_schema":{"type":"object","properties":{"fact":{"type":"string"}},"required":["fact"]}},
  {"name":"forget","description":"Löscht gespeicherte Informationen, die zum Stichwort passen.",
-  "input_schema":{"type":"object","properties":{"fact":{"type":"string"}},"required":["fact"]}}
+  "input_schema":{"type":"object","properties":{"fact":{"type":"string"}},"required":["fact"]}},
+ {"name":"app_search","description":"Sucht direkt in einer App oder Seite und öffnet die Ergebnisse.",
+  "input_schema":{"type":"object","properties":{
+   "app":{"type":"string","enum":["youtube","google","maps","tiktok","instagram","playstore","netflix","amazon","ebay","x","reddit","wikipedia","spotify"]},
+   "query":{"type":"string","description":"Suchbegriff; bei instagram ein Benutzername"}},"required":["app","query"]}},
+ {"name":"camera","description":"Öffnet die Kamera im Foto-, Selfie- oder Videomodus.",
+  "input_schema":{"type":"object","properties":{"mode":{"type":"string","enum":["photo","selfie","video"]}},"required":["mode"]}},
+ {"name":"notifications","description":"read: neueste Benachrichtigungen und Nachrichten (WhatsApp, Instagram, SMS …) lesen. reply: direkt auf eine antworten, ohne die App zu öffnen.",
+  "input_schema":{"type":"object","properties":{"action":{"type":"string","enum":["read","reply"]},
+   "app":{"type":"string","description":"Optional bei read: nur diese App, z. B. WhatsApp"},
+   "id":{"type":"integer","description":"Bei reply: id aus read"},
+   "text":{"type":"string","description":"Bei reply: Antworttext"}},"required":["action"]}},
+ {"name":"screen","description":"Bedient die gerade offene App wie ein Mensch. read: sichtbare Elemente mit Nummern. tap: Element antippen (index oder text). type: Text ins Eingabefeld. enter: Eingabe bestätigen. scroll_down/scroll_up. back/home/recents/notifications/quick_settings/screenshot/lock. Nach tap/type/scroll kommt der neue Bildschirm zurück.",
+  "input_schema":{"type":"object","properties":{"action":{"type":"string","enum":["read","tap","type","enter","scroll_down","scroll_up","back","home","recents","notifications","quick_settings","screenshot","lock"]},
+   "index":{"type":"integer"},"text":{"type":"string"}},"required":["action"]}}
 ]"""
     }
 }

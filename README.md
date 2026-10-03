@@ -66,6 +66,13 @@ Sind die kostenlosen Dienste am Limit oder gestört, übernimmt automatisch Clau
    - **Kontakte** und **Direkt anrufen** – damit „Ruf Mama an“ funktioniert (optional)
 3. **Jarvis einschalten** drücken. Oben erscheint eine dauerhafte Benachrichtigung „Jarvis ist bereit“.
 
+### Nachrichten & volle Steuerung freischalten
+Für „Nachrichten lesen & antworten“ und „Volle Handy-Steuerung“ tippst du in der Jarvis-App auf den Eintrag und schaltest Jarvis in der Liste ein.
+Ist der Schalter **ausgegraut** oder kommt „Eingeschränkte Einstellung“, sperrt Android das für Apps, die nicht aus dem Play Store kommen. So entsperrst du es:
+*Einstellungen → Apps → Jarvis → ⋮ (oben rechts) → „Eingeschränkte Einstellungen zulassen“*, dann nochmal versuchen.
+
+Wichtig: Mit diesen Rechten sieht Jarvis deine Nachrichten und den Bildschirm. Was er dafür liest, wird an die KI (z. B. Groq) geschickt. Schalte es nur ein, wenn du damit einverstanden bist.
+
 ### Extra für Samsung (wichtig!)
 Samsung beendet Hintergrund-Apps besonders gern:
 - *Einstellungen → Akku → Hintergrund-Nutzungslimits → Apps, die nie in den Standby-Modus wechseln* → **Jarvis** hinzufügen.
@@ -97,6 +104,12 @@ Samsung beendet Hintergrund-Apps besonders gern:
 | „Wie wird das Wetter?“, „Wer hat gestern gespielt?“ | Websuche, Antwort gesprochen |
 | „Wie viel Akku hab ich?“ | Akkustand |
 | „Merk dir, dass ich um 8 Uhr Schule habe“ | Wird dauerhaft gespeichert (in der App einsehbar und löschbar) |
+| „Such auf YouTube nach Minecraft“, „Zeig mir Pizza in der Nähe“ | Sucht direkt in YouTube, Google, Maps, TikTok, Instagram, Play Store, Netflix, Amazon, eBay, X, Reddit, Wikipedia |
+| „Mach ein Selfie“, „Starte ein Video“ | Kamera im richtigen Modus |
+| „Lies meine Nachrichten vor“, „Was hat Lisa geschrieben?“ | Liest neue Nachrichten vor (Benachrichtigungs-Zugriff nötig) |
+| „Antworte Lisa, dass ich gleich komme“ | Liest dir die Antwort vor, fragt „Abschicken?“ und schickt sie direkt |
+| „Öffne Instagram und geh auf mein Profil“, „Scroll runter“, „Tipp auf Folgen“ | Bedient jede App wie du (Bedienungshilfe nötig) |
+| „Mach einen Screenshot“, „Geh zurück“, „Sperr das Handy“ | Sofort (Bedienungshilfe nötig) |
 
 Was Android **nicht** erlaubt, egal welche App: WLAN, Bluetooth oder mobile Daten selbst umschalten (Jarvis öffnet dir dann die passende Einstellung), Nachrichten ohne dein Antippen abschicken, Wecker löschen.
 
