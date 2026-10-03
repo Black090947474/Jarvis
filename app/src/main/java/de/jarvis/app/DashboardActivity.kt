@@ -174,7 +174,7 @@ class DashboardActivity : Activity() {
         chips.addView(ui.chip(if (WakeWordService.isRunning) "● Hört zu" else "○ Wake-Word aus", WakeWordService.isRunning).apply {
             setOnClickListener { startActivity(Intent(this@DashboardActivity, MainActivity::class.java)) }
         })
-        val hasKey = prefs.groqKey.isNotBlank() || prefs.geminiKey.isNotBlank() || prefs.anthropicKey.isNotBlank()
+        val hasKey = prefs.hasAnyKey
         chips.addView(ui.chip(if (hasKey) "KI bereit" else "KI-Schlüssel fehlt", hasKey))
         chips.addView(ui.chip(if (online()) "Online" else "Offline", online()))
         if (bat >= 0) chips.addView(ui.chip("Akku $bat %", bat > 20))

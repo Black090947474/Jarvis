@@ -51,18 +51,10 @@ class JarvisActivity : Activity() {
         // Werkzeuge gibt es immer – einfache Befehle gehen auch ohne Schlüssel und offline
         val t = PhoneTools(this).also { tools = it }
         t.onCard = { a -> showCard(a) }
-        if (prefs.groqKey.isBlank() && prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) {
-            jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Groq-Schlüssel in der Jarvis-App ein."
+        if (!prefs.hasAnyKey) {
+            jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Mistral- oder Groq-Schlüssel in der Jarvis-App ein."
         } else {
-            val mem = Memory(this)
-            // Kostenlose zuerst (Groq, Gemini), Claude springt ein, falls beide nicht können
-            val groq = prefs.groqKey.takeIf { it.isNotBlank() }
-                ?.let { GroqClient(it, GroqClient.DEFAULT_MODEL, prefs.userName, t, mem) }
-            val gemini = prefs.geminiKey.takeIf { it.isNotBlank() }
-                ?.let { GeminiClient(it, prefs.geminiModel, prefs.userName, t, mem) }
-            val claudeBrain = prefs.anthropicKey.takeIf { it.isNotBlank() }
-                ?.let { ClaudeClient(it, prefs.model, prefs.userName, t, mem) }
-            claude = BrainRouter(listOfNotNull(groq, gemini, claudeBrain))
+            claude = Brains.build(prefs, t, Memory(this), chat = false)
         }
         tts = Speaker(this,
             onStart = { core.mode = CoreView.Mode.SPEAKING },

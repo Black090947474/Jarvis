@@ -10,6 +10,13 @@ class Prefs(context: Context) {
         get() = sp.getString("groq_key", "") ?: ""
         set(v) = sp.edit().putString("groq_key", v.trim()).apply()
 
+    var mistralKey: String
+        get() = sp.getString("mistral_key", "") ?: ""
+        set(v) = sp.edit().putString("mistral_key", v.trim()).apply()
+
+    /** Mindestens ein KI-Schlüssel eingetragen? */
+    val hasAnyKey get() = groqKey.isNotBlank() || mistralKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
+
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""
         set(v) = sp.edit().putString("gemini_key", v.trim()).apply()

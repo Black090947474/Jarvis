@@ -110,14 +110,11 @@ class ChatActivity : Activity() {
 
     private fun setupBrain() {
         val p = Prefs(this)
-        if (p.groqKey.isBlank() && p.geminiKey.isBlank() && p.anthropicKey.isBlank()) return
+        if (!p.hasAnyKey) return
         val t = PhoneTools(this).also { tools = it }
         t.onCard = { a -> addCardBubble(a); "Karte im Chat angezeigt." }
         val mem = Memory(this)
-        val groq = p.groqKey.takeIf { it.isNotBlank() }?.let { GroqClient(it, GroqClient.DEFAULT_MODEL, p.userName, t, mem, chat = true) }
-        val gem = p.geminiKey.takeIf { it.isNotBlank() }?.let { GeminiClient(it, p.geminiModel, p.userName, t, mem, chat = true) }
-        val cl = p.anthropicKey.takeIf { it.isNotBlank() }?.let { ClaudeClient(it, p.model, p.userName, t, mem, chat = true) }
-        brain = BrainRouter(listOfNotNull(groq, gem, cl)).also { b ->
+        brain = Brains.build(p, t, mem, chat = true).also { b ->
             // Bisherigen Verlauf (nur Text) mitgeben, damit Jarvis weiß, worum es ging
             b.seed(msgs.takeLast(12).map { (if (it.role == "user") "user" else "assistant") to
                 (if (it.image != null) "[Bild] " else "") + it.text.take(1500) })
@@ -368,7 +365,7 @@ class ChatActivity : Activity() {
                 val local = if (offline && b64 == null) tools?.let { Offline.handle(it, text) } else null
                 when {
                     local != null -> local + (if (b != null) "\n\n_(offline erledigt)_" else "")
-                    b == null -> "Trag zuerst deinen Groq-Schlüssel in der Jarvis-App ein. Ohne Schlüssel verstehe ich nur einfache Befehle wie „Timer 10 Minuten“, „Erinnere mich in 20 Minuten an …“ oder „Was steht heute an?“."
+                    b == null -> "Trag zuerst deinen Mistral- oder Groq-Schlüssel in der Jarvis-App ein. Ohne Schlüssel verstehe ich nur einfache Befehle wie „Timer 10 Minuten“, „Erinnere mich in 20 Minuten an …“ oder „Was steht heute an?“."
                     offline -> "Du bist gerade offline. Ohne Internet gehen nur einfache Befehle: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."
                     else -> b.ask(text, { step -> main.post { thinking.text = step } }, b64)
                 }

@@ -8,7 +8,14 @@ Sag „Hey Jarvis“, das Handy wacht auf, und du redest mit Claude. Funktionier
 
 Das Weckwort „Hey Jarvis“ wird komplett offline auf dem Handy erkannt und braucht kein Konto.
 
-**Groq (das Gehirn) – kostenlos**
+**Mistral (empfohlen) – kostenlos, kaum Pausen**
+Mistral hat im Gratis-Plan ein viel höheres Minutenlimit als Groq. Ist ein Mistral-Schlüssel eingetragen, antwortet zuerst Mistral; Groq springt ein, wenn Mistral nicht kann (und umgekehrt).
+1. Auf https://console.mistral.ai anmelden (Handynummer wird zur Bestätigung abgefragt, keine Kreditkarte).
+2. Den kostenlosen Plan **„Experiment“** wählen.
+3. Unter **API Keys** → **Create new key**, Schlüssel kopieren und in Jarvis bei „Mistral API-Key“ einfügen.
+4. Hinweis: Im Gratis-Plan darf Mistral Anfragen zur Verbesserung seiner Modelle nutzen. Abschalten kannst du das in der Mistral-Konsole unter den Datenschutz-Einstellungen.
+
+**Groq – kostenlos**
 1. Auf https://console.groq.com/keys gehen und mit GitHub oder Google anmelden.
 2. **Create API Key** antippen, Namen eingeben und den Schlüssel kopieren (beginnt mit `gsk_`, wird nur einmal angezeigt).
 3. Kostenlos sind ca. 1.000 Anfragen pro Tag.

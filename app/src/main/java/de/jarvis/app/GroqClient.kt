@@ -6,9 +6,31 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
+/** Ein Anbieter mit OpenAI-kompatibler Schnittstelle (Groq, Mistral). */
+class Provider(
+    val name: String,
+    val url: String,
+    val models: List<String>,
+    val visionModels: List<String>,
+    val maxTokensKey: String,
+    val imageUrlAsString: Boolean = false,
+) {
+    companion object {
+        val GROQ = Provider("Groq", "https://api.groq.com/openai/v1/chat/completions",
+            listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "meta-llama/llama-4-scout-17b-16e-instruct",
+                "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"),
+            listOf("qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct"), "max_completion_tokens")
+        // Mistral „Experiment“: kostenlos, sehr hohes Minutenlimit (ca. 1 Anfrage pro Sekunde)
+        val MISTRAL = Provider("Mistral", "https://api.mistral.ai/v1/chat/completions",
+            listOf("mistral-medium-latest", "mistral-small-latest"),
+            listOf("mistral-medium-latest", "mistral-small-latest"), "max_tokens", imageUrlAsString = true)
+    }
+}
+
 /**
- * Groq (kostenloses Kontingent, OpenAI-kompatible Schnittstelle) mit denselben Handy-Werkzeugen.
+ * OpenAI-kompatibler Client (Groq oder Mistral) mit denselben Handy-Werkzeugen.
  * Läuft blockierend – immer aus einem Hintergrund-Thread aufrufen.
+ * quickFail = bei vollem Minutenlimit nicht warten, sondern sofort den nächsten Anbieter nehmen.
  */
 class GroqClient(
     private val apiKey: String,
@@ -17,13 +39,15 @@ class GroqClient(
     private val tools: PhoneTools,
     private val memory: Memory,
     private val chat: Boolean = false,
+    private val provider: Provider = Provider.GROQ,
+    private val quickFail: Boolean = false,
 ) : Brain {
 
-    /** Sobald ein Bild im Gespräch ist, antwortet das Bild-Modell (die anderen sehen keine Bilder). */
+    /** Sobald ein Bild im Gespräch ist, antwortet ein Bild-Modell. */
     private var vision = false
-    private val visionModels = mutableListOf(VISION_MODEL)
+    private val visionModels = provider.visionModels.toMutableList()
 
-    private val models = (listOf(model) + FALLBACK_MODELS).filter { it.isNotBlank() }.distinct().toMutableList()
+    private val models = (listOf(model) + provider.models).filter { it.isNotBlank() }.distinct().toMutableList()
     private val messages = JSONArray()  // Verlauf ohne System-Nachricht
     private var webSearch = true
 
@@ -46,18 +70,19 @@ class GroqClient(
             messages.put(JSONObject().put("role", "user").put("content", JSONArray()
                 .put(JSONObject().put("type", "text").put("text", userText.ifBlank { "Was siehst du auf dem Bild?" }))
                 .put(JSONObject().put("type", "image_url")
-                    .put("image_url", JSONObject().put("url", "data:image/jpeg;base64,$image")))))
+                    .put("image_url", if (provider.imageUrlAsString) "data:image/jpeg;base64,$image"
+                        else JSONObject().put("url", "data:image/jpeg;base64,$image")))))
         } else messages.put(JSONObject().put("role", "user").put("content", userText))
         try {
             repeat(MAX_ROUNDS) {
                 val resp = request()
                 val msg = resp.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
-                    ?: throw Brain.Unavailable("Groq hat keine Antwort geliefert.")
+                    ?: throw Brain.Unavailable("${provider.name} hat keine Antwort geliefert.")
                 val calls = msg.optJSONArray("tool_calls")
 
                 // Nur die Felder zurückgeben, die die Schnittstelle erwartet
                 val clean = JSONObject().put("role", "assistant")
-                    .put("content", if (msg.isNull("content")) JSONObject.NULL else msg.optString("content"))
+                    .put("content", if (msg.isNull("content")) (if (provider === Provider.GROQ) JSONObject.NULL else "") else msg.optString("content"))
                 if (calls != null && calls.length() > 0) clean.put("tool_calls", calls)
                 messages.put(clean)
 
@@ -73,7 +98,7 @@ class GroqClient(
                     onStep(tools.label(name))
                     val args = try { JSONObject(fn.optString("arguments").ifBlank { "{}" }) } catch (_: Exception) { JSONObject() }
                     val out = tools.execute(name, args)
-                    messages.put(JSONObject().put("role", "tool")
+                    messages.put(JSONObject().put("role", "tool").put("name", name)
                         .put("tool_call_id", c.optString("id")).put("content", out))
                 }
             }
@@ -83,7 +108,7 @@ class GroqClient(
         } catch (e: IOException) {
             rollbackTo(rollback); throw Brain.Unavailable("Ich erreiche das Internet gerade nicht.")
         } catch (e: Exception) {
-            rollbackTo(rollback); throw Brain.Unavailable("Bei Groq ist etwas schiefgelaufen.")
+            rollbackTo(rollback); throw Brain.Unavailable("Bei ${provider.name} ist etwas schiefgelaufen.")
         }
     }
 
@@ -132,6 +157,7 @@ class GroqClient(
                     when {
                         // Ein 400er kann von der eingebauten Websuche kommen: einmal ohne sie probieren
                         e.code == 400 && webSearch -> { webSearch = false; continue }
+                        e.code == 429 && quickFail && i == list.size - 1 -> throw toUnavailable(e)
                         e.code == 429 -> { waitSec = if (waitSec == 0) e.retryAfter else minOf(waitSec, e.retryAfter); i++ }
                         e.code == 404 || (e.code == 400 && e.body.contains("model", true)) -> list.removeAt(i)
                         else -> throw toUnavailable(e)
@@ -140,8 +166,8 @@ class GroqClient(
             }
             // Alle Modelle kurz am Minutenlimit: warten statt aufgeben
             if (lastErr?.code == 429 && attempt < 3) {
-                val w = waitSec.coerceIn(3, 30)
-                step("Kurze Pause, Gratis-Limit … ($w s)")
+                val w = waitSec.coerceIn(if (provider === Provider.MISTRAL) 1 else 3, 30)
+                step("Kurze Pause, ${provider.name}-Limit … ($w s)")
                 Thread.sleep(w * 1000L)
             } else break
         }
@@ -149,13 +175,21 @@ class GroqClient(
     }
 
     private fun toUnavailable(e: ApiException) = Brain.Unavailable(when (e.code) {
-        401, 403 -> "Mein Groq-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
-        429 -> "Das kostenlose Groq-Kontingent ist gerade aufgebraucht. Versuch es etwas später nochmal."
-        in 500..599 -> "Groq ist gerade überlastet. Versuch es gleich nochmal."
-        else -> "Bei Groq ist etwas schiefgelaufen, Fehler ${e.code}."
+        401, 403 -> "Mein ${provider.name}-Schlüssel funktioniert nicht. Bitte prüf ihn in der Jarvis-App."
+        429 -> "Das kostenlose ${provider.name}-Kontingent ist gerade aufgebraucht. Versuch es etwas später nochmal."
+        in 500..599 -> "${provider.name} ist gerade überlastet. Versuch es gleich nochmal."
+        else -> "Bei ${provider.name} ist etwas schiefgelaufen, Fehler ${e.code}."
     })
 
+    private var lastPost = 0L
+
     private fun post(model: String): JSONObject {
+        // Mistral erlaubt im Gratis-Tarif etwa eine Anfrage pro Sekunde
+        if (provider === Provider.MISTRAL) {
+            val wait = 1100 - (System.currentTimeMillis() - lastPost)
+            if (wait > 0) Thread.sleep(wait)
+            lastPost = System.currentTimeMillis()
+        }
         val all = JSONArray().put(JSONObject().put("role", "system").put("content", Persona.systemPrompt(userName, memory, chat)))
         // Ältere Werkzeug-Ergebnisse (v. a. Bildschirminhalte) kürzen: spart viele Tokens,
         // damit das kostenlose Minutenlimit bei längeren Aufgaben nicht sofort voll ist.
@@ -188,10 +222,10 @@ class GroqClient(
             .put("messages", all)
             .put("tools", toolList(model))
             .put("tool_choice", "auto")
-            .put("max_completion_tokens", if (chat) 2000 else 1200)
+            .put(provider.maxTokensKey, if (chat) 2000 else 1200)
             .apply { if (model.startsWith("openai/gpt-oss")) put("reasoning_effort", "low") }
 
-        val conn = (URL("https://api.groq.com/openai/v1/chat/completions").openConnection() as HttpURLConnection).apply {
+        val conn = (URL(provider.url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 15_000
             readTimeout = 60_000
@@ -216,10 +250,6 @@ class GroqClient(
 
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-oss-120b"
-        const val VISION_MODEL = "qwen/qwen3.8-27b"
-        // Jedes Modell hat ein eigenes Gratis-Minutenlimit; ist eines voll, springt das nächste ein
-        private val FALLBACK_MODELS = listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b",
-            "meta-llama/llama-4-scout-17b-16e-instruct", "llama-3.3-70b-versatile", "qwen/qwen3.8-27b")
         private const val MAX_ROUNDS = 16
         private const val MAX_MESSAGES = 30
     }

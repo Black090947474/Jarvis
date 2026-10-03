@@ -123,3 +123,19 @@ class BrainRouter(brains: List<Brain>) {
         return first?.spoken ?: "Da ist etwas schiefgelaufen."
     }
 }
+
+
+/** Baut die Reihenfolge der KIs: Mistral (hohes Gratis-Limit) → Groq → Gemini → Claude. */
+object Brains {
+    fun build(p: Prefs, tools: PhoneTools, mem: Memory, chat: Boolean): BrainRouter {
+        val hasMistral = p.mistralKey.isNotBlank()
+        val list = mutableListOf<Brain>()
+        if (hasMistral) list += GroqClient(p.mistralKey, Provider.MISTRAL.models[0], p.userName, tools, mem, chat,
+            Provider.MISTRAL, quickFail = p.groqKey.isNotBlank())
+        if (p.groqKey.isNotBlank()) list += GroqClient(p.groqKey, GroqClient.DEFAULT_MODEL, p.userName, tools, mem, chat,
+            Provider.GROQ, quickFail = hasMistral || p.geminiKey.isNotBlank())
+        if (p.geminiKey.isNotBlank()) list += GeminiClient(p.geminiKey, p.geminiModel, p.userName, tools, mem, chat = chat)
+        if (p.anthropicKey.isNotBlank()) list += ClaudeClient(p.anthropicKey, p.model, p.userName, tools, mem, chat = chat)
+        return BrainRouter(list)
+    }
+}

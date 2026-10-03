@@ -28,6 +28,7 @@ class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
     private lateinit var groqInput: EditText
+    private lateinit var mistralInput: EditText
     private lateinit var geminiInput: EditText
     private lateinit var claudeInput: EditText
     private lateinit var nameInput: EditText
@@ -60,6 +61,9 @@ class MainActivity : Activity() {
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
+        mistralInput = input("Mistral API-Key (empfohlen, kaum Pausen)", prefs.mistralKey, secret = true)
+        col.addView(mistralInput)
+        col.addView(link("Kostenlos holen: console.mistral.ai/api-keys (Plan „Experiment“)", "https://console.mistral.ai/api-keys"))
         groqInput = input("Groq API-Key (gsk_…)", prefs.groqKey, secret = true)
         col.addView(groqInput)
         col.addView(link("Kostenlos holen: console.groq.com/keys", "https://console.groq.com/keys"))
@@ -413,7 +417,7 @@ class MainActivity : Activity() {
             toggle.postDelayed({ refresh() }, 300)
             return
         }
-        if (prefs.groqKey.isBlank() && prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) { toast("Bitte erst den Groq-Schlüssel eintragen"); return }
+        if (!prefs.hasAnyKey) { toast("Bitte erst einen Schlüssel (Mistral oder Groq) eintragen"); return }
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
@@ -422,6 +426,7 @@ class MainActivity : Activity() {
 
     private fun save() {
         prefs.groqKey = groqInput.text.toString()
+        prefs.mistralKey = mistralInput.text.toString()
         prefs.geminiKey = geminiInput.text.toString()
         prefs.anthropicKey = claudeInput.text.toString()
         prefs.userName = nameInput.text.toString()
