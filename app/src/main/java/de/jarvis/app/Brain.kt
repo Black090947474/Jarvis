@@ -54,23 +54,21 @@ interface Brain {
 }
 
 /**
- * Gemini zuerst (kostenlos), Claude als Ersatz, falls Gemini nicht kann.
- * Ist nur einer der beiden Schlüssel eingetragen, wird nur dieser benutzt.
+ * Probiert die Gehirne der Reihe nach (z. B. Groq → Gemini → Claude).
+ * Fällt eines aus (Limit, Störung), übernimmt das nächste – für den Rest des Gesprächs zuerst.
  */
-class BrainRouter(private val primary: Brain?, private val backup: Brain?) {
-    private var useBackupFirst = false
+class BrainRouter(brains: List<Brain>) {
+    private val order = brains.toMutableList()
 
     fun ask(userText: String, onStep: (String) -> Unit): String {
-        val order = listOfNotNull(if (useBackupFirst) backup else primary, if (useBackupFirst) primary else backup)
         if (order.isEmpty()) return "Mir fehlt noch ein Schlüssel. Trag ihn bitte in der Jarvis-App ein."
         var last: Brain.Unavailable? = null
-        for (b in order) {
+        for (b in order.toList()) {
             try {
                 return b.ask(userText, onStep)
             } catch (e: Brain.Unavailable) {
                 last = e
-                // Ist Gemini z. B. am Tageslimit, für den Rest des Gesprächs gleich Claude nehmen
-                if (b === primary && backup != null) useBackupFirst = true
+                if (order.size > 1) { order.remove(b); order.add(b) } // ans Ende stellen
             }
         }
         return last?.spoken ?: "Da ist etwas schiefgelaufen."

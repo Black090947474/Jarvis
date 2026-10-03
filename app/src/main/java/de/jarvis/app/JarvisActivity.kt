@@ -51,17 +51,19 @@ class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
         buildUi()
 
         val prefs = Prefs(this)
-        if (prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) {
-            jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Gemini-Schlüssel in der Jarvis-App ein."
+        if (prefs.groqKey.isBlank() && prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) {
+            jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den Groq-Schlüssel in der Jarvis-App ein."
         } else {
             val t = PhoneTools(this).also { tools = it }
             val mem = Memory(this)
-            // Gemini zuerst (kostenlos), Claude springt ein, falls Gemini nicht kann
+            // Kostenlose zuerst (Groq, Gemini), Claude springt ein, falls beide nicht können
+            val groq = prefs.groqKey.takeIf { it.isNotBlank() }
+                ?.let { GroqClient(it, GroqClient.DEFAULT_MODEL, prefs.userName, t, mem) }
             val gemini = prefs.geminiKey.takeIf { it.isNotBlank() }
                 ?.let { GeminiClient(it, prefs.geminiModel, prefs.userName, t, mem) }
             val claudeBrain = prefs.anthropicKey.takeIf { it.isNotBlank() }
                 ?.let { ClaudeClient(it, prefs.model, prefs.userName, t, mem) }
-            claude = BrainRouter(gemini ?: claudeBrain, if (gemini != null) claudeBrain else null)
+            claude = BrainRouter(listOfNotNull(groq, gemini, claudeBrain))
         }
         tts = TextToSpeech(this, this)
         // Sofort zuhören: "Jarvis, stell den Wecker auf 7" funktioniert in einem Satz.

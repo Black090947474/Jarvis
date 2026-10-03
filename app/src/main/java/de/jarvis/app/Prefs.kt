@@ -6,6 +6,10 @@ import android.content.Context
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("jarvis", Context.MODE_PRIVATE)
 
+    var groqKey: String
+        get() = sp.getString("groq_key", "") ?: ""
+        set(v) = sp.edit().putString("groq_key", v.trim()).apply()
+
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""
         set(v) = sp.edit().putString("gemini_key", v.trim()).apply()

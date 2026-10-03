@@ -27,6 +27,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
 
     private lateinit var prefs: Prefs
+    private lateinit var groqInput: EditText
     private lateinit var geminiInput: EditText
     private lateinit var claudeInput: EditText
     private lateinit var nameInput: EditText
@@ -55,9 +56,12 @@ class MainActivity : Activity() {
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
-        geminiInput = input("Gemini API-Key (AIza…)", prefs.geminiKey, secret = true)
+        groqInput = input("Groq API-Key (gsk_…)", prefs.groqKey, secret = true)
+        col.addView(groqInput)
+        col.addView(link("Kostenlos holen: console.groq.com/keys", "https://console.groq.com/keys"))
+        geminiInput = input("Gemini API-Key (optional)", prefs.geminiKey, secret = true)
         col.addView(geminiInput)
-        col.addView(link("Kostenlos holen: aistudio.google.com/apikey", "https://aistudio.google.com/apikey"))
+        col.addView(link("Optional, kostenlos: aistudio.google.com/apikey", "https://aistudio.google.com/apikey"))
         claudeInput = input("Claude API-Key (optional, als Ersatz)", prefs.anthropicKey, secret = true)
         col.addView(claudeInput)
         col.addView(link("Optional, kostet Guthaben: console.anthropic.com", "https://console.anthropic.com/settings/keys"))
@@ -143,7 +147,7 @@ class MainActivity : Activity() {
             toggle.postDelayed({ refresh() }, 300)
             return
         }
-        if (prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) { toast("Bitte erst den Gemini-Schlüssel eintragen"); return }
+        if (prefs.groqKey.isBlank() && prefs.geminiKey.isBlank() && prefs.anthropicKey.isBlank()) { toast("Bitte erst den Groq-Schlüssel eintragen"); return }
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
@@ -151,6 +155,7 @@ class MainActivity : Activity() {
     }
 
     private fun save() {
+        prefs.groqKey = groqInput.text.toString()
         prefs.geminiKey = geminiInput.text.toString()
         prefs.anthropicKey = claudeInput.text.toString()
         prefs.userName = nameInput.text.toString()
