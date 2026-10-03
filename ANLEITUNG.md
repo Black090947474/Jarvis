@@ -66,6 +66,10 @@ Sind die kostenlosen Dienste am Limit oder gestört, übernimmt automatisch Clau
    - **Kontakte** und **Direkt anrufen** – damit „Ruf Mama an“ funktioniert (optional)
 3. **Jarvis einschalten** drücken. Oben erscheint eine dauerhafte Benachrichtigung „Jarvis ist bereit“.
 
+### Stimme einstellen
+Unter **Stimme** in der Jarvis-App kannst du zwischen allen deutschen Stimmen auf deinem Handy wählen (antippen zum Anhören), Tonhöhe und Tempo einstellen und den **KI-Hall** an- oder ausschalten. Standard: tiefe Stimme, etwas ruhiger, mit leichtem Hall.
+Mehr Stimmen bekommst du über *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache → Google Sprachausgabe → ⚙ → Sprachdaten installieren → Deutsch*.
+
 ### Nachrichten & volle Steuerung freischalten
 Für „Nachrichten lesen & antworten“ und „Volle Handy-Steuerung“ tippst du in der Jarvis-App auf den Eintrag und schaltest Jarvis in der Liste ein.
 Ist der Schalter **ausgegraut** oder kommt „Eingeschränkte Einstellung“, sperrt Android das für Apps, die nicht aus dem Play Store kommen. So entsperrst du es:

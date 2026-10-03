@@ -70,6 +70,8 @@ class MainActivity : Activity() {
         col.addView(button("Speichern") { save(); toast("Gespeichert") })
 
         // --- Schritt 2: Berechtigungen ---
+        buildVoiceSection(col)
+
         col.addView(section("2 · Berechtigungen"))
         checklist = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(checklist)
@@ -100,6 +102,99 @@ class MainActivity : Activity() {
             "aus Datenschutzgründen nicht, dass das Mikrofon von selbst wieder angeht.", 13f, MUTED))
 
         setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
+    }
+
+    // ---------- Stimme ----------
+
+    private var speaker: Speaker? = null
+    private lateinit var voiceButton: Button
+
+    private fun buildVoiceSection(col: LinearLayout) {
+        col.addView(section("Stimme"))
+        speaker = Speaker(this, onReady = { updateVoiceButton() })
+        voiceButton = button("Stimme: automatisch", filled = false) { chooseVoice() }
+        col.addView(voiceButton)
+
+        col.addView(slider("Tonhöhe (links = tiefer)", prefs.voicePitch, 0.5f, 1.5f) { prefs.voicePitch = it })
+        col.addView(slider("Tempo", prefs.voiceRate, 0.6f, 1.6f) { prefs.voiceRate = it })
+
+        col.addView(android.widget.Switch(this).apply {
+            text = "KI-Hall (klingt mehr nach Jarvis)"
+            textSize = 15f; setTextColor(Color.WHITE)
+            isChecked = prefs.voiceEffect
+            setOnCheckedChangeListener { _, on -> prefs.voiceEffect = on }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) }
+        })
+        col.addView(button("Probe hören", filled = false) { previewVoice() })
+    }
+
+    private fun voiceLabel(v: android.speech.tts.Voice, i: Int): String {
+        val n = v.name.lowercase()
+        val g = when {
+            n.contains("female") -> " · weiblich"
+            n.contains("male") -> " · männlich"
+            else -> ""
+        }
+        return "Stimme ${i + 1}$g · ${if (v.isNetworkConnectionRequired) "online" else "offline"}\n${v.name}"
+    }
+
+    private fun updateVoiceButton() {
+        val voices = speaker?.germanVoices().orEmpty()
+        val i = voices.indexOfFirst { it.name == prefs.voiceName }
+        voiceButton.text = if (i >= 0) "Stimme: ${voiceLabel(voices[i], i).substringBefore("\n")}" else "Stimme: automatisch (tief, männlich)"
+    }
+
+    private fun chooseVoice() {
+        val sp = speaker ?: return
+        val voices = sp.germanVoices()
+        if (voices.isEmpty()) {
+            toast("Keine deutschen Stimmen gefunden. Installier die Google-Sprachausgabe.")
+            return
+        }
+        val labels = (listOf("Automatisch (tief, männlich)") + voices.mapIndexed { i, v -> voiceLabel(v, i) }).toTypedArray()
+        val current = voices.indexOfFirst { it.name == prefs.voiceName } + 1
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Stimme wählen – antippen zum Anhören")
+            .setSingleChoiceItems(labels, current) { _, which ->
+                prefs.voiceName = if (which == 0) "" else voices[which - 1].name
+                sp.preview(if (which == 0) null else voices[which - 1], "Guten Tag. Ich bin Jarvis. Alle Systeme sind bereit.")
+            }
+            .setPositiveButton("Fertig") { d, _ -> d.dismiss(); sp.stop(); sp.applySettings(); updateVoiceButton() }
+            .show()
+    }
+
+    private fun previewVoice() {
+        val sp = speaker ?: return
+        sp.applySettings()
+        sp.speak("Guten Tag. Ich bin Jarvis. Alle Systeme sind bereit.", "preview")
+    }
+
+    private fun slider(title: String, value: Float, min: Float, max: Float, onChange: (Float) -> Unit): LinearLayout {
+        val label = TextView(this).apply { textSize = 14f; setTextColor(MUTED) }
+        fun show(v: Float) { label.text = "$title: ${"%.2f".format(v)}" }
+        show(value)
+        val bar = android.widget.SeekBar(this).apply {
+            this.max = 100
+            progress = (((value - min) / (max - min)) * 100).toInt()
+            setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                    val v = min + (max - min) * p / 100f
+                    show(v); if (fromUser) onChange(v)
+                }
+                override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
+                override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
+            })
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) }
+            addView(label); addView(bar)
+        }
+    }
+
+    override fun onDestroy() {
+        speaker?.shutdown()
+        super.onDestroy()
     }
 
     override fun onResume() {

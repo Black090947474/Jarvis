@@ -13,8 +13,6 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -24,15 +22,14 @@ import java.util.Locale
 import kotlin.concurrent.thread
 
 /** Der Gesprächsbildschirm: zuhören → Claude fragen → vorlesen → wieder zuhören. */
-class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
+class JarvisActivity : Activity() {
 
     private lateinit var core: CoreView
     private lateinit var youText: TextView
     private lateinit var jarvisText: TextView
     private lateinit var hint: TextView
 
-    private var tts: TextToSpeech? = null
-    private var ttsReady = false
+    private var tts: Speaker? = null
     private var recognizer: SpeechRecognizer? = null
     private var claude: BrainRouter? = null
     private var tools: PhoneTools? = null
@@ -65,7 +62,10 @@ class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
                 ?.let { ClaudeClient(it, prefs.model, prefs.userName, t, mem) }
             claude = BrainRouter(listOfNotNull(groq, gemini, claudeBrain))
         }
-        tts = TextToSpeech(this, this)
+        tts = Speaker(this,
+            onStart = { core.mode = CoreView.Mode.SPEAKING },
+            onDone = { id -> afterSpeaking(id) },
+            onReady = { ok -> onTtsReady(ok) })
         // Sofort zuhören: "Jarvis, stell den Wecker auf 7" funktioniert in einem Satz.
         // Kurze Pause, damit der Wake-Word-Dienst das Mikrofon freigeben kann.
         if (claude != null) main.postDelayed({ beep(); listen() }, 200)
@@ -118,21 +118,12 @@ class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
 
     // ---------- Sprachausgabe ----------
 
-    override fun onInit(status: Int) {
-        if (status != TextToSpeech.SUCCESS) {
+    private fun onTtsReady(ok: Boolean) {
+        if (!ok) {
             jarvisText.text = "Die Sprachausgabe funktioniert nicht. Ist eine Text-zu-Sprache-App installiert?"
             listen()
             return
         }
-        tts?.language = Locale.GERMANY
-        tts?.setSpeechRate(1.05f)
-        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(id: String?) { main.post { core.mode = CoreView.Mode.SPEAKING } }
-            override fun onDone(id: String?) { main.post { afterSpeaking(id) } }
-            @Deprecated("Deprecated in Java")
-            override fun onError(id: String?) { main.post { afterSpeaking(id) } }
-        })
-        ttsReady = true
         if (claude == null) speak("Mir fehlt noch der API-Schlüssel.", ID_BYE)
     }
 
@@ -147,8 +138,8 @@ class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun speak(text: String, id: String) {
         jarvisText.text = text
-        if (!ttsReady) { afterSpeaking(id); return }
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
+        if (tts?.ready != true) { afterSpeaking(id); return }
+        tts?.speak(text, id)
     }
 
     private fun afterSpeaking(id: String?) {
@@ -294,7 +285,6 @@ class JarvisActivity : Activity(), TextToSpeech.OnInitListener {
         main.removeCallbacksAndMessages(null)
         recognizer?.destroy()
         recognizer = null
-        tts?.stop()
         tts?.shutdown()
         // Etwas warten, bis das Mikrofon wirklich frei ist, dann wieder auf "Jarvis" hören
         Handler(Looper.getMainLooper()).postDelayed({ WakeWordService.instance?.resume() }, 600)

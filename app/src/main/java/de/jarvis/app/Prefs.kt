@@ -30,6 +30,26 @@ class Prefs(context: Context) {
         get() = sp.getString("user_name", "") ?: ""
         set(v) = sp.edit().putString("user_name", v.trim()).apply()
 
+    /** Gewählte Stimme ("" = automatisch eine männliche deutsche Stimme). */
+    var voiceName: String
+        get() = sp.getString("voice_name", "") ?: ""
+        set(v) = sp.edit().putString("voice_name", v).apply()
+
+    /** Tonhöhe: 1.0 = normal, kleiner = tiefer. */
+    var voicePitch: Float
+        get() = sp.getFloat("voice_pitch", 0.82f)
+        set(v) = sp.edit().putFloat("voice_pitch", v.coerceIn(0.5f, 1.5f)).apply()
+
+    /** Tempo: 1.0 = normal. */
+    var voiceRate: Float
+        get() = sp.getFloat("voice_rate", 0.95f)
+        set(v) = sp.edit().putFloat("voice_rate", v.coerceIn(0.6f, 1.6f)).apply()
+
+    /** Leichter Raumhall für den KI-Sound. */
+    var voiceEffect: Boolean
+        get() = sp.getBoolean("voice_effect", true)
+        set(v) = sp.edit().putBoolean("voice_effect", v).apply()
+
     /** Ob der Wake-Word-Dienst laufen soll (merkt sich den Schalter). */
     var listeningEnabled: Boolean
         get() = sp.getBoolean("listening_enabled", false)
