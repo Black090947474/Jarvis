@@ -53,6 +53,7 @@ class MainActivity : Activity() {
             typeface = Typeface.create("sans-serif-black", Typeface.NORMAL); letterSpacing = 0.15f
         })
         col.addView(label("Sag „Hey Jarvis“ – auch bei gesperrtem Handy.", 15f, MUTED))
+        crashCard(col)
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
@@ -102,6 +103,42 @@ class MainActivity : Activity() {
             "aus Datenschutzgründen nicht, dass das Mikrofon von selbst wieder angeht.", 13f, MUTED))
 
         setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
+    }
+
+    // ---------- Fehlerbericht ----------
+
+    private fun crashCard(col: LinearLayout) {
+        val f = JarvisApp.crashFile(this)
+        if (!f.exists()) return
+        val text = try { f.readText() } catch (_: Exception) { return }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(px(14), px(12), px(14), px(12))
+            background = GradientDrawable().apply { cornerRadius = 14 * dp; setColor(Color.rgb(60, 18, 22)) }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(16) }
+        }
+        box.addView(TextView(this).apply {
+            this.text = "Jarvis ist zuletzt abgestürzt. Mach einen Screenshot davon und schick ihn Claude."
+            textSize = 14f; setTextColor(Color.WHITE)
+        })
+        box.addView(TextView(this).apply {
+            this.text = text.lines().take(18).joinToString("\n")
+            textSize = 10f; setTextColor(Color.rgb(255, 200, 200)); typeface = android.graphics.Typeface.MONOSPACE
+            setTextIsSelectable(true)
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) }
+        })
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        row.addView(button("Kopieren", filled = false) {
+            val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("Jarvis-Fehler", text))
+            toast("Kopiert")
+        }, LinearLayout.LayoutParams(0, px(46), 1f))
+        row.addView(android.widget.Space(this), LinearLayout.LayoutParams(px(10), 1))
+        row.addView(button("Ausblenden", filled = false) {
+            f.delete(); box.visibility = android.view.View.GONE
+        }, LinearLayout.LayoutParams(0, px(46), 1f))
+        box.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) })
+        col.addView(box)
     }
 
     // ---------- Stimme ----------

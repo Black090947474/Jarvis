@@ -134,10 +134,14 @@ class JarvisActivity : Activity() {
             }
         }
         status.text = statusText(CoreView.Mode.IDLE)
-        youText = TextView(this).apply { setTextColor(th.muted); textSize = 15f; gravity = align }
+        youText = TextView(this).apply {
+            setTextColor(th.muted); textSize = 15f; gravity = align
+            maxLines = 3; ellipsize = android.text.TextUtils.TruncateAt.END
+        }
         jarvisText = TextView(this).apply {
             setTextColor(th.fg); textSize = if (style == CoreView.Style.GLAS) 20f else 23f
             typeface = light; gravity = align; setLineSpacing(0f, 1.25f)
+            maxLines = 7; ellipsize = android.text.TextUtils.TruncateAt.END
         }
         hint = TextView(this).apply {
             setTextColor(Color.argb(150, Color.red(th.muted), Color.green(th.muted), Color.blue(th.muted)))
@@ -220,6 +224,7 @@ class JarvisActivity : Activity() {
         // (PULS-Kopfzeile oben bereits gebaut)
 
         // Kern
+        core.minimumHeight = px(120)
         root.addView(core, LinearLayout.LayoutParams(-1, 0, 1f))
 
         // Ergebnis-Karte (erscheint, wenn Jarvis einen Plan, eine Liste o. ä. zeigt)

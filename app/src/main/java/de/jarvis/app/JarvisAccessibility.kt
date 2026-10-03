@@ -158,7 +158,7 @@ class JarvisAccessibility : AccessibilityService() {
                     if (ok) { Thread.sleep(400); performGlobalAction(GLOBAL_ACTION_HOME); return "$tile umgeschaltet." }
                 }
             }
-            if (page == 0) { swipe(true); Thread.sleep(500) }
+            if (page == 0) { swipeLeft(); Thread.sleep(500) }   // nächste Seite der Schnelleinstellungen
         }
         performGlobalAction(GLOBAL_ACTION_HOME)
         return "Fehler: Kachel „$tile“ nicht in den Schnelleinstellungen gefunden."
@@ -226,6 +226,14 @@ class JarvisAccessibility : AccessibilityService() {
         val p = Path().apply { moveTo(r.exactCenterX(), r.exactCenterY()) }
         return dispatchGesture(GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(p, 0, 60)).build(), null, null)
+    }
+
+    private fun swipeLeft(): Boolean {
+        val dm = resources.displayMetrics
+        val y = dm.heightPixels * 0.3f
+        val p = Path().apply { moveTo(dm.widthPixels * 0.85f, y); lineTo(dm.widthPixels * 0.15f, y) }
+        return dispatchGesture(GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(p, 0, 300)).build(), null, null)
     }
 
     private fun swipe(down: Boolean): Boolean {

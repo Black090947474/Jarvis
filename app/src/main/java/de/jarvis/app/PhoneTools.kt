@@ -55,7 +55,12 @@ class PhoneTools(private val activity: Activity) {
     /** Führt ein Werkzeug auf dem Hauptthread aus (aus einem Hintergrund-Thread aufrufen). */
     fun execute(name: String, input: JSONObject): String {
         // Bildschirmsteuerung wartet auf Apps – darf nicht auf dem Hauptthread laufen
-        if (name == "screen") return try { screen(input) } catch (e: Exception) { "Fehler: ${e.message}" }
+        // Was wartet (Bildschirm, Schnelleinstellungen, Ortsbestimmung), darf nicht auf dem Hauptthread laufen
+        when (name) {
+            "screen" -> return safe { screen(input) }
+            "toggle" -> return safe { toggle(input.optString("what")) }
+            "location" -> return safe { location() }
+        }
         var result = "Fehler: Zeitüberschreitung"
         val latch = CountDownLatch(1)
         main.post {
@@ -69,6 +74,10 @@ class PhoneTools(private val activity: Activity) {
         latch.await(15, TimeUnit.SECONDS)
         return result
     }
+
+    private fun safe(block: () -> String): String = try { block() } catch (e: SecurityException) {
+        "Fehler: Berechtigung fehlt (${e.message}). Der Nutzer kann sie in der Jarvis-App erteilen."
+    } catch (e: Exception) { "Fehler: ${e.javaClass.simpleName}: ${e.message}" }
 
     private fun run(name: String, a: JSONObject): String = when (name) {
         "set_alarm" -> setAlarm(a)

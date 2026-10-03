@@ -45,13 +45,17 @@ class CoreView(context: Context, val style: Style) : View(context) {
         val cx = width / 2f
         val cy = height / 2f
         val size = min(width, height).toFloat()
-        when (style) {
+        if (size < 24f * dp) { postInvalidateOnAnimation(); return }   // zu klein zum Zeichnen
+        try { when (style) {
             Style.NEXUS -> drawNexus(canvas, t, cx, cy, size)
             Style.GLUT -> drawGlut(canvas, t, cx, cy, size)
             Style.AURORA -> drawAurora(canvas, t, cx, cy, size)
             Style.LINIE -> drawLinie(canvas, t, cx, cy, size)
             Style.GLAS -> drawGlas(canvas, t, cx, cy, size)
             Style.PULS -> drawPuls(canvas, t, cx, cy, size)
+        } } catch (e: Exception) {
+            android.util.Log.w("JarvisCore", "Zeichnen fehlgeschlagen", e)
+            fill.shader = null; stroke.shader = null; stroke.pathEffect = null
         }
         postInvalidateOnAnimation()
     }
