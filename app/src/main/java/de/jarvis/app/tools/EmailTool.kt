@@ -19,7 +19,7 @@ object EmailTool : JarvisTool {
     private val MAIL_APPS = listOf("gmail", "outlook", "mail", "gmx", "web.de", "yahoo", "proton", "thunderbird", "spark", "email")
 
     override val definition: JSONObject = JSONObject("""
-{"name":"email","description":"E-Mails. recent: neue Mails aus den Benachrichtigungen der Mail-Apps (Absender, Betreff, Vorschau) – zum Zusammenfassen/Suchen. draft: Entwurf in der Mail-App öffnen; der Nutzer sendet selbst. Vor draft den Text zeigen und fragen. Das Postfach selbst (alte Mails) kann Jarvis nicht lesen.",
+{"name":"email","description":"E-Mails. recent: neue Mails aus den Benachrichtigungen der Mail-Apps (Absender, Betreff, Vorschau) – zum Zusammenfassen/Suchen. draft: Entwurf in der Mail-App öffnen; der Nutzer sendet selbst. Vor draft den Text zeigen und fragen. Den ganzen Posteingang liest read_app mit app=mail.",
  "input_schema":{"type":"object","properties":{
   "action":{"type":"string","enum":["recent","draft"]},
   "query":{"type":"string","description":"recent: optionales Suchwort (Absender/Betreff)"},
