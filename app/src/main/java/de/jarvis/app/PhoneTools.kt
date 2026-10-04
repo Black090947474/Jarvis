@@ -779,7 +779,7 @@ class PhoneTools(private val activity: Activity) {
  {"name":"open_settings","description":"Öffnet eine Einstellungsseite. WLAN, Bluetooth usw. kann Android nicht von Apps umschalten lassen, nur öffnen.",
   "input_schema":{"type":"object","properties":{"page":{"type":"string",
    "enum":["wifi","bluetooth","mobile_data","display","sound","battery","location","dnd","hotspot","main"]}},"required":["page"]}},
- {"name":"remember","description":"Speichert dauerhaft eine Information über den Nutzer, wenn er ausdrücklich sagt, dass Jarvis sich etwas merken soll.",
+ {"name":"remember","description":"Speichert dauerhaft eine kurze Information über den Nutzer (Vorlieben, Hobbys, Schule, Familie, feste Termine) – auf Wunsch oder wenn er etwas Dauerhaftes über sich erzählt. Keine Passwörter/PINs.",
   "input_schema":{"type":"object","properties":{"fact":{"type":"string"}},"required":["fact"]}},
  {"name":"forget","description":"Löscht gespeicherte Informationen, die zum Stichwort passen.",
   "input_schema":{"type":"object","properties":{"fact":{"type":"string"}},"required":["fact"]}},

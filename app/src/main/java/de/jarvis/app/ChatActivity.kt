@@ -116,8 +116,10 @@ class ChatActivity : Activity() {
         val mem = Memory(this)
         brain = Brains.build(p, t, mem, chat = true).also { b ->
             // Bisherigen Verlauf (nur Text) mitgeben, damit Jarvis weiß, worum es ging
-            b.seed(msgs.takeLast(12).map { (if (it.role == "user") "user" else "assistant") to
-                (if (it.image != null) "[Bild] " else "") + it.text.take(1500) })
+            // Gemeinsames Gedächtnis mit dem Sprachmodus; beim ersten Mal der bisherige Chat-Verlauf
+            val shared = Convo(this).recent()
+            b.seed(shared.ifEmpty { msgs.takeLast(12).map { (if (it.role == "user") "user" else "assistant") to
+                (if (it.image != null) "[Bild] " else "") + it.text.take(1500) } })
         }
     }
 
@@ -372,6 +374,7 @@ class ChatActivity : Activity() {
             } catch (e: Exception) { "Da ist etwas schiefgelaufen: ${e.message}" }
             main.post {
                 setBusy(false)
+                Convo(this).let { c -> c.add("user", (if (img != null) "[Bild] " else "") + text); c.add("assistant", answer) }
                 val m = Msg("jarvis", answer)
                 msgs += m
                 (thinking.parent as? View)?.let { list.removeView(it) }

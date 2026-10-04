@@ -116,6 +116,8 @@ class MainActivity : Activity() {
         col.addView(section("Gedächtnis"))
         memoryList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(memoryList)
+        col.addView(button("Gesprächsverlauf vergessen", filled = false) {
+            Convo(this).clear(); toast("Jarvis hat eure letzten Gespräche vergessen (Gemerktes bleibt).") })
 
         col.addView(label(
             "Tipp: Nach einem Neustart des Handys einmal diese App öffnen – Android erlaubt " +
@@ -267,11 +269,37 @@ class MainActivity : Activity() {
     }
     private lateinit var voiceButton: Button
 
+    private fun chooseEngine() {
+        val engines = speaker?.engines().orEmpty()
+        if (engines.isEmpty()) { toast("Keine Sprach-Engines gefunden."); return }
+        val labels = (listOf("Standard des Handys") + engines.map { it.label }).toTypedArray()
+        android.app.AlertDialog.Builder(this).setTitle("Sprach-Engine")
+            .setItems(labels) { _, w ->
+                prefs.ttsEngine = if (w == 0) "" else engines[w - 1].name
+                prefs.voiceName = ""
+                speaker?.shutdown(); speaker = null
+                toast("Engine gewechselt – wähle jetzt die Stimme.")
+                recreate()
+            }.show()
+    }
+
+    private fun chooseStt() {
+        android.app.AlertDialog.Builder(this).setTitle("Spracherkennung")
+            .setItems(arrayOf("Google (Standard)", "Whisper (genauer, braucht Groq-Schlüssel)")) { _, w ->
+                prefs.sttMode = if (w == 0) "GOOGLE" else "WHISPER"
+                if (w == 1 && prefs.groqKey.isBlank()) toast("Trag oben noch einen Groq-Schlüssel ein, sonst bleibt es bei Google.")
+                recreate()
+            }.show()
+    }
+
     private fun buildVoiceSection(col: LinearLayout) {
         col.addView(section("Stimme"))
         speaker = Speaker(this, onReady = { updateVoiceButton() })
+        col.addView(button("Sprach-Engine: " + (prefs.ttsEngine.ifBlank { "Standard" }), filled = false) { chooseEngine() })
         voiceButton = button("Stimme: automatisch", filled = false) { chooseVoice() }
         col.addView(voiceButton)
+        col.addView(link("Bessere, natürlichere Stimme (kostenlos): SherpaTTS installieren und Stimme „Thorsten“ (Deutsch) laden →",
+            "https://f-droid.org/de/packages/org.woheller69.ttsengine/"))
 
         col.addView(slider("Tonhöhe (links = tiefer)", prefs.voicePitch, 0.5f, 1.5f) { prefs.voicePitch = it })
         col.addView(slider("Tempo", prefs.voiceRate, 0.6f, 1.6f) { prefs.voiceRate = it })
@@ -285,7 +313,16 @@ class MainActivity : Activity() {
         })
         col.addView(button("Probe hören", filled = false) { previewVoice() })
 
+        col.addView(section("Spracherkennung"))
+        col.addView(button("Spracherkennung: " + (if (prefs.sttMode == "WHISPER") "Whisper (genauer)" else "Google (Standard)"), filled = false) { chooseStt() })
+        col.addView(label("Whisper versteht dich deutlich genauer (auch Namen, Dialekt, Hintergrundlärm), braucht aber einen Groq-Schlüssel " +
+            "(kostenlos, eigenes Limit nur für Spracherkennung). Ohne Groq-Schlüssel nutzt Jarvis automatisch Google.", 13f, MUTED))
+
         col.addView(section("Design"))
+        col.addView(button("Farbschema App: " + (if (prefs.uiTheme == "LILA") "Lila" else "Blau (Command Center)"), filled = false) {
+            android.app.AlertDialog.Builder(this).setTitle("Farbschema")
+                .setItems(arrayOf("Blau (Command Center)", "Lila")) { _, w -> prefs.uiTheme = if (w == 0) "BLAU" else "LILA"; recreate() }.show()
+        })
         designButton = button(designLabel(), filled = false) { chooseDesign() }
         col.addView(designButton)
     }

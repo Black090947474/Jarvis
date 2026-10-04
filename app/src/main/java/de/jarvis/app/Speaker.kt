@@ -27,7 +27,10 @@ class Speaker(
     private val ctx = context.applicationContext
     private val prefs = Prefs(ctx)
     private val main = Handler(Looper.getMainLooper())
-    private val tts = TextToSpeech(ctx, this)
+    private val tts = TextToSpeech(ctx, this, prefs.ttsEngine.ifBlank { null })
+
+    /** Installierte Sprach-Engines (Google, Samsung, SherpaTTS …). */
+    fun engines(): List<TextToSpeech.EngineInfo> = try { tts.engines.orEmpty() } catch (_: Exception) { emptyList() }
     private var player: MediaPlayer? = null
     private var reverb: PresetReverb? = null
     private val synthIds = mutableSetOf<String>()
@@ -73,7 +76,9 @@ class Speaker(
     /** Alle deutschen Stimmen, die offline oder online verfügbar sind. */
     fun germanVoices(): List<Voice> = try {
         tts.voices.orEmpty()
-            .filter { it.locale.language == "de" && !it.features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) }
+            .filter { (it.locale.language in setOf("de", "deu", "ger") || it.locale.isO3Language == "deu") &&
+                !it.features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) }
+            .ifEmpty { tts.voices.orEmpty().filter { !it.features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) } }
             .sortedWith(compareBy({ it.isNetworkConnectionRequired }, { it.name }))
     } catch (_: Exception) { emptyList() }
 

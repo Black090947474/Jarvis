@@ -41,3 +41,28 @@ class Memory(context: Context) {
 
     companion object { const val MAX = 100 }
 }
+
+/** Gesprächsverlauf, den Sprechen und Chat teilen – damit Jarvis weiß, worüber ihr zuletzt geredet habt. */
+class Convo(context: Context) {
+    private val sp = context.getSharedPreferences("jarvis_convo", Context.MODE_PRIVATE)
+
+    private fun load(): JSONArray = try { JSONArray(sp.getString("log", "[]")) } catch (_: Exception) { JSONArray() }
+
+    @Synchronized fun add(role: String, text: String) {
+        if (text.isBlank()) return
+        val a = load()
+        a.put(org.json.JSONObject().put("r", role).put("t", text.take(1200)).put("at", System.currentTimeMillis()))
+        val keep = JSONArray()
+        for (i in maxOf(0, a.length() - 40) until a.length()) keep.put(a.get(i))
+        sp.edit().putString("log", keep.toString()).apply()
+    }
+
+    /** Letzte Nachrichten (max. [n]) der letzten [hours] Stunden, als (rolle, text). */
+    @Synchronized fun recent(n: Int = 16, hours: Int = 72): List<Pair<String, String>> {
+        val a = load(); val since = System.currentTimeMillis() - hours * 3_600_000L
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { it.optLong("at") >= since }
+            .takeLast(n).map { it.optString("r") to it.optString("t") }
+    }
+
+    fun clear() = sp.edit().remove("log").apply()
+}

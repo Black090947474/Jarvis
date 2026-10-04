@@ -34,7 +34,8 @@ class Ui(private val a: Activity) {
 
     fun card(vertical: Boolean = true) = LinearLayout(a).apply {
         orientation = if (vertical) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-        background = round(CARD, 18, LINE)
+        background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(CARD2, CARD)).apply {
+            cornerRadius = 18 * dp; setStroke(px(1), LINE) }
         setPadding(px(16), px(14), px(16), px(14))
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(10) }
     }
@@ -47,7 +48,7 @@ class Ui(private val a: Activity) {
 
     fun button(t: String, filled: Boolean = true, onClick: () -> Unit) = text(t, 15f, Color.WHITE, true).apply {
         gravity = Gravity.CENTER
-        background = if (filled) round(RED, 14) else round(CARD2, 14, LINE)
+        background = if (filled) gradient(RED, ACCENT2, 14) else round(CARD2, 14, LINE)
         setPadding(px(14), px(12), px(14), px(12))
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(10) }
@@ -58,14 +59,22 @@ class Ui(private val a: Activity) {
     fun weighted(v: View, w: Float = 1f) = v.apply { layoutParams = LinearLayout.LayoutParams(0, -2, w) }
 
     companion object {
-        val BG = Color.rgb(7, 7, 11)
-        val CARD = Color.rgb(20, 20, 27)
-        val CARD2 = Color.rgb(28, 28, 36)
-        val LINE = Color.rgb(40, 40, 52)
-        val RED = Color.rgb(255, 45, 60)
-        val MUTED = Color.rgb(140, 140, 152)
-        val SOFT = Color.rgb(200, 200, 212)
-        val GREEN = Color.rgb(60, 210, 120)
-        val AMBER = Color.rgb(255, 180, 60)
+        /** Farbschema: "BLAU" (Command Center, Standard) oder "LILA". Wird beim Start aus den Einstellungen gesetzt. */
+        @JvmStatic var theme = "BLAU"
+        private val blue get() = theme != "LILA"
+
+        val BG get() = if (blue) Color.rgb(4, 9, 17) else Color.rgb(10, 5, 16)
+        val CARD get() = if (blue) Color.rgb(9, 20, 34) else Color.rgb(22, 11, 31)
+        val CARD2 get() = if (blue) Color.rgb(12, 27, 45) else Color.rgb(30, 15, 42)
+        val LINE get() = if (blue) Color.rgb(22, 52, 82) else Color.rgb(58, 28, 78)
+        /** Akzentfarbe (heißt aus historischen Gründen RED). */
+        val RED get() = if (blue) Color.rgb(42, 168, 255) else Color.rgb(214, 64, 255)
+        val ACCENT2 get() = if (blue) Color.rgb(0, 229, 255) else Color.rgb(255, 72, 176)
+        val MUTED get() = if (blue) Color.rgb(120, 146, 172) else Color.rgb(150, 128, 166)
+        val SOFT = Color.rgb(205, 214, 226)
+        val GREEN = Color.rgb(50, 220, 130)
+        val AMBER = Color.rgb(255, 184, 60)
+
+        fun load(p: Prefs) { theme = p.uiTheme }
     }
 }

@@ -54,7 +54,7 @@ class JarvisActivity : Activity() {
         if (!prefs.hasAnyKey) {
             jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den NVIDIA- oder Groq-Schlüssel in der Jarvis-App ein."
         } else {
-            claude = Brains.build(prefs, t, Memory(this), chat = false)
+            claude = Brains.build(prefs, t, Memory(this), chat = false).also { it.seed(Convo(this).recent()) }
         }
         tts = Speaker(this,
             onStart = { core.mode = CoreView.Mode.SPEAKING },
@@ -403,8 +403,13 @@ class JarvisActivity : Activity() {
 
     // ---------- Spracherkennung ----------
 
+    @Volatile private var whisperGen = 0
+    private var whisperFailed = false
+
     private fun listen() {
         if (isFinishing || listening || busy) return
+        val p = Prefs(this)
+        if (p.sttMode == "WHISPER" && p.groqKey.isNotBlank() && !whisperFailed && Offline.isOnline(this)) { listenWhisper(p.groqKey); return }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             jarvisText.text = "Keine Spracherkennung gefunden. Installier bitte die Google-App."
             core.mode = CoreView.Mode.IDLE
@@ -416,11 +421,42 @@ class JarvisActivity : Activity() {
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1500L)
+            .apply { if (android.os.Build.VERSION.SDK_INT >= 33) putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS,
+                arrayListOf("Jarvis", "Taschenlampe", "Einkaufsliste", "Stundenplan", "Hausaufgabe", "Erinnerung", "WhatsApp", "Snapchat", "Spotify")) }
         listening = true
         core.mode = CoreView.Mode.LISTENING
         youText.text = "…"
         recognizer?.startListening(intent)
+    }
+
+    /** Genauere Erkennung über Whisper: selbst aufnehmen, bis du fertig bist, dann erkennen lassen. */
+    private fun listenWhisper(key: String) {
+        listening = true
+        val my = ++whisperGen
+        val cancelled = { whisperGen != my || isFinishing }
+        core.mode = CoreView.Mode.LISTENING
+        youText.text = "…"
+        thread {
+            val pcm = try { Whisper.record({ lvl -> main.post { core.level = lvl } }, cancelled) }
+                      catch (e: Exception) { main.post { if (!cancelled()) { listening = false; whisperFailed = true; listen() } }; return@thread }
+            if (cancelled()) return@thread
+            if (pcm == null) { main.post { if (!cancelled()) { listening = false; onNothingHeard() } }; return@thread }
+            main.post { core.mode = CoreView.Mode.THINKING; youText.text = "Verstehe …" }
+            val text = try { Whisper.transcribe(key, pcm) } catch (e: Exception) { null }
+            main.post {
+                if (!cancelled()) listening = false
+                when {
+                    cancelled() -> {}
+                    text == null -> { whisperFailed = true; jarvisText.text = "Whisper geht gerade nicht – ich nutze Google."; listen() }
+                    text.isBlank() -> onNothingHeard()
+                    else -> onHeard(text)
+                }
+            }
+        }
     }
 
     private val listener = object : RecognitionListener {
@@ -438,7 +474,9 @@ class JarvisActivity : Activity() {
 
         override fun onResults(results: Bundle?) {
             listening = false
-            val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim()
+            // Von mehreren Vorschlägen den nehmen, den Jarvis sicher versteht (sonst den wahrscheinlichsten)
+            val all = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty().map { it.trim() }.filter { it.isNotEmpty() }
+            val text = all.firstOrNull { de.jarvis.app.logic.LocalCommands.parse(it) != null } ?: all.firstOrNull()
             if (text.isNullOrEmpty()) onNothingHeard() else onHeard(text)
         }
 
@@ -495,12 +533,14 @@ class JarvisActivity : Activity() {
             val offline = client == null || !Offline.isOnline(this)
             // Einfache Befehle (Timer, Wecker, Taschenlampe, Erinnerung, Tagesplan, Akku) immer direkt: schneller, schont das Limit
             val local = if (t != null) Offline.handle(t, text)?.substringBefore("\n\n") else null
-            val reply = when {
+            val reply0 = when {
                 local != null -> local
                 client == null -> "Dafür brauche ich einen KI-Schlüssel. Ohne geht nur: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."
                 offline -> "Ich bin gerade offline. Ohne Internet kann ich Timer, Wecker, Taschenlampe, Erinnerungen, deinen Tagesplan und den Akku."
                 else -> client.ask(text, { step -> main.post { jarvisText.text = step } })
             }
+            val reply = reply0
+            Convo(this).let { c -> c.add("user", text); c.add("assistant", reply) }
             main.post {
                 busy = false
                 if (isFinishing) return@post
@@ -518,11 +558,13 @@ class JarvisActivity : Activity() {
     private fun onTap() {
         // Tippen unterbricht Jarvis und hört wieder zu
         if (busy) return
+        whisperGen++
         tts?.stop()
         recognizer?.cancel()
         listening = false
         silentTries = 0
-        listen()
+        // Kurz warten, bis eine laufende Aufnahme das Mikrofon freigegeben hat
+        main.postDelayed({ listen() }, 250)
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -533,6 +575,7 @@ class JarvisActivity : Activity() {
     }
 
     override fun onDestroy() {
+        whisperGen++
         isOpen = false
         main.removeCallbacksAndMessages(null)
         recognizer?.destroy()

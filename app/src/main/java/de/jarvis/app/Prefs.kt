@@ -63,6 +63,21 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("voice_effect2", false)
         set(v) = sp.edit().putBoolean("voice_effect2", v).apply()
 
+    /** Farbschema der App: BLAU (Command Center) oder LILA. */
+    var uiTheme: String
+        get() = sp.getString("ui_theme", "BLAU") ?: "BLAU"
+        set(v) = sp.edit().putString("ui_theme", v).apply()
+
+    /** Spracherkennung: GOOGLE (Standard) oder WHISPER (genauer, über Groq). */
+    var sttMode: String
+        get() = sp.getString("stt_mode", "GOOGLE") ?: "GOOGLE"
+        set(v) = sp.edit().putString("stt_mode", v).apply()
+
+    /** Sprachausgabe-Engine (Paketname), leer = Standard des Handys. */
+    var ttsEngine: String
+        get() = sp.getString("tts_engine", "") ?: ""
+        set(v) = sp.edit().putString("tts_engine", v).apply()
+
     /** Design des Gesprächsbildschirms: GLUT, AURORA, LINIE oder GLAS. */
     var design: String
         get() = sp.getString("design", "NEXUS") ?: "NEXUS"

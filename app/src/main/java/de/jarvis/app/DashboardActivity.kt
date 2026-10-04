@@ -62,98 +62,194 @@ class DashboardActivity : Activity() {
     private lateinit var extrasBox: LinearLayout
     private var torchOn = false
 
+    private lateinit var content: android.widget.FrameLayout
+    private val pages = mutableMapOf<String, android.view.View>()
+    private val navViews = mutableMapOf<String, Pair<IconView, TextView>>()
+    private var current = "home"
+    private lateinit var systemBox: LinearLayout
+    private lateinit var statusText: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ui = Ui(this); prefs = Prefs(this)
+        prefs = Prefs(this); Ui.load(prefs); ui = Ui(this)
         window.statusBarColor = BG; window.navigationBarColor = BG
         Notifier.channels(this)
 
-        val col = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(ui.px(18), ui.px(22), ui.px(18), ui.px(36))
-        }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(BG) }
+        content = android.widget.FrameLayout(this)
+        root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(buildNav(), LinearLayout.LayoutParams(-1, -2))
+        pages["home"] = buildHome(); pages["tools"] = buildTools(); pages["system"] = buildSystem()
+        pages.values.forEach { content.addView(it, android.widget.FrameLayout.LayoutParams(-1, -1)) }
+        setContentView(root)
+        show(savedInstanceState?.getString("tab") ?: intent.getStringExtra("tab") ?: "home")
+    }
 
-        // ---- Kopf: Uhr, Datum, Begrüßung ----
-        val head = ui.row()
+    override fun onSaveInstanceState(out: Bundle) { super.onSaveInstanceState(out); out.putString("tab", current) }
+
+    override fun onBackPressed() {
+        if (current != "home") show("home") else @Suppress("DEPRECATION") super.onBackPressed()
+    }
+
+    private fun show(tab: String) {
+        current = tab
+        pages.forEach { (k, v) -> v.visibility = if (k == tab) android.view.View.VISIBLE else android.view.View.GONE }
+        navViews.forEach { (k, v) ->
+            val on = k == tab
+            v.second.setTextColor(if (on) RED else MUTED)
+            v.first.alpha = if (on) 1f else 0.55f
+        }
+        if (tab == "system") refreshSystem()
+    }
+
+    private fun buildNav(): LinearLayout {
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(Ui.CARD); setStroke(ui.px(1), Ui.LINE) }
+            setPadding(0, ui.px(8), 0, ui.px(10))
+        }
+        for ((key, icon, label) in listOf(Triple("home", "home", "Home"), Triple("chat", "chat", "Chat"),
+                Triple("tools", "tools", "Tools"), Triple("system", "gear", "System"))) {
+            val item = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
+                setOnClickListener { if (key == "chat") startActivity(Intent(this@DashboardActivity, ChatActivity::class.java)) else show(key) } }
+            val iv = IconView(this, icon, RED)
+            item.addView(iv, LinearLayout.LayoutParams(ui.px(24), ui.px(24)))
+            val tv = ui.text(label, 11f, MUTED).apply { gravity = Gravity.CENTER; setPadding(0, ui.px(3), 0, 0) }
+            item.addView(tv)
+            navViews[key] = iv to tv
+            nav.addView(item, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        return nav
+    }
+
+    private fun page(col: LinearLayout) = ScrollView(this).apply { isFillViewport = true; addView(col) }
+
+    private fun title(t: String, sub: String?, gear: Boolean): LinearLayout {
+        val head = ui.row().apply { setPadding(0, ui.px(6), 0, 0) }
         val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        left.addView(TextClock(this).apply {
-            format24Hour = "HH:mm"; format12Hour = "HH:mm"; textSize = 54f; setTextColor(Color.WHITE)
-            typeface = Typeface.create("sans-serif-thin", Typeface.NORMAL); includeFontPadding = false
-        })
-        dateText = ui.text("", 15f, SOFT); left.addView(dateText)
-        greeting = ui.text("", 14f, MUTED); left.addView(greeting)
+        left.addView(ui.text(t, 26f, Color.WHITE).apply { letterSpacing = 0.45f; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) })
+        sub?.let { left.addView(ui.text(it, 11f, RED).apply { letterSpacing = 0.18f }) }
         head.addView(ui.weighted(left))
-        head.addView(ui.text("J", 26f, Color.WHITE, true).apply {
-            gravity = Gravity.CENTER
-            background = ui.gradient(RED, Color.rgb(120, 10, 30), 40)
-            layoutParams = LinearLayout.LayoutParams(ui.px(56), ui.px(56))
-            setOnClickListener { talk() }
-        })
-        col.addView(head)
+        if (gear) head.addView(IconView(this, "gear", SOFT).apply {
+            background = ui.round(Ui.CARD2, 14, Ui.LINE); setPadding(ui.px(8), ui.px(8), ui.px(8), ui.px(8))
+            setOnClickListener { startActivity(Intent(this@DashboardActivity, MainActivity::class.java)) }
+        }, LinearLayout.LayoutParams(ui.px(44), ui.px(44)))
+        return head
+    }
+
+    // ---------- Home ----------
+
+    private fun buildHome(): ScrollView {
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(18), ui.px(18), ui.px(28)) }
+        col.addView(title("J A R V I S", "DEIN PERSÖNLICHER KI-ASSISTENT", gear = true))
+
+        val orb = OrbView(this).apply { setOnClickListener { talk() } }
+        col.addView(orb, LinearLayout.LayoutParams(-1, ui.px(250)).apply { topMargin = ui.px(8) })
+
+        val greet = ui.card().apply { gravity = Gravity.CENTER_HORIZONTAL }
+        greeting = ui.text("", 18f, Color.WHITE, true).apply { gravity = Gravity.CENTER }
+        dateText = ui.text("", 13f, MUTED).apply { gravity = Gravity.CENTER; setPadding(0, ui.px(4), 0, 0) }
+        greet.addView(greeting, LinearLayout.LayoutParams(-1, -2)); greet.addView(dateText, LinearLayout.LayoutParams(-1, -2))
+        col.addView(greet)
+
+        // Großer Mikrofon-Knopf
+        val ask = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, ui.px(18), 0, ui.px(4)); setOnClickListener { talk() } }
+        ask.addView(IconView(this, "mic", RED).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Ui.CARD); setStroke(ui.px(2), RED) }
+            setPadding(ui.px(22), ui.px(22), ui.px(22), ui.px(22))
+            elevation = ui.px(8).toFloat()
+        }, LinearLayout.LayoutParams(ui.px(86), ui.px(86)))
+        ask.addView(ui.text("FRAG JARVIS", 15f, Color.WHITE, true).apply { letterSpacing = 0.2f; setPadding(0, ui.px(10), 0, 0) })
+        ask.addView(ui.text("Tippen oder „Hey Jarvis“ sagen", 12f, RED))
+        col.addView(ask, LinearLayout.LayoutParams(-1, -2))
 
         chips = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         col.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(chips) })
 
-        // ---- Sprechen ----
-        col.addView(ui.text("🎙  Mit Jarvis sprechen", 17f, Color.WHITE, true).apply {
-            gravity = Gravity.CENTER
-            background = ui.gradient(RED, Color.rgb(150, 15, 40), 22)
-            setPadding(0, ui.px(16), 0, ui.px(16))
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(16) }
-            setOnClickListener { talk() }
-        })
-
-        // ---- Wetter ----
         col.addView(ui.section("Wetter"))
         weatherBox = ui.card(); col.addView(weatherBox)
-
-        // ---- Heute ----
         col.addView(ui.section("Heute"))
         todayBox = ui.card(); col.addView(todayBox)
-        weekText = ui.text("", 13f, MUTED).apply { setPadding(ui.px(4), ui.px(8), 0, 0) }
+        weekText = ui.text("", 13f, MUTED).apply { setPadding(ui.px(4), ui.px(8), 0, 0)
+            setOnClickListener { startActivity(Intent(this@DashboardActivity, CalendarActivity::class.java)) } }
         col.addView(weekText)
-
-        // ---- Nachrichten ----
         col.addView(ui.section("Nachrichten"))
         msgBox = ui.card(); col.addView(msgBox)
-
-        // ---- Schule, Einkaufsliste, Geburtstage ----
         col.addView(ui.section("Schule · Einkauf · Geburtstage"))
         extrasBox = ui.card(); col.addView(extrasBox)
+        return page(col)
+    }
 
-        // ---- Schnellaktionen ----
-        col.addView(ui.section("Schnellaktionen"))
-        val grid = GridLayout(this).apply { columnCount = 3 }
-        fun quick(icon: String, label: String, action: () -> Unit) {
+    // ---------- Tools ----------
+
+    private fun buildTools(): ScrollView {
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(18), ui.px(18), ui.px(28)) }
+        col.addView(title("J A R V I S", "WERKZEUGE", gear = true))
+        val hi = ui.card().apply { background = ui.gradient(Color.argb(90, Color.red(RED), Color.green(RED), Color.blue(RED)), Ui.CARD, 18) }
+        hi.addView(ui.text("Was soll ich für dich tun?", 17f, Color.WHITE, true))
+        hi.addView(ui.text("Tippe ein Werkzeug an oder sag es einfach.", 13f, SOFT))
+        col.addView(hi)
+        val grid = GridLayout(this).apply { columnCount = 2 }
+        fun tile(icon: String, name: String, sub: String, action: () -> Unit) {
             val box = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-                background = ui.round(CARD2, 16, Ui.LINE)
-                setPadding(ui.px(4), ui.px(14), ui.px(4), ui.px(12))
+                orientation = LinearLayout.VERTICAL
+                background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Ui.CARD2, Ui.CARD)).apply { cornerRadius = 16 * ui.dp; setStroke(ui.px(1), Ui.LINE) }
+                setPadding(ui.px(14), ui.px(14), ui.px(10), ui.px(14))
                 setOnClickListener { action() }
             }
-            box.addView(ui.text(icon, 22f).apply { gravity = Gravity.CENTER })
-            box.addView(ui.text(label, 12f, SOFT).apply { gravity = Gravity.CENTER; maxLines = 1 })
+            box.addView(IconView(this, icon, RED), LinearLayout.LayoutParams(ui.px(30), ui.px(30)))
+            box.addView(ui.text(name, 15f, Color.WHITE, true).apply { setPadding(0, ui.px(10), 0, 0); maxLines = 1 })
+            box.addView(ui.text(sub, 11f, RED).apply { maxLines = 1 })
             grid.addView(box, GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f)).apply {
-                width = 0; setMargins(ui.px(4), ui.px(4), ui.px(4), ui.px(4))
-            })
+                width = 0; setMargins(ui.px(5), ui.px(5), ui.px(5), ui.px(5)) })
         }
-        quick("💬", "Chat") { startActivity(Intent(this, ChatActivity::class.java)) }
-        quick("✅", "Aufgabe") { addTaskDialog() }
-        quick("🔔", "Erinnerung") { addReminderDialog() }
-        quick("⏱", "Timer") { timerDialog() }
-        quick("🔦", "Taschenlampe") { toggleTorch() }
-        quick("📅", "Kalender") { openCalendar() }
-        quick("📋", "Aufgaben") { showTasks() }
-        quick("🛡", "Berechtigungen") { startActivity(Intent(this, PermissionsActivity::class.java)) }
-        quick("🌅", "Briefing") { showBriefing() }
-        quick("🛒", "Einkauf") { shoppingDialog() }
-        quick("📝", "Notiz") { noteDialog() }
-        quick("🎵", "Lied erkennen") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
-        quick("📍", "Parkplatz") { parkingDialog() }
-        quick("⚙", "Einstellungen") { startActivity(Intent(this, MainActivity::class.java)) }
-        col.addView(grid, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(6) })
+        tile("chat", "Chat", "Mit Jarvis schreiben") { startActivity(Intent(this, ChatActivity::class.java)) }
+        tile("calendar", "Kalender", "Termine & Planung") { startActivity(Intent(this, CalendarActivity::class.java)) }
+        tile("bell", "Erinnerungen", "Aufgaben & Erinnerungen") { remindersDialog() }
+        tile("phone", "Telefon", "Anrufe & Anrufliste") { phoneDialog() }
+        tile("message", "Nachrichten", "Zusammenfassen") { askJarvis("Fass meine neuen Nachrichten kurz zusammen.") }
+        tile("mail", "E-Mails", "Mail-App öffnen") { openMail() }
+        tile("music", "Musik", "Steuerung & Erkennen") { musicDialog() }
+        tile("device", "Geräte", "Status & Schalter") { show("system") }
+        tile("brain", "Wissen", "Fragen & Websuche") { startActivity(Intent(this, ChatActivity::class.java)) }
+        tile("camera", "Kamera", "Foto & Video") { openCamera() }
+        tile("apps", "Apps", "Öffnen & suchen") { startActivity(Intent(this, AppsActivity::class.java)) }
+        tile("school", "Schule", "Stundenplan & Hausaufgaben") { schoolDialog() }
+        tile("cart", "Einkauf", "Einkaufsliste") { val l = de.jarvis.app.tools.ShoppingTool.items(this); if (l.isEmpty()) shoppingDialog() else checkShopping(l) }
+        tile("notes", "Notizen", "Notieren & finden") { notesDialog() }
+        tile("learn", "Lernen", "Vokabeln abfragen") { askJarvis("Frag mich Vokabeln ab.") }
+        tile("bolt", "Kommandos", "Eigene Befehle") { routinesDialog() }
+        tile("sun", "Briefing", "Dein Tag kurz") { showBriefing() }
+        tile("timer", "Timer", "Countdown starten") { timerDialog() }
+        tile("flash", "Taschenlampe", "An / aus") { toggleTorch() }
+        tile("pin", "Parkplatz", "Merken & finden") { parkingDialog() }
+        tile("song", "Lied erkennen", "Was läuft gerade?") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
+        tile("shield", "Berechtigungen", "Was Jarvis darf") { startActivity(Intent(this, PermissionsActivity::class.java)) }
+        col.addView(grid, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(8) })
+        return page(col)
+    }
 
-        setContentView(ScrollView(this).apply { setBackgroundColor(BG); isFillViewport = true; addView(col) })
+    // ---------- System ----------
+
+    private fun buildSystem(): ScrollView {
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(18), ui.px(18), ui.px(28)) }
+        col.addView(title("J A R V I S", "COMMAND CENTER", gear = true))
+        val status = ui.card(false).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(ui.px(20), ui.px(22), ui.px(20), ui.px(22))
+            background = android.graphics.drawable.GradientDrawable().apply { setColor(Ui.CARD); cornerRadius = 22 * ui.dp; setStroke(ui.px(2), RED) } }
+        status.addView(android.view.View(this).apply { background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(GREEN) } }, LinearLayout.LayoutParams(ui.px(22), ui.px(22)))
+        val st = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), 0, 0, 0) }
+        st.addView(ui.text("SYSTEMSTATUS", 12f, SOFT).apply { letterSpacing = 0.15f })
+        statusText = ui.text("ONLINE", 26f, GREEN, true).apply { letterSpacing = 0.1f }
+        st.addView(statusText)
+        status.addView(st)
+        col.addView(status)
+        systemBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        col.addView(systemBox)
+        return page(col)
     }
 
     override fun onResume() {
@@ -162,10 +258,11 @@ class DashboardActivity : Activity() {
     }
 
     private fun refresh() {
+        if (current == "system") refreshSystem()
         dateText.text = SimpleDateFormat("EEEE, d. MMMM", Locale.GERMANY).format(Date())
         val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
         val hi = when (h) { in 5..10 -> "Guten Morgen"; in 11..17 -> "Hallo"; in 18..22 -> "Guten Abend"; else -> "Gute Nacht" }
-        greeting.text = hi + (if (prefs.userName.isNotBlank()) ", ${prefs.userName}" else "") + "."
+        greeting.text = hi + (if (prefs.userName.isNotBlank()) ", ${prefs.userName}" else "") + ".\nWie kann ich dir heute helfen?"
         refreshChips()
         refreshWeather()
         refreshAgenda()
@@ -371,6 +468,152 @@ class DashboardActivity : Activity() {
                 refreshWeather()
             }
         }
+    }
+
+    // ---------- System-Seite ----------
+
+    private fun refreshSystem() {
+        if (!::systemBox.isInitialized) return
+        val on = online()
+        statusText.text = if (on) "ONLINE" else "OFFLINE"
+        statusText.setTextColor(if (on) GREEN else AMBER)
+        thread {
+            val bm = getSystemService(BatteryManager::class.java)
+            val bat = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+            val charging = bm?.isCharging == true
+            val cm = getSystemService(ConnectivityManager::class.java)
+            val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+            val net = when {
+                caps == null -> "Keins"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "WLAN"
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Mobil"
+                else -> "Verbunden"
+            }
+            val free = try { android.os.StatFs(android.os.Environment.getDataDirectory().path).availableBytes / 1_000_000_000L } catch (_: Exception) { -1L }
+            val loc = de.jarvis.app.tools.Geo.lastKnown(applicationContext)
+            val city = loc?.let { l -> try { @Suppress("DEPRECATION")
+                android.location.Geocoder(this, Locale.GERMANY).getFromLocation(l.first, l.second, 1)?.firstOrNull()?.locality } catch (_: Exception) { null } }
+            val lm = getSystemService(android.location.LocationManager::class.java)
+            val locOn = try { if (android.os.Build.VERSION.SDK_INT >= 28) lm?.isLocationEnabled == true else true } catch (_: Exception) { false }
+            val bt = try { getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.isEnabled == true } catch (_: Exception) { false }
+            val media = try {
+                val msm = getSystemService(android.media.session.MediaSessionManager::class.java)
+                val sessions = msm?.getActiveSessions(android.content.ComponentName(this, JarvisNotificationListener::class.java)).orEmpty()
+                sessions.firstOrNull { it.playbackState?.state == android.media.session.PlaybackState.STATE_PLAYING } ?: sessions.firstOrNull()
+            } catch (_: Exception) { null }
+            val md = media?.metadata
+            val song = md?.getString(android.media.MediaMetadata.METADATA_KEY_TITLE)
+            val artist = md?.getString(android.media.MediaMetadata.METADATA_KEY_ARTIST)
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                systemBox.removeAllViews()
+                val grid = GridLayout(this).apply { columnCount = 2 }
+                fun tile(icon: String, label: String, value: String, ok: Boolean? = null, action: (() -> Unit)? = null) {
+                    val box = ui.card(false).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(ui.px(12), ui.px(14), ui.px(10), ui.px(14))
+                        action?.let { a -> setOnClickListener { a() } } }
+                    box.addView(IconView(this, icon, if (ok == false) MUTED else if (ok == true) GREEN else RED), LinearLayout.LayoutParams(ui.px(30), ui.px(30)))
+                    val t = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(10), 0, 0, 0) }
+                    t.addView(ui.text(label, 12f, MUTED))
+                    t.addView(ui.text(value, 15f, Color.WHITE, true).apply { maxLines = 2 })
+                    box.addView(t, LinearLayout.LayoutParams(0, -2, 1f))
+                    grid.addView(box, GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f)).apply {
+                        width = 0; setMargins(ui.px(4), ui.px(4), ui.px(4), ui.px(4)) })
+                }
+                tile("battery", "Akku", if (bat >= 0) "$bat %" + (if (charging) " ⚡" else "") else "?", bat > 20)
+                tile("wifi", "Netzwerk", net, caps != null) { startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)) }
+                tile("storage", "Speicher", if (free >= 0) "$free GB frei" else "?", free > 2)
+                tile("pin", "Standort", city ?: if (loc != null) "bekannt" else "unbekannt", locOn) {
+                    startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+                tile("music", "Aktuelle Musik", song?.let { it + (artist?.let { a -> " – $a" } ?: "") } ?: "Nichts läuft", song != null) { musicDialog() }
+                tile("device", "Gerät", android.os.Build.MANUFACTURER.replaceFirstChar { it.uppercase() } + " " + android.os.Build.MODEL)
+                tile("mic", "Mikrofon / Hey Jarvis", if (WakeWordService.isRunning) "Hört zu" else "Aus", WakeWordService.isRunning) {
+                    startActivity(Intent(this, MainActivity::class.java)) }
+                tile("camera", "Kamera", "Bereit", true) { openCamera() }
+                tile("pin", "Standortdienst", if (locOn) "Ein" else "Aus", locOn) { startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
+                tile("bluetooth", "Bluetooth", if (bt) "Ein" else "Aus", bt) { startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)) }
+                tile("brain", "KI", if (prefs.nvidiaKey.isNotBlank()) "NVIDIA" else if (prefs.groqKey.isNotBlank()) "Groq" else if (prefs.hasAnyKey) "bereit" else "Schlüssel fehlt", prefs.hasAnyKey) {
+                    startActivity(Intent(this, MainActivity::class.java)) }
+                tile("shield", "Berechtigungen", "Verwalten") { startActivity(Intent(this, PermissionsActivity::class.java)) }
+                systemBox.addView(grid, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(10) })
+                systemBox.addView(ui.text("Schalter öffnen die passende Android-Einstellung – Jarvis ändert nichts heimlich.", 12f, MUTED)
+                    .apply { setPadding(ui.px(4), ui.px(10), 0, 0) })
+            }
+        }
+    }
+
+    // ---------- Werkzeug-Dialoge ----------
+
+    private fun list(title: String, items: List<String>, empty: String, onClick: ((Int) -> Unit)? = null, extra: Pair<String, () -> Unit>? = null) {
+        val b = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle(title)
+        if (items.isEmpty()) b.setMessage(empty) else b.setItems(items.toTypedArray()) { _, i -> onClick?.invoke(i) }
+        extra?.let { (label, act) -> b.setPositiveButton(label) { _, _ -> act() } }
+        b.setNegativeButton("Schließen", null).show()
+    }
+
+    private fun remindersDialog() {
+        val store = AgendaStore(this)
+        val rem = store.reminders().filter { it.active }.sortedBy { it.next ?: Long.MAX_VALUE }
+        val tasks = store.tasks().filter { !it.done }.sortedBy { it.due ?: Long.MAX_VALUE }
+        val lines = rem.map { "🔔 " + it.describe().substringAfter(" | ") } + tasks.map { "☐ " + it.title + (it.due?.let { d -> "  · " + TimeLogic.short(d) } ?: "") }
+        list("Erinnerungen & Aufgaben", lines, "Nichts geplant.", { i -> if (i >= rem.size) completeTask(tasks[i - rem.size].id) },
+            "Neu" to { AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setItems(arrayOf("Neue Erinnerung", "Neue Aufgabe")) { _, w -> if (w == 0) addReminderDialog() else addTaskDialog() }.show() })
+    }
+
+    private fun phoneDialog() {
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("Telefon")
+            .setItems(arrayOf("Letzte Anrufe", "Telefon-App öffnen", "Kontakte")) { _, i ->
+                when (i) {
+                    0 -> runTool { de.jarvis.app.tools.CallLogTool.run(ToolContext(this), JSONObject().put("limit", 8)) }
+                    1 -> safeStart(Intent(Intent.ACTION_DIAL))
+                    else -> safeStart(Intent(Intent.ACTION_VIEW, android.provider.ContactsContract.Contacts.CONTENT_URI))
+                }
+            }.show()
+    }
+
+    private fun openMail() = safeStart(Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_EMAIL))
+    private fun openCamera() = safeStart(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA))
+    private fun safeStart(i: Intent) = try { startActivity(i) } catch (_: Exception) { toast("Keine passende App gefunden.") }
+
+    private fun musicDialog() {
+        val am = getSystemService(android.media.AudioManager::class.java)
+        fun key(k: Int) { am?.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, k))
+            am?.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, k)) }
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("Musik")
+            .setItems(arrayOf("⏯  Play / Pause", "⏭  Nächstes Lied", "⏮  Vorheriges Lied", "🎵  Lied erkennen", "Spotify öffnen")) { _, i ->
+                when (i) {
+                    0 -> key(android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+                    1 -> key(android.view.KeyEvent.KEYCODE_MEDIA_NEXT)
+                    2 -> key(android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+                    3 -> runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) }
+                    else -> packageManager.getLaunchIntentForPackage("com.spotify.music")?.let { safeStart(it) } ?: toast("Spotify ist nicht installiert.")
+                }
+                if (current == "system") main.postDelayed({ refreshSystem() }, 800)
+            }.show()
+    }
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private fun schoolDialog() {
+        val late = java.time.LocalTime.now().hour >= 15
+        val day = java.time.LocalDate.now().plusDays(if (late) 1 else 0).dayOfWeek
+        val lessons = de.jarvis.app.tools.SchoolTool.lessons(this, day)
+        val hw = AgendaStore(this).tasks().filter { !it.done && it.category == de.jarvis.app.tools.SchoolTool.HOMEWORK }
+        val lines = lessons.map { "🕘 $it" } + hw.map { "📚 ${it.title}" + (it.due?.let { d -> " · bis " + TimeLogic.day(d) } ?: "") }
+        list((if (late) "Morgen" else "Heute") + " in der Schule", lines,
+            "Kein Stundenplan gespeichert.\n\nSchick Jarvis im Chat ein Foto deines Stundenplans und schreib „Speicher meinen Stundenplan“ – oder sag z. B. „Mein Montag: 8 Uhr Mathe, 9:45 Deutsch“.",
+            { i -> if (i >= lessons.size) completeTask(hw[i - lessons.size].id) },
+            "Foto schicken" to { startActivity(Intent(this, ChatActivity::class.java)) })
+    }
+
+    private fun notesDialog() {
+        val notes = de.jarvis.app.tools.JsonStore(this).list("notes").reversed()
+        list("Notizen", notes.map { TimeLogic.short(it.optLong("at")) + "  " + it.optString("t") }, "Noch keine Notizen.", null, "Neue Notiz" to { noteDialog() })
+    }
+
+    private fun routinesDialog() {
+        val r = de.jarvis.app.tools.JsonStore(this).list("routines")
+        list("Eigene Kommandos", r.map { "⚡ " + it.optString("name") }, "Noch keine eigenen Kommandos.\n\nSag z. B.: „Wenn ich Gaming-Modus sage, mach Nicht stören an, Lautstärke auf 80 und starte Spotify.“",
+            { i -> val ctxTools = PhoneTools(this); runTool { ctxTools.execute("routines", JSONObject().put("action", "run").put("name", r[i].optString("name"))) } })
     }
 
     // ---------- Aktionen ----------

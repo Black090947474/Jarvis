@@ -86,6 +86,21 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neues Design (ab Version 17)
+Unten gibt es jetzt vier Bereiche: **Home** (leuchtender Kern, „Frag Jarvis“, Wetter, Heute, Nachrichten, Schule), **Chat**, **Tools** (alle Werkzeuge als Kacheln: Kalender, Erinnerungen, Telefon, Musik, Apps, Schule, Einkauf, Notizen, Lernen, Kommandos …) und **System** (Akku, Netzwerk, Speicher, Standort, Musik, Bluetooth …). Farbschema Blau oder Lila unter ⚙ → Design.
+
+### Gedächtnis
+Jarvis merkt sich jetzt von selbst Wichtiges über dich (Hobbys, Verein, Schule, Vorlieben) – sichtbar und löschbar unter ⚙ → Gedächtnis. Sprechen und Chat teilen sich außerdem den Gesprächsverlauf der letzten Tage („Gesprächsverlauf vergessen“ löscht ihn).
+
+### Bessere Spracherkennung
+⚙ → Spracherkennung → **Whisper**: versteht deutlich genauer. Braucht einen (kostenlosen) Groq-Schlüssel; Whisper hat dort ein eigenes Limit, unabhängig vom Chat.
+
+### Bessere Stimme
+Die natürlichste kostenlose deutsche Stimme ist „Thorsten“ (eine freigegebene, gespendete Stimme). So geht's:
+1. **SherpaTTS** installieren: https://f-droid.org/de/packages/org.woheller69.ttsengine/ (unten „APK herunterladen“).
+2. SherpaTTS öffnen und als Sprache **Deutsch – thorsten** (Piper) laden.
+3. In Jarvis: ⚙ → Stimme → **Sprach-Engine: SherpaTTS**, dann Stimme wählen und „Probe hören“.
+
 ### Stimme einstellen
 Unter **Stimme** in der Jarvis-App kannst du zwischen allen deutschen Stimmen auf deinem Handy wählen (antippen zum Anhören), Tonhöhe und Tempo einstellen und den **KI-Hall** an- oder ausschalten. Standard: die natürlichste Stimme auf deinem Handy (meist eine Online-Stimme von Google), ohne Effekte.
 Mehr Stimmen bekommst du über *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache → Google Sprachausgabe → ⚙ → Sprachdaten installieren → Deutsch*.
