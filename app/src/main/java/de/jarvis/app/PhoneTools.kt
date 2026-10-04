@@ -627,6 +627,8 @@ class PhoneTools(private val activity: Activity) {
 
     // ---------- Apps lesen (z. B. Posteingang) ----------
 
+    private val RISKY_TAP = Regex("\\b(senden|send|absenden|abschicken|posten|post|teilen|share|veröffentlichen|kaufen|buy|bezahlen|pay|bestellen|order|zahlungspflichtig|löschen|delete|entfernen|abonnieren|subscribe|folgen|follow|gefällt mir|like)\\b|send_button|btn_send|compose_send")
+
     private val MAIL_APPS = listOf("com.google.android.gm", "de.gmx.mobile.android.mail", "de.web.mobile.android.mail",
         "com.microsoft.office.outlook", "com.samsung.android.email.provider", "com.yahoo.mobile.client.android.mail",
         "ch.protonmail.android", "de.telekom.mail", "com.google.android.apps.mail")
@@ -685,6 +687,14 @@ class PhoneTools(private val activity: Activity) {
         }
         val index = if (a.has("index") && !a.isNull("index")) a.optInt("index") else null
         val text = a.optString("text").takeIf { it.isNotBlank() }
+        // Sicherheitsnetz: Senden/Posten/Kaufen/Löschen per Bildschirm nur nach ausdrücklicher Bestätigung
+        if (a.optString("action") == "tap" && !a.optBoolean("confirmed")) {
+            val target = (text ?: "") + " " + (index?.let { acc.describeIndex(it) } ?: "")
+            if (RISKY_TAP.containsMatchIn(target.lowercase()))
+                return "BESTÄTIGUNG NÖTIG: Das tippt auf „${target.trim().take(60)}“ (senden/posten/kaufen/löschen). " +
+                    "Lies dem Nutzer vorher genau vor, was gesendet bzw. getan wird, und frag „Soll ich?“. " +
+                    "Erst nach einem klaren Ja dasselbe tap mit confirmed=true aufrufen."
+        }
         return when (val action = a.optString("action")) {
             "read" -> acc.read()
             "tap" -> acc.tap(index, text)
@@ -843,7 +853,8 @@ class PhoneTools(private val activity: Activity) {
    "confirmed":{"type":"boolean","description":"reply erst nach Ja des Nutzers mit true"}},"required":["action"]}},
  {"name":"screen","description":"Bedient die gerade offene App wie ein Mensch. read: sichtbare Elemente mit Nummern. tap: Element antippen (index oder text). type: Text ins Eingabefeld. enter: Eingabe bestätigen. scroll_down/scroll_up. back/home/recents/notifications/quick_settings/screenshot/lock. Nach tap/type/scroll kommt der neue Bildschirm zurück.",
   "input_schema":{"type":"object","properties":{"action":{"type":"string","enum":["read","tap","type","enter","scroll_down","scroll_up","back","home","recents","notifications","quick_settings","screenshot","lock"]},
-   "index":{"type":"integer"},"text":{"type":"string"}},"required":["action"]}},
+   "index":{"type":"integer"},"text":{"type":"string"},
+   "confirmed":{"type":"boolean","description":"Nur nach ausdrücklichem Ja des Nutzers bei Senden/Posten/Kaufen/Löschen/Liken"}},"required":["action"]}},
  {"name":"location","description":"Bestimmt den aktuellen Standort des Nutzers (Adresse und Koordinaten). Nützlich für Wetter hier, Weg nach Hause usw.",
   "input_schema":{"type":"object","properties":{}}},
  {"name":"latest_photo","description":"Öffnet das neueste Foto oder bereitet es zum Teilen vor. Mit who: Teilen-Fenster, der Nutzer wählt den Empfänger und tippt auf Senden.",

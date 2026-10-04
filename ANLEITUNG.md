@@ -174,6 +174,7 @@ Samsung beendet Hintergrund-Apps besonders gern:
 | „Hab ich neue Mails?“, „Schreib eine Mail an …“ | Neue Mails aus den Benachrichtigungen; Entwürfe öffnen sich in der Mail-App, senden tust du |
 | „Check meine E-Mails“, „Was steht in meinem Posteingang?“ | Öffnet deine Mail-App, liest den Posteingang vom Bildschirm und fasst zusammen (Bildschirmsteuerung nötig) |
 | „Was hat Max mir auf WhatsApp geschrieben?“, „Schau in Instagram, was neu ist“ | Öffnet die App und liest den sichtbaren Inhalt (nur lesen) |
+| „Antworte auf die Mail von Max, dass ich morgen Zeit habe“, „Schreib Lisa auf Insta zurück …“ | Jarvis schreibt die Antwort in der App, liest sie dir vor und fragt „Soll ich senden?“ – gesendet wird erst nach deinem Ja |
 | „Wie wird das Wetter morgen?“ | Wetter (Open-Meteo, kostenlos) |
 | „Wo ist die nächste Apotheke?“ | Karte mit Treffern in deiner Nähe |
 | „Helligkeit auf 40 Prozent“ | Helligkeit (Freigabe „Systemeinstellungen ändern“) |

@@ -68,6 +68,9 @@ class JarvisAccessibility : AccessibilityService() {
         for (i in 0 until n.childCount) collect(n.getChild(i), out, depth + 1)
     }
 
+    /** Beschriftung (inkl. Kennung) des Elements mit dieser Nummer aus dem letzten read – für Sicherheitsabfragen. */
+    fun describeIndex(index: Int): String = lastNodes.getOrNull(index)?.let { label(it) + " " + (idName(it) ?: "") }.orEmpty()
+
     private fun label(n: AccessibilityNodeInfo): String {
         val t = n.text?.toString()?.trim().orEmpty()
         val d = n.contentDescription?.toString()?.trim().orEmpty()
