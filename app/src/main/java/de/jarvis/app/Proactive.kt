@@ -160,8 +160,8 @@ object Scheduler {
         }
         val am = ctx.getSystemService(AlarmManager::class.java)!!
         val scan = pi(ctx, ACTION_SCAN, RC_SCAN)
-        if (p.proactive) am.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + 60_000, AlarmManager.INTERVAL_HALF_HOUR, scan)
-        else am.cancel(scan)
+        // Scan läuft auch ohne proaktive Hinweise (hält das Widget aktuell); Hinweise prüft scan() selbst
+        am.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + 60_000, AlarmManager.INTERVAL_HALF_HOUR, scan)
         scheduleBriefing(ctx)
     }
 
@@ -179,6 +179,7 @@ object Scheduler {
     // ---------- Proaktive Prüfung (alle ~30 Minuten) ----------
 
     fun scan(ctx: Context) {
+        JarvisWidget.updateAll(ctx)
         val p = Prefs(ctx)
         if (!p.proactive || !p.feature("calendar")) return
         val now = System.currentTimeMillis()

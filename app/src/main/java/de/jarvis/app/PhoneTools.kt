@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit
 class PhoneTools(private val activity: Activity) {
 
     private val ctx: Context get() = activity
+    val appContext: Context get() = activity
     private val main = Handler(Looper.getMainLooper())
     private val prefs = Prefs(activity)
 
@@ -89,7 +90,7 @@ class PhoneTools(private val activity: Activity) {
         // Neue, modulare Werkzeuge (Kalender, Erinnerungen, Aufgaben, Wetter …) laufen im Hintergrund-Thread
         ToolRegistry.find(name)?.let { tool ->
             tool.feature?.let { f -> if (!prefs.feature(f)) return Res.disabled(FEATURE_NAMES[f] ?: f) }
-            return safe { tool.run(ToolContext(activity), input) }
+            return safe { tool.run(ToolContext(activity) { n, a -> execute(n, a) }, input) }
         }
         // Wichtige Aktionen nur nach Bestätigung
         if (name == "notifications" && input.optString("action") == "reply" && !input.optBoolean("confirmed")) {
@@ -716,6 +717,9 @@ class PhoneTools(private val activity: Activity) {
             "calendar" to "Prüfe Kalender …", "agenda" to "Stelle deinen Tag zusammen …", "reminders" to "Erinnerung …",
             "tasks" to "Aufgaben …", "call_log" to "Lese Anrufliste …", "email" to "Prüfe E-Mails …",
             "weather" to "Hole Wetter …", "nearby" to "Suche in der Nähe …", "brightness" to "Helligkeit …",
+            "web" to "Suche im Internet …", "briefing" to "Stelle deinen Tag zusammen …", "school" to "Schaue in den Stundenplan …",
+            "shopping" to "Einkaufsliste …", "notes" to "Notizen …", "learn" to "Lern-Modus …", "routines" to "Führe Kommando aus …",
+            "birthdays" to "Prüfe Geburtstage …", "places" to "Orte …", "recognize_song" to "Höre mit …",
             "set_alarm" to "Stelle Wecker …", "set_timer" to "Starte Timer …", "show_alarms" to "Öffne Wecker …",
             "flashlight" to "Taschenlampe …", "set_volume" to "Lautstärke …", "media_control" to "Musik …",
             "play_music" to "Suche Musik …", "open_app" to "Öffne App …", "call" to "Rufe an …",

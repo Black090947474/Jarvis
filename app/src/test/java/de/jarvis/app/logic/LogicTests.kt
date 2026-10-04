@@ -95,6 +95,14 @@ fun main() {
     check("Was steht heute an", p("Jarvis, was steht heute an?")?.tool == "agenda")
     check("Was hab ich morgen", p("was hab ich morgen")?.args?.get("range") == "morgen")
     check("Unbekannt = null", p("Erzähl mir einen Witz") == null)
+    check("Guten Morgen = Briefing", p("Guten Morgen Jarvis")?.tool == "briefing")
+    check("Einkaufsliste add mehrere", p("Setz Milch und Eier auf die Einkaufsliste")?.let {
+        it.tool == "shopping" && it.args["items"] == listOf("milch", "eier") } == true) { p("Setz Milch und Eier auf die Einkaufsliste").toString() }
+    check("Kurzform Einkaufsliste", p("Brot auf die Einkaufsliste")?.args?.get("items") == listOf("brot"))
+    check("Einkaufsliste zeigen", p("Was steht auf der Einkaufsliste?")?.args?.get("action") == "list")
+    check("Parkplatz merken", p("Merk dir, wo ich geparkt habe")?.args?.get("action") == "save")
+    check("Parkplatz finden", p("Wo hab ich geparkt?")?.args?.get("action") == "go")
+    check("Notiz", p("Notiere: Mama anrufen wegen Sonntag")?.let { it.tool == "notes" && (it.args["text"] as String).startsWith("mama") } == true)
 
     println("\n$passed bestanden, $failed fehlgeschlagen")
     if (failed > 0) kotlin.system.exitProcess(1)

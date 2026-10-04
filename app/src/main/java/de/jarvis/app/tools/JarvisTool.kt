@@ -47,7 +47,7 @@ object Res {
 }
 
 /** Was ein Werkzeug zum Arbeiten bekommt. Läuft im Hintergrund-Thread. */
-class ToolContext(val activity: Activity) {
+class ToolContext(val activity: Activity, val runner: ((String, JSONObject) -> String)? = null) {
     val ctx: Context get() = activity
     val prefs = Prefs(activity)
     private val main = Handler(Looper.getMainLooper())
@@ -72,7 +72,8 @@ class ToolContext(val activity: Activity) {
 
 object ToolRegistry {
     val all: List<JarvisTool> by lazy {
-        listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool)
+        listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool,
+            WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool)
     }
 
     fun find(name: String): JarvisTool? = all.firstOrNull { it.name == name }
@@ -82,15 +83,17 @@ object ToolRegistry {
         "agenda" to listOf("termin", "kalender", "heute", "morgen", "woche", "monat", "frei", "zeit", "plan", "erinner",
             "aufgabe", "todo", "to-do", "steht an", "wann", "verschieb", "lösch", "absag", "montag", "dienstag", "mittwoch",
             "donnerstag", "freitag", "samstag", "sonntag", "wochenende", "uhr", "datum", "geburtstag", "lernen", "hausaufgabe",
-            "zuhause", "zu hause", "ankomm", "erledigt", "fertig", "liste"),
+            "zuhause", "zu hause", "ankomm", "erledigt", "fertig", "liste", "schule", "stundenplan", "fach", "stunde",
+            "einkauf", "kaufen", "notiz", "notier", "aufschreib", "geburtstag", "mathe", "deutsch", "englisch"),
         "comm" to listOf("ruf", "anruf", "angerufen", "telefon", "nachricht", "schreib", "sms", "whatsapp", "mail", "e-mail",
             "antwort", "benachrichtig", "kontakt", "insta", "snap", "verpasst"),
         "device" to listOf("wlan", "wifi", "bluetooth", "flugmodus", "hotspot", "helligkeit", "hell", "dunkel", "einstellung",
             "kamera", "foto", "bild", "selfie", "screenshot", "bildschirm", "tipp", "scroll", "öffne", "app", "standort",
             "wo bin", "navig", "fahr", "route", "nähe", "karte", "maps", "drehen", "nicht stören", "daten", "zurück", "sperr",
-            "like", "folg", "poste", "schick"),
+            "like", "folg", "poste", "schick", "geparkt", "park", "auto steht", "merk dir den ort", "wo steht"),
         "info" to listOf("wetter", "regen", "temperatur", "sonne", "grad", "kalt", "warm", "jacke", "schirm", "website",
-            "webseite", "homepage", "zweite", "station", "anderen handy", "vergiss", "merk"),
+            "webseite", "homepage", "zweite", "station", "anderen handy", "vergiss", "merk", "vokabel", "abfrag",
+            "lern", "quiz", "teste mich", "karteikart"),
     )
 
     /** Welche Gruppen für diese Anfrage gebraucht werden ("core" immer). */

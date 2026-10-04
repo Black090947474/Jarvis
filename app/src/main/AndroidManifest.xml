@@ -48,6 +48,10 @@
         </intent>
         <package android:name="com.spotify.music" />
         <package android:name="com.whatsapp" />
+        <package android:name="com.shazam.android" />
+        <intent>
+            <action android:name="com.google.android.googlequicksearchbox.MUSIC_SEARCH" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
@@ -164,6 +168,19 @@
             android:name=".WakeWordService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <!-- Startbildschirm-Widget -->
+        <receiver
+            android:name=".JarvisWidget"
+            android:exported="true"
+            android:label="Jarvis">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
         <!-- Erinnerungen, Termin-Hinweise, Neustart -->
         <receiver
             android:name=".JarvisReceiver"

@@ -19,8 +19,14 @@ object Offline {
     /** Versucht den Befehl lokal auszuführen. null = nicht erkannt (dann braucht es die KI). Im Hintergrund aufrufen. */
     fun handle(tools: PhoneTools, text: String): String? {
         val low = text.lowercase()
-        if (listOf("zweite", "station", "anderen handy", "und dann", " und ").any { low.contains(it) } && !low.startsWith("erinner")) return null
+        if (listOf("zweite", "station", "anderen handy", "und dann", " danach ").any { low.contains(it) }) return null
+        // Eigene Kommandos (Routinen) direkt per Namen
+        de.jarvis.app.tools.RoutineTool.find(tools.appContext, text)?.let { r ->
+            return Res.spoken(tools.execute("routines", JSONObject().put("action", "run").put("name", r.optString("name"))))
+        }
         val c = LocalCommands.parse(text) ?: return null
+        // "Taschenlampe an und Timer 5 Minuten" ist ein Mehrfach-Befehl → das macht die KI
+        if (low.contains(" und ") && c.tool in setOf("flashlight", "set_timer", "set_alarm", "battery", "agenda")) return null
         return Res.spoken(tools.execute(c.tool, JSONObject(c.args)))
     }
 }

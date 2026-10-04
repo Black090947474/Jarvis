@@ -67,10 +67,38 @@ object LocalCommands {
         }
 
         if (t.contains("akku")) return Cmd("battery", emptyMap())
+
+        // Tagesüberblick
+        if (Regex("^(guten morgen|morgen jarvis|briefing|tagesüberblick|was gibt.?s heute|wie sieht mein tag aus)").containsMatchIn(t))
+            return Cmd("briefing", mapOf("day" to "heute"))
+
+        // Einkaufsliste: "setz milch und eier auf die einkaufsliste", "milch auf die einkaufsliste"
+        Regex("^(?:setz|schreib|pack|tu|füg)\\w* (.+?) (?:auf|zu) (?:die|der|meine|meiner) einkaufsliste").find(t)?.let { m ->
+            return Cmd("shopping", mapOf("action" to "add", "items" to splitItems(m.groupValues[1])))
+        }
+        Regex("^(.+?) auf (?:die|meine) einkaufsliste").find(t)?.let { m ->
+            return Cmd("shopping", mapOf("action" to "add", "items" to splitItems(m.groupValues[1])))
+        }
+        if (Regex("(was steht auf (der|meiner) einkaufsliste|zeig (mir )?(die |meine )?einkaufsliste|^einkaufsliste$)").containsMatchIn(t))
+            return Cmd("shopping", mapOf("action" to "list"))
+
+        // Orte: Parkplatz merken / wiederfinden
+        if (Regex("merk (dir )?(mal )?,? ?wo ich (geparkt|mein auto|mein fahrrad)").containsMatchIn(t) || t == "ich hab hier geparkt")
+            return Cmd("places", mapOf("action" to "save", "name" to if (t.contains("fahrrad")) "Fahrrad" else "Parkplatz"))
+        if (Regex("wo (hab|habe) ich (geparkt|mein auto|mein fahrrad)|wo steht mein (auto|fahrrad)").containsMatchIn(t))
+            return Cmd("places", mapOf("action" to "go", "name" to if (t.contains("fahrrad")) "Fahrrad" else "Parkplatz"))
+
+        // Notiz: "notiere: ...", "notiz ..."
+        Regex("^(?:notier\\w*|notiz|schreib dir auf)[: ]+(.+)").find(t)?.let { m ->
+            return Cmd("notes", mapOf("action" to "add", "text" to m.groupValues[1].trim()))
+        }
         return null
     }
 
     private fun cleanText(s: String) = s.trim().removeSuffix(" zu").trim()
+
+    /** "milch, eier und brot" → [milch, eier, brot] */
+    fun splitItems(s: String): List<String> = s.split(Regex(",| und | sowie ")).map { it.trim().removePrefix("noch ").trim() }.filter { it.isNotBlank() }
 
     /** "um 7", "um 6:30", "um 18 uhr 15", "auf halb acht", "um viertel nach sieben" → (Stunde, Minute). */
     fun parseClock(t: String): Pair<Int, Int>? {

@@ -157,6 +157,19 @@ Samsung beendet Hintergrund-Apps besonders gern:
 | „Wie wird das Wetter morgen?“ | Wetter (Open-Meteo, kostenlos) |
 | „Wo ist die nächste Apotheke?“ | Karte mit Treffern in deiner Nähe |
 | „Helligkeit auf 40 Prozent“ | Helligkeit (Freigabe „Systemeinstellungen ändern“) |
+| „Guten Morgen“ | Tagesüberblick: Wetter, Termine, Schule, Hausaufgaben, Aufgaben, Geburtstage, Nachrichten (auch ohne KI) |
+| „Was gibt's Neues?“, „Wie hat Bayern gespielt?“ | Websuche und Schlagzeilen (DuckDuckGo, Google News, Wikipedia – ohne Schlüssel) |
+| „Mein Montag: 8 Uhr Mathe, 9:45 Deutsch …“ | Stundenplan speichern; „Was hab ich morgen?“ |
+| „Hausaufgabe Mathe: Seite 42“ | Hausaufgabe bis zur nächsten Mathestunde, Erinnerung am Vortag 17 Uhr |
+| „Speicher Vokabeln: dog = Hund, cat = Katze“, „Frag mich Englisch ab“ | Lern-Modus mit Karteikarten, schwierige kommen öfter |
+| „Setz Milch und Eier auf die Einkaufsliste“, „Was steht drauf?“ | Einkaufsliste (auch im Dashboard abhaken) |
+| „Notiere: …“, „Was hab ich mir zu … notiert?“ | Notizen |
+| „Wer hat bald Geburtstag?“ | Geburtstage aus deinen Kontakten |
+| „Merk dir, wo ich geparkt habe“ / „Wo hab ich geparkt?“ | Ort merken und zu Fuß hinnavigieren |
+| „Was läuft gerade?“ | Lied erkennen (Google oder Shazam) |
+| „Wenn ich Gaming-Modus sage: Nicht stören an, Lautstärke 80, Spotify Gaming“ | Eigenes Kommando – danach reicht „Gaming-Modus“ (läuft ohne KI) |
+
+**Widget:** Lange auf den Startbildschirm drücken → Widgets → Jarvis. Zeigt Uhrzeit, nächsten Termin, Wetter und einen Mikrofon-Knopf.
 | „Wie wird das Wetter?“, „Wer hat gestern gespielt?“ | Websuche, Antwort gesprochen |
 | „Wie viel Akku hab ich?“ | Akkustand |
 | „Merk dir, dass ich um 8 Uhr Schule habe“ | Wird dauerhaft gespeichert (in der App einsehbar und löschbar) |

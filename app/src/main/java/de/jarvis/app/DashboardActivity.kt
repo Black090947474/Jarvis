@@ -59,6 +59,7 @@ class DashboardActivity : Activity() {
     private lateinit var todayBox: LinearLayout
     private lateinit var weekText: TextView
     private lateinit var msgBox: LinearLayout
+    private lateinit var extrasBox: LinearLayout
     private var torchOn = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,6 +117,10 @@ class DashboardActivity : Activity() {
         col.addView(ui.section("Nachrichten"))
         msgBox = ui.card(); col.addView(msgBox)
 
+        // ---- Schule, Einkaufsliste, Geburtstage ----
+        col.addView(ui.section("Schule · Einkauf · Geburtstage"))
+        extrasBox = ui.card(); col.addView(extrasBox)
+
         // ---- Schnellaktionen ----
         col.addView(ui.section("Schnellaktionen"))
         val grid = GridLayout(this).apply { columnCount = 3 }
@@ -140,6 +145,11 @@ class DashboardActivity : Activity() {
         quick("📅", "Kalender") { openCalendar() }
         quick("📋", "Aufgaben") { showTasks() }
         quick("🛡", "Berechtigungen") { startActivity(Intent(this, PermissionsActivity::class.java)) }
+        quick("🌅", "Briefing") { showBriefing() }
+        quick("🛒", "Einkauf") { shoppingDialog() }
+        quick("📝", "Notiz") { noteDialog() }
+        quick("🎵", "Lied erkennen") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
+        quick("📍", "Parkplatz") { parkingDialog() }
         quick("⚙", "Einstellungen") { startActivity(Intent(this, MainActivity::class.java)) }
         col.addView(grid, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(6) })
 
@@ -160,6 +170,8 @@ class DashboardActivity : Activity() {
         refreshWeather()
         refreshAgenda()
         refreshMessages()
+        refreshExtras()
+        JarvisWidget.updateAll(this)
     }
 
     private fun online(): Boolean {
@@ -289,6 +301,76 @@ class DashboardActivity : Activity() {
         msgBox.addView(ui.text(byApp.joinToString("  ·  ") { "${it.key} ${it.value.size}" }, 14f, Color.WHITE, true))
         list.take(3).forEach { m -> msgBox.addView(ui.text("${m.title}: ${m.text}", 13f, MUTED).apply { maxLines = 1; setPadding(0, ui.px(4), 0, 0) }) }
         msgBox.setOnClickListener { askJarvis("Fass meine neuen Nachrichten kurz zusammen.") }
+    }
+
+    // ---------- Schule, Einkauf, Geburtstage ----------
+
+    private fun refreshExtras() {
+        thread {
+            val late = java.time.LocalTime.now().hour >= 15
+            val day = java.time.LocalDate.now().plusDays(if (late) 1 else 0).dayOfWeek
+            val school = de.jarvis.app.tools.SchoolTool.summary(applicationContext, day)
+            val hw = AgendaStore(applicationContext).tasks().filter { !it.done && it.category == de.jarvis.app.tools.SchoolTool.HOMEWORK }
+            val shop = de.jarvis.app.tools.ShoppingTool.items(applicationContext)
+            val bd = de.jarvis.app.tools.BirthdayTool.upcoming(applicationContext, 7)
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                extrasBox.removeAllViews()
+                extrasBox.addView(ui.text("🎒 " + (if (late) "Morgen: " else "Heute: ") + (school ?: "kein Stundenplan gespeichert – sag z. B. „Mein Montag: 8 Uhr Mathe, 9 Uhr Deutsch“"), 14f, if (school != null) Color.WHITE else MUTED))
+                if (hw.isNotEmpty()) extrasBox.addView(ui.text("📚 Hausaufgaben: " + hw.joinToString(", ") { it.title }, 13f, AMBER).apply { setPadding(0, ui.px(6), 0, 0) })
+                extrasBox.addView(ui.text(if (shop.isEmpty()) "🛒 Einkaufsliste leer" else "🛒 " + shop.joinToString(", ") + "  (antippen = abhaken)", 14f,
+                    if (shop.isEmpty()) MUTED else Color.WHITE).apply {
+                    setPadding(0, ui.px(8), 0, 0)
+                    if (shop.isNotEmpty()) setOnClickListener { checkShopping(shop) }
+                })
+                if (bd.isNotEmpty()) extrasBox.addView(ui.text("🎂 " + bd.joinToString("  ·  ") { de.jarvis.app.tools.BirthdayTool.describe(it) }, 13f, SOFT).apply { setPadding(0, ui.px(8), 0, 0) })
+            }
+        }
+    }
+
+    private fun checkShopping(items: List<String>) {
+        val checked = BooleanArray(items.size)
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("Einkaufsliste – abhaken")
+            .setMultiChoiceItems(items.toTypedArray(), checked) { _, i, on -> checked[i] = on }
+            .setPositiveButton("Erledigt") { _, _ ->
+                val done = items.filterIndexed { i, _ -> checked[i] }
+                if (done.isNotEmpty()) runTool { de.jarvis.app.tools.ShoppingTool.remove(applicationContext, done) }
+            }.setNegativeButton("Abbrechen", null).show()
+    }
+
+    private fun shoppingDialog() {
+        val what = input("z. B. Milch, Eier und Brot")
+        dialog("Auf die Einkaufsliste", listOf(what)) {
+            runTool { de.jarvis.app.tools.ShoppingTool.add(applicationContext, what.text.toString().split(Regex(",| und ")).map { it.trim() }) }
+        }
+    }
+
+    private fun noteDialog() {
+        val what = input("Notiz")
+        dialog("Neue Notiz", listOf(what)) {
+            runTool { de.jarvis.app.tools.NotesTool.run(ToolContext(this), JSONObject().put("action", "add").put("text", what.text.toString())) }
+        }
+    }
+
+    private fun parkingDialog() {
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("Parkplatz")
+            .setItems(arrayOf("Hier geparkt – merken", "Zum Parkplatz navigieren")) { _, i ->
+                runTool { de.jarvis.app.tools.PlacesTool.run(ToolContext(this), JSONObject().put("action", if (i == 0) "save" else "go").put("name", "Parkplatz")) }
+            }.show()
+    }
+
+    private fun showBriefing() {
+        toast("Stelle deinen Tag zusammen …")
+        thread {
+            val text = try { de.jarvis.app.tools.BriefingTool.build(applicationContext) } catch (e: Exception) { "Fehler: ${e.message}" }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("Dein Tag")
+                    .setMessage(text).setPositiveButton("OK", null)
+                    .setNeutralButton("Vorlesen lassen") { _, _ -> startActivity(Intent(this, JarvisActivity::class.java)); toast("Sag „Guten Morgen“") }.show()
+                refreshWeather()
+            }
+        }
     }
 
     // ---------- Aktionen ----------
