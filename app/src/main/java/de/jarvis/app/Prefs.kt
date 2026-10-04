@@ -58,6 +58,16 @@ class Prefs(context: Context) {
         get() = sp.getFloat("voice_rate2", 1.0f)
         set(v) = sp.edit().putFloat("voice_rate2", v.coerceIn(0.6f, 1.6f)).apply()
 
+    /** Jarvis-Klang: AUS, BUTLER, KI, HOLOGRAMM. Alte „KI-Hall“-Einstellung wird übernommen. */
+    var voiceFx: String
+        get() = sp.getString("voice_fx", null) ?: if (sp.getBoolean("voice_effect2", false)) "BUTLER" else "KI"
+        set(v) = sp.edit().putString("voice_fx", v).apply()
+
+    /** Stärke des Jarvis-Klangs 0..1. */
+    var voiceFxStrength: Float
+        get() = sp.getFloat("voice_fx_strength", 0.7f)
+        set(v) = sp.edit().putFloat("voice_fx_strength", v.coerceIn(0f, 1f)).apply()
+
     /** Leichter Raumhall für den KI-Sound. */
     var voiceEffect: Boolean
         get() = sp.getBoolean("voice_effect2", false)

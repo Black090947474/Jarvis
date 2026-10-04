@@ -104,6 +104,16 @@ fun main() {
     check("Parkplatz finden", p("Wo hab ich geparkt?")?.args?.get("action") == "go")
     check("Notiz", p("Notiere: Mama anrufen wegen Sonntag")?.let { it.tool == "notes" && (it.args["text"] as String).startsWith("mama") } == true)
 
+    println("VoiceFx")
+    val sig = ShortArray(22050) { (Math.sin(it * 2 * Math.PI * 140 / 22050) * 8000).toInt().toShort() }
+    val back = VoiceFx.readWav(VoiceFx.writeWav(sig, 22050))
+    check("WAV schreiben/lesen", back != null && back.second == 22050 && back.first.contentEquals(sig))
+    for (pr in VoiceFx.Preset.entries) {
+        val o = VoiceFx.process(sig, 22050, pr, 1f)
+        check("Klang ${pr.name}: nicht leiser abgeschnitten, kein Übersteuern", o.size >= sig.size && o.maxOf { Math.abs(it.toInt()) } <= 32767)
+    }
+    check("Klang AUS ändert nichts", VoiceFx.process(sig, 22050, VoiceFx.Preset.AUS, 1f).contentEquals(sig))
+
     println("\n$passed bestanden, $failed fehlgeschlagen")
     if (failed > 0) kotlin.system.exitProcess(1)
 }

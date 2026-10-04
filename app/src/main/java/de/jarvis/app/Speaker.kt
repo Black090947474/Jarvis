@@ -9,7 +9,9 @@ import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
+import de.jarvis.app.logic.VoiceFx
 import java.io.File
+import kotlin.concurrent.thread
 import java.util.Locale
 
 /**
@@ -33,7 +35,7 @@ class Speaker(
     fun engines(): List<TextToSpeech.EngineInfo> = try { tts.engines.orEmpty() } catch (_: Exception) { emptyList() }
     private var player: MediaPlayer? = null
     private var reverb: PresetReverb? = null
-    private val synthIds = mutableSetOf<String>()
+    private val synthIds: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
     private var counter = 0
 
     var ready = false
@@ -48,9 +50,13 @@ class Speaker(
                 if (id != null && id !in synthIds) main.post { onStart() }
             }
             override fun onDone(id: String?) {
-                main.post {
-                    if (id != null && synthIds.remove(id)) playFile(id) else onDone(id)
-                }
+                if (id != null && synthIds.contains(id)) {
+                    // Jarvis-Klang im Hintergrund berechnen, dann abspielen
+                    thread {
+                        val ok = applyFx()
+                        main.post { if (synthIds.remove(id)) { if (ok) playFile(id) else speakDirect(pendingText.remove(id) ?: "", id) } }
+                    }
+                } else main.post { onDone(id) }
             }
             @Deprecated("Deprecated in Java")
             override fun onError(id: String?) {
@@ -66,7 +72,7 @@ class Speaker(
 
     /** Stimme, Tonhöhe und Tempo aus den Einstellungen übernehmen. */
     fun applySettings() {
-        tts.setPitch(prefs.voicePitch)
+        tts.setPitch(prefs.voicePitch * preset().pitch)
         tts.setSpeechRate(prefs.voiceRate)
         val voices = germanVoices()
         val chosen = voices.firstOrNull { it.name == prefs.voiceName } ?: pickDefault(voices)
@@ -96,7 +102,7 @@ class Speaker(
     fun preview(voice: Voice?, text: String) {
         if (!ready) return
         if (voice != null) tts.voice = voice
-        tts.setPitch(prefs.voicePitch)
+        tts.setPitch(prefs.voicePitch * preset().pitch)
         tts.setSpeechRate(prefs.voiceRate)
         speak(text, "preview")
     }
@@ -106,7 +112,8 @@ class Speaker(
     fun speak(text: String, id: String) {
         stop()
         if (!ready) { main.post { onDone(id) }; return }
-        if (!prefs.voiceEffect) { speakDirect(text, id); return }
+        tts.setPitch(prefs.voicePitch * preset().pitch)
+        if (preset() == VoiceFx.Preset.AUS) { speakDirect(text, id); return }
         val sid = "$id#${++counter}"
         synthIds += sid
         pendingText[sid] = text
@@ -122,7 +129,7 @@ class Speaker(
     private fun playFile(sid: String) {
         val id = sid.substringBefore('#')
         val text = pendingText.remove(sid).orEmpty()
-        val file = File(ctx.cacheDir, "jarvis_voice.wav")
+        val file = File(ctx.cacheDir, "jarvis_voice_fx.wav")
         try {
             val mp = MediaPlayer()
             player = mp
@@ -131,7 +138,6 @@ class Speaker(
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             mp.setDataSource(file.absolutePath)
             mp.prepare()
-            addReverb(mp)
             mp.setOnCompletionListener { releasePlayer(); onDone(id) }
             mp.setOnErrorListener { _, _, _ -> releasePlayer(); onDone(id); true }
             mp.start()
@@ -141,6 +147,23 @@ class Speaker(
             speakDirect(text, id)
         }
     }
+
+    /** Zum Ausprobieren in den Einstellungen: diesen Klang statt des gespeicherten verwenden. */
+    var fxOverride: VoiceFx.Preset? = null
+    var strengthOverride: Float? = null
+
+    private fun preset() = fxOverride ?: VoiceFx.Preset.of(prefs.voiceFx)
+
+    /** Liest die gesprochene Datei, legt den Jarvis-Klang darüber und speichert sie. false = Format unbekannt. */
+    private fun applyFx(): Boolean = try {
+        val raw = File(ctx.cacheDir, "jarvis_voice.wav").readBytes()
+        val wav = VoiceFx.readWav(raw)
+        if (wav == null) false else {
+            val out = VoiceFx.process(wav.first, wav.second, preset(), strengthOverride ?: prefs.voiceFxStrength)
+            File(ctx.cacheDir, "jarvis_voice_fx.wav").writeBytes(VoiceFx.writeWav(out, wav.second))
+            true
+        }
+    } catch (_: Throwable) { false }
 
     /** Leichter Raumhall – klingt nach "KI im Anzug". Geräte ohne Hall-Effekt spielen einfach trocken ab. */
     private fun addReverb(mp: MediaPlayer) {

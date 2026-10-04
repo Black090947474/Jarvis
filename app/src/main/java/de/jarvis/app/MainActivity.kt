@@ -268,6 +268,30 @@ class MainActivity : Activity() {
             .show()
     }
     private lateinit var voiceButton: Button
+    private lateinit var fxButton: Button
+
+    private fun fxLabel() = "Jarvis-Klang: " + de.jarvis.app.logic.VoiceFx.Preset.of(prefs.voiceFx).label.substringBefore(" –")
+
+    /** Eigener Jarvis-Klang: antippen = Probe hören, Fertig = übernehmen. */
+    private fun chooseFx() {
+        val sp = speaker ?: return
+        val presets = de.jarvis.app.logic.VoiceFx.Preset.entries
+        var chosen = presets.indexOf(de.jarvis.app.logic.VoiceFx.Preset.of(prefs.voiceFx))
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Jarvis-Klang – antippen zum Anhören")
+            .setSingleChoiceItems(presets.map { it.label }.toTypedArray(), chosen) { _, w ->
+                chosen = w
+                sp.fxOverride = presets[w]
+                sp.applySettings()
+                sp.speak("Guten Tag. Ich bin Jarvis. Alle Systeme sind bereit.", "preview")
+            }
+            .setPositiveButton("Übernehmen") { d, _ ->
+                prefs.voiceFx = presets[chosen].name
+                sp.stop(); sp.fxOverride = null; sp.applySettings(); fxButton.text = fxLabel(); d.dismiss()
+            }
+            .setNegativeButton("Abbrechen") { _, _ -> sp.stop(); sp.fxOverride = null; sp.applySettings() }
+            .show()
+    }
 
     private fun chooseEngine() {
         val engines = speaker?.engines().orEmpty()
@@ -304,13 +328,9 @@ class MainActivity : Activity() {
         col.addView(slider("Tonhöhe (links = tiefer)", prefs.voicePitch, 0.5f, 1.5f) { prefs.voicePitch = it })
         col.addView(slider("Tempo", prefs.voiceRate, 0.6f, 1.6f) { prefs.voiceRate = it })
 
-        col.addView(android.widget.Switch(this).apply {
-            text = "KI-Hall (klingt mehr nach Jarvis)"
-            textSize = 15f; setTextColor(Color.WHITE)
-            isChecked = prefs.voiceEffect
-            setOnCheckedChangeListener { _, on -> prefs.voiceEffect = on }
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(14) }
-        })
+        fxButton = button(fxLabel(), filled = false) { chooseFx() }
+        col.addView(fxButton)
+        col.addView(slider("Stärke des Jarvis-Klangs", prefs.voiceFxStrength, 0f, 1f) { prefs.voiceFxStrength = it })
         col.addView(button("Probe hören", filled = false) { previewVoice() })
 
         col.addView(section("Spracherkennung"))

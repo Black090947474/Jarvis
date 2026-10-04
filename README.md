@@ -101,6 +101,9 @@ Die natürlichste kostenlose deutsche Stimme ist „Thorsten“ (eine freigegebe
 2. SherpaTTS öffnen und als Sprache **Deutsch – thorsten** (Piper) laden.
 3. In Jarvis: ⚙ → Stimme → **Sprach-Engine: SherpaTTS**, dann Stimme wählen und „Probe hören“.
 
+### Jarvis-Klang (eigene Stimme)
+⚙ → Stimme → **Jarvis-Klang**: Jarvis legt eigene Effekte über jede Stimme – **Butler** (warm, tief, Raumhall), **KI** (metallischer Schimmer, leichte Doppelung) oder **Hologramm** (Lautsprecher-Klang mit Echo). Antippen = Probe hören, mit „Stärke“ regeln. Läuft offline auf dem Handy.
+
 ### Stimme einstellen
 Unter **Stimme** in der Jarvis-App kannst du zwischen allen deutschen Stimmen auf deinem Handy wählen (antippen zum Anhören), Tonhöhe und Tempo einstellen und den **KI-Hall** an- oder ausschalten. Standard: die natürlichste Stimme auf deinem Handy (meist eine Online-Stimme von Google), ohne Effekte.
 Mehr Stimmen bekommst du über *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache → Google Sprachausgabe → ⚙ → Sprachdaten installieren → Deutsch*.
