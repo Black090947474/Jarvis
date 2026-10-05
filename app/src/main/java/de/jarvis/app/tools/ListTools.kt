@@ -96,7 +96,10 @@ object NotesTool : JarvisTool {
     }
 }
 
-/** Lern-Modus: Vokabeln/Karteikarten abfragen, schwierige Karten kommen öfter. */
+/**
+ * Lernassistent: Karteikarten in Fächern/Themen, Wiederholung nach dem Leitner-System (Fächer 1–5),
+ * Multiple Choice, Prüfungssimulation, Fehleranalyse, Lernstand. Schwierige Karten kommen öfter.
+ */
 object QuizTool : JarvisTool {
     override val name = "learn"
     override val group = "info"
@@ -104,60 +107,103 @@ object QuizTool : JarvisTool {
     override val permissions = emptyList<String>()
 
     override val definition: JSONObject = JSONObject("""
-{"name":"learn","description":"Lern-Modus mit Karteikarten. add: Karten in ein Thema (deck) speichern, cards = Liste 'Frage = Antwort'. next: nächste Karte zum Abfragen holen (stell nur die Frage, verrate die Antwort nicht). answer: Ergebnis speichern (deck, id, correct). decks: Themen mit Lernstand. delete_deck: Thema löschen (mit confirmed). Beim Abfragen: Frage stellen, Antwort des Nutzers großzügig bewerten (Tippfehler ok), answer aufrufen, dann nächste Karte.",
+{"name":"learn","description":"Lernassistent mit Karteikarten (deck = Fach/Thema, z. B. 'Englisch Unit 3'). add: Karten speichern, cards = Liste 'Frage = Antwort' (auch aus Fotos/Notizen erstellen). next: nächste fällige Karte (Antwort NICHT verraten; mode=mc liefert zusätzlich 3 falsche Antwortmöglichkeiten für Multiple Choice). answer: Ergebnis speichern (deck,id,correct) – großzügig bewerten. exam: Prüfungssimulation, count Fragen auf einmal; am Ende Note/Ergebnis nennen und mit answer speichern. mistakes: schwierigste Karten (Fehleranalyse). decks: alle Themen mit Lernstand. delete_deck (confirmed). Diktat/offene Fragen/Zusammenfassungen machst du selbst im Gespräch.",
  "input_schema":{"type":"object","properties":{
-  "action":{"type":"string","enum":["add","next","answer","decks","delete_deck"]},
-  "deck":{"type":"string"},"cards":{"type":"array","items":{"type":"string"}},
-  "id":{"type":"integer"},"correct":{"type":"boolean"},"confirmed":{"type":"boolean"}},"required":["action"]}}
+  "action":{"type":"string","enum":["add","next","answer","exam","mistakes","decks","delete_deck"]},
+  "deck":{"type":"string"},"cards":{"type":"array","items":{"type":"string"}},"mode":{"type":"string","enum":["normal","mc"]},
+  "count":{"type":"integer"},"id":{"type":"integer"},"correct":{"type":"boolean"},"confirmed":{"type":"boolean"}},"required":["action"]}}
 """.trimIndent())
 
-    private fun key(deck: String) = "deck_" + deck.lowercase().trim().replace(Regex("[^a-z0-9äöüß]+"), "_")
+    /** Wiederholungsabstände je Leitner-Fach (Minuten): 1 → gleich wieder, 5 → in 2 Wochen. */
+    private val INTERVAL = longArrayOf(0, 10, 24 * 60, 3 * 24 * 60, 7 * 24 * 60, 14 * 24 * 60)
+
+    fun key(deck: String) = "deck_" + deck.lowercase().trim().replace(Regex("[^a-z0-9äöüß]+"), "_")
+
+    private fun findDeck(store: JsonStore, deck: String): String? {
+        val index = store.obj("decks")
+        if (index.has(key(deck))) return key(deck)
+        return index.keys().asSequence().firstOrNull { index.optString(it).contains(deck, true) || deck.contains(index.optString(it), true) }
+    }
+
+    private fun box(c: JSONObject) = c.optInt("box", 1).coerceIn(1, 5)
+    private fun due(c: JSONObject) = c.optLong("due", 0)
 
     override fun run(t: ToolContext, a: JSONObject): String {
         val store = JsonStore(t.ctx)
         val deck = a.optString("deck").trim()
         val index = store.obj("decks")
-        return when (a.optString("action")) {
+        val now = System.currentTimeMillis()
+        val k = if (deck.isBlank()) null else findDeck(store, deck)
+        when (a.optString("action")) {
             "add" -> {
-                if (deck.isBlank()) return Res.error("Wie heißt das Thema?")
+                if (deck.isBlank()) return Res.error("Wie heißt das Fach/Thema?")
                 val arr = a.optJSONArray("cards") ?: return Res.error("Keine Karten.")
-                val cards = store.list(key(deck))
+                val kk = k ?: key(deck)
+                val cards = store.list(kk)
                 var n = 0
                 for (i in 0 until arr.length()) {
                     val raw = arr.optString(i)
                     val parts = if (raw.contains("=")) raw.split("=", limit = 2).map { it.trim() }
                                 else raw.split(Regex("\\s+(–|-|:)\\s+|\\s*:\\s*"), limit = 2)
                     if (parts.size < 2 || parts[0].isBlank() || parts[1].isBlank()) continue
-                    cards += JSONObject().put("id", store.newId()).put("q", parts[0]).put("a", parts[1]).put("ok", 0).put("bad", 0); n++
+                    if (cards.any { it.optString("q").equals(parts[0], true) }) continue
+                    cards += JSONObject().put("id", store.newId()).put("q", parts[0]).put("a", parts[1]).put("ok", 0).put("bad", 0).put("box", 1).put("due", 0); n++
                 }
-                store.save(key(deck), cards); store.saveObj("decks", index.put(key(deck), deck))
-                Res.ok("$n Karten in „$deck“ gespeichert (jetzt ${cards.size}).")
+                store.save(kk, cards); if (!index.has(kk)) store.saveObj("decks", index.put(kk, deck))
+                return Res.ok("$n Karten in „${index.optString(kk, deck)}“ gespeichert (jetzt ${cards.size}).")
             }
             "next" -> {
-                val cards = store.list(key(deck))
-                if (cards.isEmpty()) return Res.error("Im Thema „$deck“ gibt es keine Karten. Erst mit add anlegen.")
-                // Schwierige und neue Karten bevorzugen, etwas Zufall
-                val pick = cards.sortedBy { it.optInt("ok") * 2 - it.optInt("bad") * 3 + Math.random() * 3 }.first()
-                Res.ok("Karte id ${pick.optInt("id")}: Frage: ${pick.optString("q")} | (Lösung, nicht verraten: ${pick.optString("a")})")
+                val kk = k ?: return Res.error("Thema „$deck“ nicht gefunden. Erst mit add anlegen oder decks ansehen.")
+                val cards = store.list(kk)
+                if (cards.isEmpty()) return Res.error("Keine Karten im Thema.")
+                val dueCards = cards.filter { due(it) <= now }
+                val pick = (dueCards.ifEmpty { cards }).sortedBy { box(it) * 10 - it.optInt("bad") * 3 + Math.random() * 6 }.first()
+                var extra = ""
+                if (a.optString("mode") == "mc") {
+                    val wrong = cards.filter { it.optInt("id") != pick.optInt("id") }.map { it.optString("a") }.distinct().shuffled().take(3)
+                    val options = (wrong + pick.optString("a")).shuffled()
+                    extra = " | Antwortmöglichkeiten: " + options.mapIndexed { i, o -> "${'A' + i}) $o" }.joinToString("  ")
+                }
+                return Res.ok("Karte id ${pick.optInt("id")} (Fach ${box(pick)}/5, ${dueCards.size} fällig): Frage: ${pick.optString("q")}$extra | (Lösung, nicht verraten: ${pick.optString("a")})")
+            }
+            "exam" -> {
+                val kk = k ?: return Res.error("Thema nicht gefunden.")
+                val cards = store.list(kk).shuffled().take(a.optInt("count", 10).coerceIn(3, 30))
+                return Res.ok("Prüfungssimulation „${index.optString(kk)}“ – ${cards.size} Fragen. Stelle sie nacheinander, bewerte, speichere jede mit answer, am Ende Punkte und Note (1–6):\n" +
+                    cards.joinToString("\n") { "id ${it.optInt("id")}: ${it.optString("q")} (Lösung: ${it.optString("a")})" })
             }
             "answer" -> {
-                val cards = store.list(key(deck))
+                val kk = k ?: return Res.error("Thema nicht gefunden.")
+                val cards = store.list(kk)
                 val c = cards.firstOrNull { it.optInt("id") == a.optInt("id", -1) } ?: return Res.error("Karte nicht gefunden.")
-                if (a.optBoolean("correct")) c.put("ok", c.optInt("ok") + 1) else c.put("bad", c.optInt("bad") + 1)
-                store.save(key(deck), cards)
-                val known = cards.count { it.optInt("ok") > it.optInt("bad") }
-                Res.ok("Gespeichert. Lernstand „$deck“: $known von ${cards.size} sitzen.")
+                val ok = a.optBoolean("correct")
+                val nb = if (ok) (box(c) + 1).coerceAtMost(5) else 1
+                c.put(if (ok) "ok" else "bad", c.optInt(if (ok) "ok" else "bad") + 1).put("box", nb).put("due", now + INTERVAL[nb] * 60_000L)
+                store.save(kk, cards)
+                val stats = store.obj("learn_stats")
+                val day = java.time.LocalDate.now().toString()
+                store.saveObj("learn_stats", stats.put(day, stats.optInt(day) + 1).put("total", stats.optInt("total") + 1))
+                return Res.ok("Gespeichert (${if (ok) "richtig → Fach $nb" else "falsch → zurück in Fach 1"}). Lernstand: ${cards.count { box(it) >= 3 }} von ${cards.size} sitzen, ${cards.count { due(it) <= now }} fällig.")
+            }
+            "mistakes" -> {
+                val keys = if (k != null) listOf(k) else index.keys().asSequence().toList()
+                val worst = keys.flatMap { kk -> store.list(kk).map { index.optString(kk) to it } }
+                    .filter { it.second.optInt("bad") > 0 }.sortedByDescending { it.second.optInt("bad") - it.second.optInt("ok") }.take(10)
+                return if (worst.isEmpty()) Res.ok("Noch keine Fehler gespeichert – super!")
+                else Res.ok("Schwierigste Karten:\n" + worst.joinToString("\n") { (d, c) -> "$d: ${c.optString("q")} → ${c.optString("a")} (${c.optInt("bad")}× falsch, ${c.optInt("ok")}× richtig)" })
             }
             "delete_deck" -> {
-                if (!a.optBoolean("confirmed")) return Res.confirm("Thema „$deck“ mit allen Karten löschen.")
-                store.save(key(deck), emptyList()); index.remove(key(deck)); store.saveObj("decks", index)
-                Res.ok("Thema „$deck“ gelöscht.")
+                val kk = k ?: return Res.error("Thema nicht gefunden.")
+                if (!a.optBoolean("confirmed")) return Res.confirm("Thema „${index.optString(kk)}“ mit allen Karten löschen.")
+                store.save(kk, emptyList()); index.remove(kk); store.saveObj("decks", index)
+                return Res.ok("Gelöscht.")
             }
             else -> {
                 val names = index.keys().asSequence().toList()
-                if (names.isEmpty()) Res.ok("Noch keine Lernthemen. Sag z. B. „Speicher Vokabeln: dog = Hund, cat = Katze“.")
-                else Res.ok("Lernthemen:\n" + names.joinToString("\n") { k ->
-                    val cs = store.list(k); "${index.optString(k)}: ${cs.size} Karten, ${cs.count { it.optInt("ok") > it.optInt("bad") }} sitzen" })
+                return if (names.isEmpty()) Res.ok("Noch keine Lernthemen. Sag z. B. „Speicher Vokabeln Englisch: dog = Hund, cat = Katze“ oder schick ein Foto deiner Vokabelliste.")
+                else Res.ok("Lernthemen:\n" + names.joinToString("\n") { kk ->
+                    val cs = store.list(kk)
+                    "${index.optString(kk)}: ${cs.size} Karten, ${cs.count { box(it) >= 3 }} sitzen, ${cs.count { due(it) <= now }} fällig" })
             }
         }
     }

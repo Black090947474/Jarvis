@@ -86,6 +86,21 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 18 – Jarvis als Command Center
+- **Automationen** (Tools → Automationen): WENN Uhrzeit / Ort / Kopfhörer / Bluetooth-Gerät / WLAN / Akku unter X % / Ladekabel / Termin beginnt / Benachrichtigung / App geöffnet → DANN Hinweis, sprechen, Erinnerung, Musik, Lautstärke, App, Timer, Taschenlampe, Helligkeit, Briefing, eigenes Kommando. Mit Vorlagen und **Testmodus**. Auch per Sprache: „Wenn meine Kopfhörer verbunden werden, starte Spotify und stell die Lautstärke auf 40 %.“
+- **Agenten-Modus:** „Plane mir einen Lerntag für die Mathearbeit“ – Jarvis prüft Kalender, Aufgaben und Lernstoff, macht einen Plan und fragt, bevor er etwas einträgt.
+- **Smart Context** (bei aktivierten Hinweisen): erkennt Prüfungen im Kalender ohne Lernzeit, warnt bei wenig Akku, begrüßt dich zu Hause mit offenen Hausaufgaben.
+- **Lernassistent:** Fächer/Themen, Wiederholung nach Leitner-System, Multiple Choice, Prüfungssimulation mit Note, Fehleranalyse.
+- **Datei-Assistent:** „Finde meine Mathe-Datei“, „Fasse das PDF zusammen“, „Suche in meinen Dateien nach Photosynthese“ (braucht „Zugriff auf alle Dateien“). Im Chat kannst du PDFs, Word-, Excel- und Textdateien anhängen.
+- **Fahrzeit:** „Wie lange brauche ich mit dem Rad zur Schule?“, „Wann muss ich los, um 8 Uhr dort zu sein?“ (OpenStreetMap; Bus/Bahn öffnet Maps).
+- **Benachrichtigungs-Zentrum:** sortiert in Wichtig, Schule, Familie, Freunde, Arbeit, Werbung, System.
+- **Gedächtnis-Bereich:** Profil, Langzeit- und Kurzzeit-Gedächtnis ansehen, ändern, löschen. **Persönlichkeit:** Butler, freundlich, professionell, technisch, humorvoll, minimalistisch + Regler.
+- **Aktionsverlauf, Statistik, Meine Geräte, Plugins, Personalisierung** (Hintergrund, Akzentfarbe, Schriftgröße, Startseite, Animationen), **Sicherung** (Export/Import ohne Schlüssel).
+- **Notfall:** „Ich brauche Hilfe“ öffnet sofort 112/110/Notfallkontakt/Standort senden (du tippst selbst auf Anrufen).
+- **Auto-Modus:** große Knöpfe; startet automatisch, wenn sich dein Auto per Bluetooth verbindet.
+- **Aktions-PIN** (Berechtigungen): optional zusätzliche PIN vor Senden/Löschen/Kaufen.
+- **Live-Status** auf Home inkl. welches KI-Modell gerade antwortet; komplexe Aufgaben nutzen automatisch ein stärkeres Modell.
+
 ### Neues Design (ab Version 17)
 Unten gibt es jetzt vier Bereiche: **Home** (leuchtender Kern, „Frag Jarvis“, Wetter, Heute, Nachrichten, Schule), **Chat**, **Tools** (alle Werkzeuge als Kacheln: Kalender, Erinnerungen, Telefon, Musik, Apps, Schule, Einkauf, Notizen, Lernen, Kommandos …) und **System** (Akku, Netzwerk, Speicher, Standort, Musik, Bluetooth …). Farbschema Blau oder Lila unter ⚙ → Design.
 

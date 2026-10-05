@@ -21,9 +21,9 @@ object RoutineTool : JarvisTool {
     override val permissions = emptyList<String>()
 
     override val definition: JSONObject = JSONObject("""
-{"name":"routines","description":"Eigene Kommandos (Routinen). save: unter einem Namen mehrere Werkzeug-Schritte speichern, steps = Liste von {tool, args}, z. B. [{\"tool\":\"set_volume\",\"args\":{\"percent\":80}},{\"tool\":\"play_music\",\"args\":{\"query\":\"Gaming Playlist\"}}]. run: Routine ausführen. list: alle. delete: löschen (mit confirmed). Danach reicht es, den Namen zu sagen.",
+{"name":"routines","description":"Eigene Kommandos (Routinen). save: unter einem Namen mehrere Werkzeug-Schritte speichern, steps = Liste von {tool, args}, z. B. [{\"tool\":\"set_volume\",\"args\":{\"percent\":80}},{\"tool\":\"play_music\",\"args\":{\"query\":\"Gaming Playlist\"}}]. run: Routine ausführen. test: nur anzeigen, was passieren würde (Testmodus). list: alle. delete: löschen (mit confirmed). Danach reicht es, den Namen zu sagen.",
  "input_schema":{"type":"object","properties":{
-  "action":{"type":"string","enum":["save","run","list","delete"]},
+  "action":{"type":"string","enum":["save","run","test","list","delete"]},
   "name":{"type":"string"},
   "steps":{"type":"array","items":{"type":"object","properties":{"tool":{"type":"string"},"args":{"type":"object"}}}},
   "confirmed":{"type":"boolean"}},"required":["action"]}}
@@ -73,6 +73,12 @@ object RoutineTool : JarvisTool {
                 if (clean.length() == 0) return Res.error("Keine erlaubten Schritte.")
                 store.save("routines", all.filter { !it.optString("name").equals(nm, true) } + JSONObject().put("name", nm).put("steps", clean))
                 Res.ok("Kommando „$nm“ gespeichert (${clean.length()} Schritte). Sag einfach „$nm“.")
+            }
+            "test" -> {
+                val r = all.firstOrNull { it.optString("name").equals(nm, true) } ?: find(t.ctx, nm) ?: return Res.error("Kommando „$nm“ gibt es nicht.")
+                val s = r.optJSONArray("steps") ?: JSONArray()
+                Res.ok("[Testmodus – nichts ausgeführt] „${r.optString("name")}“ würde: " + (0 until s.length()).joinToString(", ") {
+                    de.jarvis.app.Automations.describeStep(s.getJSONObject(it)) })
             }
             "run" -> execute(t, all.firstOrNull { it.optString("name").equals(nm, true) } ?: find(t.ctx, nm)
                 ?: return Res.error("Kommando „$nm“ gibt es nicht."))
@@ -246,11 +252,8 @@ object BriefingTool : JarvisTool {
         if (ag.reminders.isNotEmpty()) parts += "Erinnerungen: " + ag.reminders.take(3).joinToString(", ") { "${TimeLogic.time(it.next!!)} ${it.text}" } + "."
         val bd = BirthdayTool.upcoming(ctx, if (day == "heute") 0 else 1).filter { it.second == LocalDate.now().plusDays(if (day == "morgen") 1 else 0) }
         if (bd.isNotEmpty()) parts += "Geburtstag hat: " + bd.joinToString(", ") { it.first + (it.third?.let { a -> " ($a)" } ?: "") } + "."
-        if (JarvisNotificationListener.isConnected && day == "heute") {
-            val msgs = JarvisNotificationListener.recent(null, 40)
-            if (msgs.isNotEmpty()) parts += "Du hast ${msgs.size} neue Benachrichtigungen, vor allem von " +
-                msgs.groupBy { it.app }.entries.sortedByDescending { it.value.size }.take(2).joinToString(" und ") { it.key } + "."
-        }
+        if (JarvisNotificationListener.isConnected && day == "heute" && JarvisNotificationListener.recent(null, 1).isNotEmpty())
+            parts += NotificationHub.summary()
         val shop = ShoppingTool.items(ctx)
         if (shop.isNotEmpty()) parts += "Auf der Einkaufsliste stehen ${shop.size} Sachen."
         return parts.joinToString(" ")

@@ -22,6 +22,10 @@ object LocalCommands {
         val t = input.lowercase(Locale.GERMANY).replace(Regex("[!?.,]"), " ").replace(Regex("\\s+"), " ").trim()
             .removePrefix("hey ").removePrefix("jarvis ").trim()
 
+        // Notfall – immer sofort und ohne KI
+        if (Regex("^(ich brauche hilfe|hilfe|notfall|notruf)$|ich brauche (dringend )?hilfe|das ist ein notfall").containsMatchIn(t))
+            return Cmd("emergency", emptyMap())
+
         // Taschenlampe
         if (t.contains("taschenlampe") || t.contains("licht an") || t.contains("licht aus")) {
             val off = Regex("\\b(aus|ausschalten|ausmachen)\\b").containsMatchIn(t)

@@ -77,6 +77,7 @@ object Scheduler {
     const val ACTION_SCAN = "de.jarvis.app.SCAN"
     const val ACTION_EVENT = "de.jarvis.app.EVENT_ALERT"
     const val ACTION_BRIEFING = "de.jarvis.app.BRIEFING"
+    const val ACTION_AUTOMATION = "de.jarvis.app.AUTOMATION"
     private const val RC_SCAN = 900_001
     private const val RC_BRIEFING = 900_002
     private const val RC_GEOFENCE = 900_003
@@ -163,6 +164,24 @@ object Scheduler {
         // Scan läuft auch ohne proaktive Hinweise (hält das Widget aktuell); Hinweise prüft scan() selbst
         am.setInexactRepeating(AlarmManager.RTC_WAKEUP, now + 60_000, AlarmManager.INTERVAL_HALF_HOUR, scan)
         scheduleBriefing(ctx)
+        scheduleAutomations(ctx)
+        SmartHints.scheduleHome(ctx)
+    }
+
+    /** Uhrzeit- und Orts-Automationen einplanen. */
+    fun scheduleAutomations(ctx: Context) {
+        val am = ctx.getSystemService(AlarmManager::class.java)!!
+        for (a in Automations.all(ctx)) {
+            val id = a.optInt("id"); val t = a.optJSONObject("trigger") ?: continue
+            val p = pi(ctx, ACTION_AUTOMATION, 800_000 + id) { putExtra("id", id) }
+            am.cancel(p)
+            Automations.fenceReminder(ctx, a)?.let { cancel(ctx, it) }
+            if (!a.optBoolean("on", true)) continue
+            when (t.optString("type")) {
+                "time" -> Automations.nextTime(t)?.let { exactAt(ctx, it, p) }
+                "place" -> Automations.fenceReminder(ctx, a)?.let { addGeofence(ctx, it) }
+            }
+        }
     }
 
     fun scheduleBriefing(ctx: Context) {
@@ -180,6 +199,8 @@ object Scheduler {
 
     fun scan(ctx: Context) {
         JarvisWidget.updateAll(ctx)
+        scanAutomationEvents(ctx)
+        SmartHints.check(ctx)
         val p = Prefs(ctx)
         if (!p.proactive || !p.feature("calendar")) return
         val now = System.currentTimeMillis()
@@ -211,6 +232,20 @@ object Scheduler {
                     "„${a.title}“ (${TimeLogic.short(a.start)}–${TimeLogic.time(a.end)}) überschneidet sich mit " +
                     "„${b.title}“ (${TimeLogic.time(b.start)}–${TimeLogic.time(b.end)}). Sag z. B. „Jarvis, verschieb ${b.title}“.")
             }
+        }
+    }
+
+    /** „Kalendertermin beginnt“-Automationen für die nächsten Stunden einplanen. */
+    private fun scanAutomationEvents(ctx: Context) {
+        val autos = Automations.all(ctx).filter { it.optBoolean("on", true) && it.optJSONObject("trigger")?.optString("type") == "event" }
+        if (autos.isEmpty()) return
+        val p = Prefs(ctx); val now = System.currentTimeMillis()
+        for (e in CalendarTool.safeEvents(ctx, now, now + 6 * 3_600_000L).filter { !it.allDay }) for (a in autos) {
+            val at = e.begin - a.getJSONObject("trigger").optInt("minutes_before") * 60_000L
+            val key = "au:${a.optInt("id")}:${e.id}:${e.begin}"
+            if (at < now || p.wasNotified(key)) continue
+            p.markNotified(key)
+            exactAt(ctx, at, pi(ctx, ACTION_AUTOMATION, ((key.hashCode() and 0x7fffffff) % 90_000) + 700_000) { putExtra("id", a.optInt("id")); putExtra("event", e.title) })
         }
     }
 
@@ -286,6 +321,8 @@ class JarvisReceiver : BroadcastReceiver() {
                 if (ev.hasError()) return
                 for (g in ev.triggeringGeofences.orEmpty()) {
                     val id = g.requestId.removePrefix("rem_").toIntOrNull() ?: continue
+                    if (id >= 900_000) { Automations.runById(ctx, id - 900_000); continue }
+                    if (id == 899_999) { SmartHints.arrivedHome(ctx); continue }
                     val r = store.reminder(id) ?: continue
                     if (!r.active) continue
                     showReminder(ctx, r)
@@ -296,6 +333,12 @@ class JarvisReceiver : BroadcastReceiver() {
             }
 
             Scheduler.ACTION_SCAN -> Scheduler.scan(ctx)
+            Scheduler.ACTION_AUTOMATION -> {
+                val id = intent.getIntExtra("id", -1)
+                Automations.runById(ctx, id)
+                Scheduler.scheduleAutomations(ctx)
+            }
+            "android.bluetooth.device.action.ACL_CONNECTED" -> Automations.onBluetooth(ctx, intent)
             Scheduler.ACTION_EVENT -> if (Prefs(ctx).proactive && Prefs(ctx).notifyEvents) Scheduler.eventAlert(ctx, intent)
             Scheduler.ACTION_BRIEFING -> Scheduler.briefing(ctx)
         }

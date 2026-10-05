@@ -11,8 +11,8 @@ android {
         applicationId = "de.jarvis.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 28
-        versionName = "17.3"
+        versionCode = 29
+        versionName = "18.0"
         // Nur für moderne Handys (64-Bit ARM) – macht die App viel kleiner
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -35,4 +35,6 @@ dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
     // Geofencing für ortsbasierte Erinnerungen ("wenn ich zu Hause ankomme")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    // Text aus PDF-Dateien lesen (Datei-Assistent)
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 }

@@ -103,6 +103,14 @@ class PermissionsActivity : Activity() {
             Item("Kamera", "Kamera-App öffnen (Foto, Selfie, Video). Braucht keine eigene Freigabe.", "camera", { true }, {}),
             Item("Bildschirmsteuerung", "Apps bedienen wie ein Mensch und WLAN/Bluetooth-Kacheln umschalten (Bedienungshilfe).", "screen",
                 { secureListHas(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) }, { restrictedHint(); startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }),
+            Item("Dateien", "Datei-Assistent: Dokumente finden, PDFs/Word/Excel lesen und zusammenfassen (nur lesen, nie löschen).", "files",
+                { Build.VERSION.SDK_INT < 30 || android.os.Environment.isExternalStorageManager() },
+                { startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName"))) }),
+            Item("Bluetooth-Geräte erkennen", "Für Automationen („Wenn Kopfhörer/Auto verbunden …“) und den Auto-Modus.", null,
+                { Build.VERSION.SDK_INT < 31 || has(Manifest.permission.BLUETOOTH_CONNECT) },
+                { if (Build.VERSION.SDK_INT >= 31) ask(Manifest.permission.BLUETOOTH_CONNECT) }),
+            Item("Über anderen Apps einblenden", "Damit Automationen und „Hey Jarvis“ Aktionen auch im Hintergrund starten dürfen.", null,
+                { Settings.canDrawOverlays(this) }, { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))) }),
             Item("Systemeinstellungen ändern", "Für die Bildschirmhelligkeit.", "settings",
                 { Settings.System.canWrite(this) }, { startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))) }),
         )
@@ -202,6 +210,16 @@ class PermissionsActivity : Activity() {
             val loc = Geo.lastKnown(this)
             if (loc == null) toast("Kein Standort – erst „Standort“ erlauben und einschalten.")
             else { prefs.setHome(loc.first, loc.second); toast("Zuhause gespeichert."); build() }
+        })
+        col.addView(ui.button(if (prefs.actionPin.isBlank()) "Aktions-PIN einrichten (optional)" else "Aktions-PIN ändern / entfernen", filled = false) {
+            val f = android.widget.EditText(this).apply { hint = "4–8 Ziffern, leer = keine PIN"
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD }
+            AlertDialog.Builder(this).setTitle("Aktions-PIN")
+                .setMessage("Wenn gesetzt, fragt Jarvis vor wichtigen bestätigten Aktionen (Senden, Löschen, Kaufen …) zusätzlich diese PIN ab. Das ist NICHT deine Handy-PIN.")
+                .setView(f).setPositiveButton("Speichern") { _, _ ->
+                    val v = f.text.toString()
+                    if (v.isNotEmpty() && v.length < 4) toast("Mindestens 4 Ziffern.") else { prefs.actionPin = v; build() }
+                }.setNegativeButton("Abbrechen", null).show()
         })
         col.addView(ui.button("Benachrichtigungs-Kategorien in Android", filled = false) {
             Notifier.channels(this)

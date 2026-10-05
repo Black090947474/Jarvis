@@ -14,6 +14,8 @@ class Provider(
     val visionModels: List<String>,
     val maxTokensKey: String,
     val imageUrlAsString: Boolean = false,
+    /** Stärkere Modelle für komplexe Aufgaben (Pläne, Analysen) – werden dann zuerst probiert. */
+    val strong: List<String> = emptyList(),
 ) {
     companion object {
         val GROQ = Provider("Groq", "https://api.groq.com/openai/v1/chat/completions",
@@ -24,7 +26,8 @@ class Provider(
         val NVIDIA = Provider("NVIDIA", "https://integrate.api.nvidia.com/v1/chat/completions",
             listOf("meta/llama-3.3-70b-instruct", "qwen/qwen3-next-80b-a3b-instruct", "moonshotai/kimi-k2-instruct",
                 "openai/gpt-oss-120b", "deepseek-ai/deepseek-v4-flash", "openai/gpt-oss-20b"),
-            listOf("meta/llama-4-maverick-17b-128e-instruct", "meta/llama-3.2-90b-vision-instruct"), "max_tokens")
+            listOf("meta/llama-4-maverick-17b-128e-instruct", "meta/llama-3.2-90b-vision-instruct"), "max_tokens",
+            strong = listOf("moonshotai/kimi-k2-instruct", "qwen/qwen3-next-80b-a3b-instruct"))
         // Mistral „Experiment“: kostenlos, sehr hohes Minutenlimit (ca. 1 Anfrage pro Sekunde)
         val MISTRAL = Provider("Mistral", "https://api.mistral.ai/v1/chat/completions",
             listOf("mistral-medium-latest", "mistral-small-latest"),
@@ -67,7 +70,11 @@ class AiClient(
 
     private var lastQuery = ""
 
+    /** Komplexe Aufgabe? Dann zuerst ein stärkeres Modell (Model-Router). */
+    private var complex = false
+
     override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
+        complex = userText.length > 160 || ModelStatus.COMPLEX.containsMatchIn(userText)
         lastQuery = userText
         tools.noteQuery(userText)
         step = onStep
@@ -157,10 +164,10 @@ class AiClient(
         for (attempt in 0..3) {
             var waitSec = 0
             var i = 0
-            val list = if (vision) visionModels else models
+            val list = if (vision) visionModels else if (complex) (provider.strong + models).distinct().toMutableList() else models
             while (i < list.size) {
                 try {
-                    return post(list[i])
+                    return post(list[i]).also { ModelStatus.set(provider.name, list[i], vision, complex) }
                 } catch (e: ApiException) {
                     lastErr = e
                     when {

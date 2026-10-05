@@ -73,6 +73,57 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("voice_effect2", false)
         set(v) = sp.edit().putBoolean("voice_effect2", v).apply()
 
+    // ---------- Persönlichkeit & Profil ----------
+    var personality: String
+        get() = sp.getString("personality", "BUTLER") ?: "BUTLER"
+        set(v) = sp.edit().putString("personality", v).apply()
+    var humor: Int
+        get() = sp.getInt("p_humor", 50)
+        set(v) = sp.edit().putInt("p_humor", v.coerceIn(0, 100)).apply()
+    var talkative: Int
+        get() = sp.getInt("p_talk", 35)
+        set(v) = sp.edit().putInt("p_talk", v.coerceIn(0, 100)).apply()
+    var formality: Int
+        get() = sp.getInt("p_formal", 40)
+        set(v) = sp.edit().putInt("p_formal", v.coerceIn(0, 100)).apply()
+    var proactivity: Int
+        get() = sp.getInt("p_proactive", 50)
+        set(v) = sp.edit().putInt("p_proactive", v.coerceIn(0, 100)).apply()
+    /** Optionale PIN für wichtige Aktionen (nur in Jarvis, nicht die Handy-PIN). */
+    var actionPin: String
+        get() = sp.getString("action_pin", "") ?: ""
+        set(v) = sp.edit().putString("action_pin", v.filter { it.isDigit() }.take(8)).apply()
+
+    /** Name des Bluetooth-Geräts im Auto (startet den Auto-Modus). */
+    var carDevice: String
+        get() = sp.getString("car_device", "") ?: ""
+        set(v) = sp.edit().putString("car_device", v.trim()).apply()
+
+    var emergencyName: String
+        get() = sp.getString("em_name", "") ?: ""
+        set(v) = sp.edit().putString("em_name", v.trim()).apply()
+    var emergencyNumber: String
+        get() = sp.getString("em_number", "") ?: ""
+        set(v) = sp.edit().putString("em_number", v.filter { it.isDigit() || it == '+' }).apply()
+
+    // ---------- Personalisierung ----------
+    var accent: String
+        get() = sp.getString("accent", "AUTO") ?: "AUTO"
+        set(v) = sp.edit().putString("accent", v).apply()
+    var fontScale: Float
+        get() = sp.getFloat("font_scale", 1.0f)
+        set(v) = sp.edit().putFloat("font_scale", v.coerceIn(0.8f, 1.3f)).apply()
+    var startPage: String
+        get() = sp.getString("start_page", "home") ?: "home"
+        set(v) = sp.edit().putString("start_page", v).apply()
+    var animations: Boolean
+        get() = sp.getBoolean("animations", true)
+        set(v) = sp.edit().putBoolean("animations", v).apply()
+
+    var profileJson: String
+        get() = sp.getString("profile", "{}") ?: "{}"
+        set(v) = sp.edit().putString("profile", v).apply()
+
     /** Farbschema der App: BLAU (Command Center) oder LILA. */
     var uiTheme: String
         get() = sp.getString("ui_theme", "BLAU") ?: "BLAU"

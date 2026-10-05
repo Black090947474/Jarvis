@@ -29,7 +29,7 @@ class OrbView(context: Context) : View(context) {
         addUpdateListener { t = it.animatedValue as Float; invalidate() }
     }
 
-    override fun onAttachedToWindow() { super.onAttachedToWindow(); anim.start() }
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); if (Ui.animations) anim.start() else { t = 0.12f; invalidate() } }
     override fun onDetachedFromWindow() { anim.cancel(); super.onDetachedFromWindow() }
 
     private fun alpha(c: Int, a: Int) = Color.argb(a, Color.red(c), Color.green(c), Color.blue(c))
@@ -74,7 +74,17 @@ class OrbView(context: Context) : View(context) {
                 val r1 = r * 0.50f; val r2 = r * 0.45f
                 c.drawLine(cx + cos(a).toFloat() * r1, cy + sin(a).toFloat() * r1, cx + cos(a).toFloat() * r2, cy + sin(a).toFloat() * r2, p)
             }
-            // Pulsierender Kern
+            // Dezente Partikel, die vom Kern nach außen schweben
+            p.style = Paint.Style.FILL
+            for (i in 0 until 28) {
+                val phase = ((t * (1.5f + (i % 4) * 0.4f) + i * 0.137f) % 1f)
+                val ang = Math.toRadians(i * 37.0 + t * 360 * 0.08 * (1 + i % 3))
+                val rr = r * (0.3f + phase * 0.68f)
+                p.color = alpha(if (i % 2 == 0) acc2 else acc, ((1f - phase) * 170).toInt().coerceIn(0, 255))
+                c.drawCircle(cx + cos(ang).toFloat() * rr, cy + sin(ang).toFloat() * rr, (1.1f + (i % 3) * 0.6f) * dp, p)
+            }
+            p.style = Paint.Style.STROKE
+                        // Pulsierender Kern
             val pulse = 0.5f + 0.5f * sin(t * Math.PI.toFloat() * 2 * 6) * 0.5f + level * 0.6f
             val core = r * (0.26f + 0.04f * pulse)
             p.style = Paint.Style.FILL

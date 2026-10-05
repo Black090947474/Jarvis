@@ -51,6 +51,7 @@ class JarvisActivity : Activity() {
         // Werkzeuge gibt es immer – einfache Befehle gehen auch ohne Schlüssel und offline
         val t = PhoneTools(this).also { tools = it }
         t.onCard = { a -> showCard(a) }
+        t.pinGate = { d -> PinGate.ask(this, d) }
         if (!prefs.hasAnyKey) {
             jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den NVIDIA- oder Groq-Schlüssel in der Jarvis-App ein."
         } else {

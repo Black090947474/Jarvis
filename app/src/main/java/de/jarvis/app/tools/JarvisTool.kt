@@ -73,7 +73,8 @@ class ToolContext(val activity: Activity, val runner: ((String, JSONObject) -> S
 object ToolRegistry {
     val all: List<JarvisTool> by lazy {
         listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool,
-            WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool)
+            WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool,
+            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool)
     }
 
     fun find(name: String): JarvisTool? = all.firstOrNull { it.name == name }

@@ -6,7 +6,13 @@ import java.util.Locale
 
 /** Dauerhaftes Gedächtnis: Dinge, die Jarvis sich auf Wunsch merkt. Nur lokal auf dem Handy. */
 class Memory(context: Context) {
+    val ctx: Context = context.applicationContext
     private val sp = context.getSharedPreferences("jarvis_memory", Context.MODE_PRIVATE)
+
+    fun set(index: Int, fact: String) {
+        val list = all().toMutableList()
+        if (index in list.indices && fact.isNotBlank()) { list[index] = fact.trim(); save(list) }
+    }
 
     fun all(): List<String> {
         val arr = try { JSONArray(sp.getString("facts", "[]")) } catch (_: Exception) { JSONArray() }

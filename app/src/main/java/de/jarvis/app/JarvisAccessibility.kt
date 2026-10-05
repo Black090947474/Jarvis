@@ -20,7 +20,17 @@ class JarvisAccessibility : AccessibilityService() {
     private var lastNodes: List<AccessibilityNodeInfo> = emptyList()
 
     override fun onServiceConnected() { instance = this }
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    private var lastPkg = ""
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // „App wird geöffnet“-Automationen
+        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val pkg = event.packageName?.toString() ?: return
+        if (pkg == lastPkg || pkg == packageName || pkg.startsWith("com.android.systemui")) return
+        lastPkg = pkg
+        val app = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (_: Exception) { return }
+        Thread { try { Automations.fire(applicationContext, "app", org.json.JSONObject().put("app", app)) } catch (_: Exception) {} }.start()
+    }
     override fun onInterrupt() {}
     override fun onUnbind(intent: Intent?): Boolean { if (instance === this) instance = null; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }

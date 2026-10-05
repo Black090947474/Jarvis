@@ -23,7 +23,7 @@ class Ui(private val a: Activity) {
         GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(c1, c2)).apply { cornerRadius = radius * dp }
 
     fun text(t: CharSequence, size: Float, color: Int = Color.WHITE, bold: Boolean = false) = TextView(a).apply {
-        text = t; textSize = size; setTextColor(color)
+        text = t; textSize = size * fontScale; setTextColor(color)
         if (bold) typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
     }
 
@@ -61,20 +61,30 @@ class Ui(private val a: Activity) {
     companion object {
         /** Farbschema: "BLAU" (Command Center, Standard) oder "LILA". Wird beim Start aus den Einstellungen gesetzt. */
         @JvmStatic var theme = "BLAU"
+        @JvmStatic var accent = "AUTO"
+        @JvmStatic var fontScale = 1f
+        @JvmStatic var animations = true
         private val blue get() = theme != "LILA"
+        private val black get() = theme == "SCHWARZ"
 
-        val BG get() = if (blue) Color.rgb(4, 9, 17) else Color.rgb(10, 5, 16)
-        val CARD get() = if (blue) Color.rgb(9, 20, 34) else Color.rgb(22, 11, 31)
-        val CARD2 get() = if (blue) Color.rgb(12, 27, 45) else Color.rgb(30, 15, 42)
-        val LINE get() = if (blue) Color.rgb(22, 52, 82) else Color.rgb(58, 28, 78)
+        val BG get() = if (black) Color.rgb(0, 0, 0) else if (blue) Color.rgb(4, 9, 17) else Color.rgb(10, 5, 16)
+        val CARD get() = if (black) Color.rgb(14, 14, 18) else if (blue) Color.rgb(9, 20, 34) else Color.rgb(22, 11, 31)
+        val CARD2 get() = if (black) Color.rgb(22, 22, 28) else if (blue) Color.rgb(12, 27, 45) else Color.rgb(30, 15, 42)
+        val LINE get() = if (black) Color.rgb(44, 44, 54) else if (blue) Color.rgb(22, 52, 82) else Color.rgb(58, 28, 78)
         /** Akzentfarbe (heißt aus historischen Gründen RED). */
-        val RED get() = if (blue) Color.rgb(42, 168, 255) else Color.rgb(214, 64, 255)
-        val ACCENT2 get() = if (blue) Color.rgb(0, 229, 255) else Color.rgb(255, 72, 176)
+        val RED get() = when (accent) {
+            "CYAN" -> Color.rgb(0, 210, 255); "GRUEN" -> Color.rgb(40, 220, 140); "ROT" -> Color.rgb(255, 60, 80); "GOLD" -> Color.rgb(255, 190, 60)
+            else -> if (blue) Color.rgb(42, 168, 255) else Color.rgb(214, 64, 255)
+        }
+        val ACCENT2 get() = when (accent) {
+            "CYAN" -> Color.rgb(120, 240, 255); "GRUEN" -> Color.rgb(150, 255, 200); "ROT" -> Color.rgb(255, 140, 90); "GOLD" -> Color.rgb(255, 230, 140)
+            else -> if (blue) Color.rgb(0, 229, 255) else Color.rgb(255, 72, 176)
+        }
         val MUTED get() = if (blue) Color.rgb(120, 146, 172) else Color.rgb(150, 128, 166)
         val SOFT = Color.rgb(205, 214, 226)
         val GREEN = Color.rgb(50, 220, 130)
         val AMBER = Color.rgb(255, 184, 60)
 
-        fun load(p: Prefs) { theme = p.uiTheme }
+        fun load(p: Prefs) { theme = p.uiTheme; accent = p.accent; fontScale = p.fontScale; animations = p.animations }
     }
 }

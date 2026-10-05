@@ -26,10 +26,10 @@ object WebTool : JarvisTool {
 
     private const val UA = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36"
 
-    fun get(url: String, max: Int = 400_000): String {
+    fun get(url: String, max: Int = 400_000, ua: String = UA): String {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 8000; c.readTimeout = 12000; c.instanceFollowRedirects = true
-        c.setRequestProperty("User-Agent", UA)
+        c.setRequestProperty("User-Agent", ua)
         c.setRequestProperty("Accept-Language", "de-DE,de;q=0.9")
         try {
             if (c.responseCode !in 200..299) throw java.io.IOException("HTTP ${c.responseCode}")

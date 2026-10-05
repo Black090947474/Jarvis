@@ -68,6 +68,7 @@ class DashboardActivity : Activity() {
     private var current = "home"
     private lateinit var systemBox: LinearLayout
     private lateinit var statusText: TextView
+    private lateinit var liveBox: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,7 +83,7 @@ class DashboardActivity : Activity() {
         pages["home"] = buildHome(); pages["tools"] = buildTools(); pages["system"] = buildSystem()
         pages.values.forEach { content.addView(it, android.widget.FrameLayout.LayoutParams(-1, -1)) }
         setContentView(root)
-        show(savedInstanceState?.getString("tab") ?: intent.getStringExtra("tab") ?: "home")
+        show(savedInstanceState?.getString("tab") ?: intent.getStringExtra("tab") ?: prefs.startPage)
     }
 
     override fun onSaveInstanceState(out: Bundle) { super.onSaveInstanceState(out); out.putString("tab", current) }
@@ -168,6 +169,10 @@ class DashboardActivity : Activity() {
         chips = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         col.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(chips) })
 
+        // Live-Status
+        liveBox = ui.card().apply { setOnClickListener { show("system") } }
+        col.addView(liveBox)
+
         col.addView(ui.section("Wetter"))
         weatherBox = ui.card(); col.addView(weatherBox)
         col.addView(ui.section("Heute"))
@@ -227,6 +232,18 @@ class DashboardActivity : Activity() {
         tile("flash", "Taschenlampe", "An / aus") { toggleTorch() }
         tile("pin", "Parkplatz", "Merken & finden") { parkingDialog() }
         tile("song", "Lied erkennen", "Was läuft gerade?") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
+        tile("bolt", "Automationen", "Wenn … dann …") { startActivity(Intent(this, AutomationsActivity::class.java)) }
+        tile("brain", "Gedächtnis", "Was Jarvis weiß") { HubActivity.open(this, "memory") }
+        tile("chat", "Persönlichkeit", "Charakter & Humor") { HubActivity.open(this, "personality") }
+        tile("notes", "Dateien", "Finden & zusammenfassen") { filesDialog() }
+        tile("home", "Auto-Modus", "Große Knöpfe") { startActivity(Intent(this, CarActivity::class.java)) }
+        tile("device", "Meine Geräte", "Handys & Station") { HubActivity.open(this, "devices") }
+        tile("storage", "Aktionsverlauf", "Was Jarvis getan hat") { HubActivity.open(this, "log") }
+        tile("battery", "Statistik", "Deine Zahlen") { HubActivity.open(this, "stats") }
+        tile("apps", "Plugins", "Module an/aus") { HubActivity.open(this, "plugins") }
+        tile("sun", "Personalisieren", "Farben & Layout") { HubActivity.open(this, "personalize") }
+        tile("storage", "Sicherung", "Daten sichern") { HubActivity.open(this, "backup") }
+        tile("shield", "Notfall", "112 & Notfallkontakt") { HubActivity.open(this, "emergency") }
         tile("shield", "Berechtigungen", "Was Jarvis darf") { startActivity(Intent(this, PermissionsActivity::class.java)) }
         col.addView(grid, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(8) })
         return page(col)
@@ -264,6 +281,7 @@ class DashboardActivity : Activity() {
         val hi = when (h) { in 5..10 -> "Guten Morgen"; in 11..17 -> "Hallo"; in 18..22 -> "Guten Abend"; else -> "Gute Nacht" }
         greeting.text = hi + (if (prefs.userName.isNotBlank()) ", ${prefs.userName}" else "") + ".\nWie kann ich dir heute helfen?"
         refreshChips()
+        refreshLive()
         refreshWeather()
         refreshAgenda()
         refreshMessages()
@@ -394,10 +412,15 @@ class DashboardActivity : Activity() {
         }
         val list = JarvisNotificationListener.recent(null, 40)
         if (list.isEmpty()) { msgBox.addView(ui.text("Keine neuen Nachrichten.", 14f, SOFT)); return }
-        val byApp = list.groupBy { it.app }.entries.sortedByDescending { it.value.size }
-        msgBox.addView(ui.text(byApp.joinToString("  ·  ") { "${it.key} ${it.value.size}" }, 14f, Color.WHITE, true))
-        list.take(3).forEach { m -> msgBox.addView(ui.text("${m.title}: ${m.text}", 13f, MUTED).apply { maxLines = 1; setPadding(0, ui.px(4), 0, 0) }) }
-        msgBox.setOnClickListener { askJarvis("Fass meine neuen Nachrichten kurz zusammen.") }
+        // Benachrichtigungs-Zentrum: nach Kategorien
+        msgBox.addView(ui.text(de.jarvis.app.tools.NotificationHub.summary(), 14f, Color.WHITE, true))
+        val g = de.jarvis.app.tools.NotificationHub.grouped()
+        for ((cat, msgs) in g.entries.take(4)) {
+            val color = when (cat) { "Wichtig" -> Color.rgb(255, 110, 110); "Schule", "Familie" -> AMBER; "Werbung", "System" -> MUTED; else -> SOFT }
+            msgBox.addView(ui.text("$cat (${msgs.size}): " + msgs.take(2).joinToString(" · ") { "${it.title}: ${it.text}" }, 13f, color).apply {
+                maxLines = 1; setPadding(0, ui.px(5), 0, 0) })
+        }
+        msgBox.setOnClickListener { askJarvis("Was ist bei meinen Benachrichtigungen wichtig? Fass kurz zusammen.") }
     }
 
     // ---------- Schule, Einkauf, Geburtstage ----------
@@ -467,6 +490,48 @@ class DashboardActivity : Activity() {
                     .setNeutralButton("Vorlesen lassen") { _, _ -> startActivity(Intent(this, JarvisActivity::class.java)); toast("Sag „Guten Morgen“") }.show()
                 refreshWeather()
             }
+        }
+    }
+
+    // ---------- Live-Status (Home) ----------
+
+    private fun refreshLive() {
+        if (!::liveBox.isInitialized) return
+        thread {
+            val on = online()
+            val bm = getSystemService(BatteryManager::class.java)
+            val bat = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+            val cm = getSystemService(ConnectivityManager::class.java)
+            val wifi = cm?.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            val store = AgendaStore(applicationContext); val now = System.currentTimeMillis()
+            val task = store.tasks().filter { !it.done }.sortedWith(compareBy({ it.due ?: Long.MAX_VALUE }, { it.priority != "hoch" })).firstOrNull()
+            val rem = store.reminders().filter { it.active && it.next != null && it.next > now }.minByOrNull { it.next!! }
+            val ev = de.jarvis.app.tools.CalendarTool.safeEvents(applicationContext, now, now + 2 * 86_400_000L).firstOrNull { !it.allDay && it.end > now }
+            val model = ModelStatus.current.ifBlank { if (prefs.nvidiaKey.isNotBlank()) "NVIDIA" else if (prefs.groqKey.isNotBlank()) "Groq" else "–" }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                liveBox.removeAllViews()
+                val top = ui.row()
+                top.addView(android.view.View(this).apply { background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(if (on) GREEN else AMBER) } }, LinearLayout.LayoutParams(ui.px(12), ui.px(12)))
+                top.addView(ui.text(if (on) "  JARVIS ONLINE" else "  OFFLINE-MODUS", 15f, if (on) GREEN else AMBER, true).apply { letterSpacing = 0.12f })
+                liveBox.addView(top)
+                fun line(k: String, v: String) = liveBox.addView(ui.row().apply { setPadding(0, ui.px(4), 0, 0)
+                    addView(ui.text(k, 12f, MUTED).apply { width = ui.px(110) }); addView(ui.weighted(ui.text(v, 13f, Color.WHITE).apply { maxLines = 1 })) })
+                line("Mikrofon", if (WakeWordService.isRunning) "hört auf „Hey Jarvis“" else "Wake-Word aus")
+                line("KI-Modell", model)
+                line("Netz", (if (on) "Internet" else "kein Internet") + " · " + (if (wifi) "WLAN" else "Mobil/aus") + (if (bat >= 0) " · Akku $bat %" else ""))
+                line("Aufgabe", task?.title ?: "keine offen")
+                line("Erinnerung", rem?.let { TimeLogic.short(it.next!!) + "  " + it.text } ?: "keine")
+                line("Termin", ev?.let { TimeLogic.short(it.begin) + "  " + it.title } ?: "keine")
+            }
+        }
+    }
+
+    private fun filesDialog() {
+        val f = input("Dateiname oder Stichwort, z. B. Mathe")
+        dialog("Datei finden", listOf(f)) {
+            runTool { de.jarvis.app.tools.FilesTool.run(ToolContext(this), JSONObject().put("action", "find").put("query", f.text.toString())) }
         }
     }
 

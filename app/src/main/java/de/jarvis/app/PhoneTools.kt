@@ -67,7 +67,7 @@ class PhoneTools(private val activity: Activity) {
             if (n == "add_calendar_event") continue // ersetzt durch calendar (mit Bestätigung)
             if ((GROUP_OF[n] ?: "core") in groups) out.put(d)
         }
-        for (t in ToolRegistry.all) if (t.group in groups && (t.feature == null || prefs.feature(t.feature!!))) out.put(t.definition)
+        for (t in ToolRegistry.all) if (t.group in groups && (t.feature == null || prefs.feature(t.feature!!)) && prefs.feature("tool_" + t.name)) out.put(t.definition)
         return out
     }
 
@@ -84,10 +84,34 @@ class PhoneTools(private val activity: Activity) {
     fun label(name: String): String = LABELS[name] ?: "Arbeite …"
 
     /** Führt ein Werkzeug auf dem Hauptthread aus (aus einem Hintergrund-Thread aufrufen). */
+    /** Wird von Jarvis/Chat gesetzt: zeigt die Aktions-PIN-Abfrage und wartet auf das Ergebnis (true = richtig). */
+    var pinGate: ((String) -> Boolean)? = null
+
+    /** Testmodus: Werkzeuge werden nur angezeigt, nicht ausgeführt. */
+    @Volatile var simulate = false
+
+    /** Führt ein Werkzeug aus und schreibt es in den Aktionsverlauf. */
     fun execute(name: String, input: JSONObject): String {
+        if (simulate && name !in READ_ONLY) return "OK: [Testmodus] Würde ausführen: ${label(name)} $input"
+        // Optionale Aktions-PIN für bestätigte, wichtige Aktionen (Senden, Löschen, Kaufen …)
+        if (input.optBoolean("confirmed") && prefs.actionPin.isNotBlank()) {
+            val gate = pinGate
+            if (gate == null || !gate("${label(name).removeSuffix(" …")}: ${input.toString().take(120)}"))
+                return log(name, input, "FEHLER: Aktions-PIN nicht bestätigt – nichts ausgeführt.")
+        }
+        return log(name, input, executeInner(name, input))
+    }
+
+    private fun log(name: String, input: JSONObject, result: String): String {
+        try { ActionLog.add(ctx, name, label(name), input, result, FEATURE_OF[name] ?: ToolRegistry.find(name)?.feature) } catch (_: Exception) {}
+        return result
+    }
+
+    private fun executeInner(name: String, input: JSONObject): String {
         // Funktionsschalter aus dem Berechtigungszentrum respektieren
         FEATURE_OF[name]?.let { f -> if (!prefs.feature(f)) return Res.disabled(FEATURE_NAMES[f] ?: f) }
         // Neue, modulare Werkzeuge (Kalender, Erinnerungen, Aufgaben, Wetter …) laufen im Hintergrund-Thread
+        if (!prefs.feature("tool_$name")) return Res.disabled("das Modul „${label(name).removeSuffix(" …")}“ (Plugins)")
         ToolRegistry.find(name)?.let { tool ->
             tool.feature?.let { f -> if (!prefs.feature(f)) return Res.disabled(FEATURE_NAMES[f] ?: f) }
             return safe { tool.run(ToolContext(activity) { n, a -> execute(n, a) }, input) }
@@ -744,6 +768,13 @@ class PhoneTools(private val activity: Activity) {
     }
 
     companion object {
+        /** Anzeigename eines Werkzeugs (ohne „…“). */
+        fun labelFor(name: String) = (LABELS[name] ?: name).removeSuffix(" …")
+
+        /** Werkzeuge, die nur lesen – laufen auch im Testmodus. */
+        private val READ_ONLY = setOf("battery", "location", "notifications", "count_photos", "agenda", "calendar_list",
+            "weather", "web", "briefing", "call_log", "birthdays")
+
         /** Gruppe je altem Werkzeug (core wird immer mitgeschickt). */
         private val GROUP_OF = mapOf(
             "set_alarm" to "core", "set_timer" to "core", "flashlight" to "core", "open_app" to "core",

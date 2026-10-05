@@ -18,14 +18,15 @@ class JarvisNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         instance = this
-        try { activeNotifications?.forEach { add(it) } } catch (_: Exception) {}
+        try { activeNotifications?.forEach { add(it, fire = false) } } catch (_: Exception) {}
+        Triggers.start(this)
     }
 
-    override fun onListenerDisconnected() { if (instance === this) instance = null }
+    override fun onListenerDisconnected() { if (instance === this) instance = null; Triggers.stop(this) }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) { add(sbn) }
 
-    private fun add(sbn: StatusBarNotification) {
+    private fun add(sbn: StatusBarNotification, fire: Boolean = true) {
         if (sbn.packageName == packageName || sbn.isOngoing) return
         val n = sbn.notification
         if ((n.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return
@@ -43,6 +44,8 @@ class JarvisNotificationListener : NotificationListenerService() {
             items.addLast(Msg(++counter, sbn.packageName, app, title, text.take(400), sbn.postTime, reply))
             while (items.size > MAX) items.removeFirst()
         }
+        if (fire) Thread { try { Automations.fire(applicationContext, "notification",
+            org.json.JSONObject().put("app", app).put("text", "$title $text")) } catch (_: Exception) {} }.start()
     }
 
     data class Msg(

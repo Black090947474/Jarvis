@@ -95,6 +95,8 @@ fun main() {
     check("Was steht heute an", p("Jarvis, was steht heute an?")?.tool == "agenda")
     check("Was hab ich morgen", p("was hab ich morgen")?.args?.get("range") == "morgen")
     check("Unbekannt = null", p("Erzähl mir einen Witz") == null)
+    check("Notfall", p("Jarvis, ich brauche Hilfe")?.tool == "emergency" && p("Notfall")?.tool == "emergency")
+    check("Kein Fehlalarm", p("hilfe bei mathe hausaufgaben") == null)
     check("Guten Morgen = Briefing", p("Guten Morgen Jarvis")?.tool == "briefing")
     check("Einkaufsliste add mehrere", p("Setz Milch und Eier auf die Einkaufsliste")?.let {
         it.tool == "shopping" && it.args["items"] == listOf("milch", "eier") } == true) { p("Setz Milch und Eier auf die Einkaufsliste").toString() }
