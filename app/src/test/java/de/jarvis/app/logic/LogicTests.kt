@@ -116,6 +116,33 @@ fun main() {
     }
     check("Klang AUS ändert nichts", VoiceFx.process(sig, 22050, VoiceFx.Preset.AUS, 1f).contentEquals(sig))
 
+    println("WakeMath (persönliches Weckwort)")
+    val rnd = java.util.Random(7)
+    fun vec(base: FloatArray?, noise: Float) = FloatArray(96) { i -> (base?.get(i) ?: 0f) + (rnd.nextGaussian() * noise).toFloat() + 5f }
+    val word = List(WakeMath.K) { FloatArray(96) { rnd.nextGaussian().toFloat() } }
+    fun recording(withWord: Boolean): Pair<List<FloatArray>, List<Double>> {
+        val embs = ArrayList<FloatArray>(); val rms = ArrayList<Double>()
+        repeat(12) { embs.add(vec(null, 1f)); rms.add(60.0) }                     // 1 s Ruhe + Vorlauf
+        if (withWord) { for (k in 0 until WakeMath.K) { embs.add(vec(word[k], 0.35f)); rms.add(if (k < 2) 3000.0 else 80.0) } }
+        else repeat(25) { embs.add(vec(null, 1f)); rms.add(2500.0) }             // normaler Satz
+        repeat(6) { embs.add(vec(null, 1f)); rms.add(60.0) }
+        return embs to rms
+    }
+    check("Wortende gefunden", WakeMath.wordEnd(recording(true).second, 12) == 13)
+    check("Stille = kein Wort", WakeMath.wordEnd(List(20) { 50.0 }, 12) == -1)
+    val tpls = List(6) { val (e, r) = recording(true); WakeMath.template(e, r, 12)!! }
+    check("Vorlage hat K Merkmale", tpls.all { it.size == WakeMath.K })
+    val bg = recording(false).first + tpls.flatten().take(2)
+    val mean = WakeMath.mean(bg)
+    val pos = WakeMath.positives(tpls, mean)
+    val (negE, _) = recording(false)
+    val neg = WakeMath.negMax(negE, tpls, mean, 12)
+    check("eigene Aufnahmen ähnlicher als normaler Satz", pos.min() > neg + 0.1f) { "pos=${pos.min()} neg=$neg" }
+    val cal = WakeMath.calibrate(pos, neg)
+    check("Schwelle liegt dazwischen", cal.good && cal.threshold > neg && cal.threshold < pos.min()) { cal.toString() }
+    check("schlechte Trennung wird erkannt", !WakeMath.calibrate(listOf(0.5f, 0.52f, 0.55f), 0.6f).good)
+    check("Kosinus identisch = 1", Math.abs(WakeMath.cos(word[0], word[0], FloatArray(0)) - 1f) < 1e-4)
+
     println("\n$passed bestanden, $failed fehlgeschlagen")
     if (failed > 0) kotlin.system.exitProcess(1)
 }

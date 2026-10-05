@@ -1,12 +1,12 @@
 # Jarvis – Anleitung
 
-Sag „Hey Jarvis“, das Handy wacht auf, und du redest mit Claude. Funktioniert auch bei gesperrtem Bildschirm.
+Sag „Jarvis“, das Handy wacht auf, und du redest mit Claude. Funktioniert auch bei gesperrtem Bildschirm.
 
 ---
 
 ## 1. Schlüssel besorgen
 
-Das Weckwort „Hey Jarvis“ wird komplett offline auf dem Handy erkannt und braucht kein Konto.
+Das Weckwort „Jarvis“ wird komplett offline auf dem Handy erkannt und braucht kein Konto.
 
 **NVIDIA (empfohlen, das Gehirn) – kostenlos, ohne Kreditkarte**
 NVIDIA hat kein so knappes Minutenlimit wie Groq (ca. 40 Anfragen pro Minute), daher kaum Pausen.
@@ -86,6 +86,18 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 19
+- **Nur noch „Jarvis“** als Weckwort (statt „Hey Jarvis“). Für beste Erkennung: ⚙ Einstellungen → Weckwort → **„Weckwort auf meine Stimme trainieren“** (6× „Jarvis“ sagen, dann einen normalen Satz). Es werden nur Zahlen-Merkmale gespeichert, keine Aufnahmen. „Hey Jarvis“ geht weiterhin.
+- **Neues Design:** Startseite im Lila-„Aivio“-Stil (Begrüßung, Suchfeld, Karten, Verlauf), neuer Kern **„Sphäre“**, neuer Sprach-Bildschirm, **heller Modus** (Personalisieren → Hintergrund → Hell).
+- **Fokus-Timer (Pomodoro):** Lernblöcke + Pausen, großer Ring, auf Wunsch „Nicht stören“ (einmal im Berechtigungszentrum erlauben). Fokuszeit erscheint in der Statistik. „Jarvis, 25 Minuten Mathe lernen.“
+- **Packliste:** „Was muss ich morgen einpacken?“ – Fächer aus dem Stundenplan, Material pro Fach, Hausaufgaben, Regenschirm bei Regen. „Für Sport brauche ich Sportzeug und Turnschuhe.“
+- **Taschengeld:** „Ich habe 5 Euro für Kino ausgegeben“, „Ich habe 20 Euro bekommen“, „Wie viel hab ich diesen Monat ausgegeben?“, Sparziel.
+- **Fotos finden:** nach Zeitraum, Ordner (Kamera, Screenshots, WhatsApp) und Ort (aus den Foto-Ortsdaten). Den Bildinhalt sieht Jarvis erst, wenn du das Foto im Chat schickst.
+- **Hausaufgaben-Tutor:** erklärt Schritt für Schritt statt nur die Lösung zu verraten. **Foto → Karteikarten:** Foto vom Heft in den Chat + „mach Karteikarten“.
+- **Dolmetscher:** „Sag auf Englisch: Wo ist der Bahnhof?“ – Jarvis spricht Englisch und hört danach auf Englisch zu.
+- **Quiz-Abend** (Jarvis ist Quizmaster mit Punktestand), **Geschichten & Witze**.
+- **Begrüßung beim Heimkommen** (Wetter, offene Aufgaben, neue Nachrichten) – braucht den Ort „Zuhause“; abschaltbar unter Personalisieren. Auch als Automation: „Nach Hause (WLAN) → Begrüßung“.
+
 ### Neu in Version 18 – Jarvis als Command Center
 - **Automationen** (Tools → Automationen): WENN Uhrzeit / Ort / Kopfhörer / Bluetooth-Gerät / WLAN / Akku unter X % / Ladekabel / Termin beginnt / Benachrichtigung / App geöffnet → DANN Hinweis, sprechen, Erinnerung, Musik, Lautstärke, App, Timer, Taschenlampe, Helligkeit, Briefing, eigenes Kommando. Mit Vorlagen und **Testmodus**. Auch per Sprache: „Wenn meine Kopfhörer verbunden werden, starte Spotify und stell die Lautstärke auf 40 %.“
 - **Agenten-Modus:** „Plane mir einen Lerntag für die Mathearbeit“ – Jarvis prüft Kalender, Aufgaben und Lernstoff, macht einen Plan und fragt, bevor er etwas einträgt.
@@ -138,9 +150,9 @@ Auf dem Startbildschirm gibt es jetzt ein zweites Symbol **„Jarvis Chat“** (
 1. Auf dem **zweiten Handy** Jarvis installieren (gleicher Link), Groq-Schlüssel eintragen und unten bei **Zweites Handy** auf **„Dieses Handy als Station starten“** tippen. Am besten ans Ladekabel legen – der Bildschirm bleibt an.
 2. Auf der Station siehst du Uhrzeit, Datum, Akku und unten einen **6-stelligen Code** und eine Zahl wie 192.168.x.x.
 3. Auf dem **Haupthandy** bei **Zweites Handy** auf **„Station suchen & koppeln“** tippen und den Code eingeben.
-4. Fertig. Sag zum Haupthandy z. B. „Hey Jarvis, spiel auf dem zweiten Handy Musik“, „Mach auf der Station die Taschenlampe an“, „Stell auf dem anderen Handy einen Wecker auf 7“.
+4. Fertig. Sag zum Haupthandy z. B. „Jarvis, spiel auf dem zweiten Handy Musik“, „Mach auf der Station die Taschenlampe an“, „Stell auf dem anderen Handy einen Wecker auf 7“.
 
-Beide Handys müssen im **selben WLAN** sein, und auf dem zweiten Handy muss die Station geöffnet sein. Tipp: Lass „Hey Jarvis“ nur auf einem Handy eingeschaltet, sonst antworten beide gleichzeitig.
+Beide Handys müssen im **selben WLAN** sein, und auf dem zweiten Handy muss die Station geöffnet sein. Tipp: Lass das Weckwort nur auf einem Handy eingeschaltet, sonst antworten beide gleichzeitig.
 
 ### Nachrichten & volle Steuerung freischalten
 Für „Nachrichten lesen & antworten“ und „Volle Handy-Steuerung“ tippst du in der Jarvis-App auf den Eintrag und schaltest Jarvis in der Liste ein.
@@ -157,8 +169,8 @@ Samsung beendet Hintergrund-Apps besonders gern:
 ---
 
 ## 5. Benutzen
-- **„Hey Jarvis“** sagen und direkt weiterreden, z. B. „Hey Jarvis, stell den Wecker auf 7“. Ein kurzer Ton zeigt, dass er zuhört.
-- Nach seiner Antwort hört er automatisch weiter zu. Du musst „Hey Jarvis“ also nicht vor jedem Befehl sagen, erst wieder, wenn du ein paar Sekunden still warst.
+- **„Jarvis“** sagen und direkt weiterreden, z. B. „Jarvis, stell den Wecker auf 7“. Ein kurzer Ton zeigt, dass er zuhört.
+- Nach seiner Antwort hört er automatisch weiter zu. Du musst „Jarvis“ also nicht vor jedem Befehl sagen, erst wieder, wenn du ein paar Sekunden still warst.
 - Beenden: „Danke“, „Tschüss“ oder „Stopp“ sagen, kurz still sein oder die Zurück-Taste drücken.
 - Antippen des Bildschirms unterbricht Jarvis und er hört dir wieder zu.
 
@@ -231,7 +243,7 @@ Ist das Handy gesperrt, kann Jarvis Wecker, Timer, Taschenlampe, Lautstärke und
 
 ## Gut zu wissen
 - **Nach einem Neustart** des Handys einmal die Jarvis-App öffnen. Android erlaubt aus Datenschutzgründen nicht, dass das Mikrofon von selbst wieder angeht.
-- „Hey Jarvis“ wird **offline auf dem Handy** erkannt (mit dem freien openWakeWord-Modell, Lizenz CC BY-NC-SA 4.0, also nur für private Nutzung). Erst nach dem Wake Word geht etwas ins Internet.
+- Das Weckwort wird **offline auf dem Handy** erkannt (mit dem freien openWakeWord-Modell, Lizenz CC BY-NC-SA 4.0, also nur für private Nutzung). Erst nach dem Wake Word geht etwas ins Internet.
 - Spracherkennung und Stimme kommen von Google. Klingt die Stimme komisch: *Einstellungen → Allgemeine Verwaltung → Text-zu-Sprache* → „Google Sprachausgabe“ wählen und die deutsche Stimme laden.
 - Reagiert Jarvis zu oft oder zu selten, lässt sich die Schwelle im Code (`Prefs.kt`, `sensitivity`, Standard 0.5) anpassen.
 - Kosten: Mit Groq und Gemini im kostenlosen Tarif nichts. Nur wenn Claude einspringt, kostet eine Frage weniger als einen Cent (Websuche ca. einen Cent extra).

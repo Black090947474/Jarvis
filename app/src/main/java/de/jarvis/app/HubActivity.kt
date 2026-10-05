@@ -49,7 +49,7 @@ class HubActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this); Ui.load(prefs); ui = Ui(this)
-        window.statusBarColor = BG; window.navigationBarColor = BG
+        window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(16), ui.px(18), ui.px(32)) }
         setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
     }
@@ -58,16 +58,16 @@ class HubActivity : Activity() {
 
     private fun header(title: String, sub: String) {
         val head = ui.row()
-        head.addView(ui.text("‹", 30f, Color.WHITE).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
+        head.addView(ui.text("‹", 30f, Ui.FG).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
         val t = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        t.addView(ui.text(title, 21f, Color.WHITE, true)); t.addView(ui.text(sub, 12f, RED))
+        t.addView(ui.text(title, 21f, Ui.FG, true)); t.addView(ui.text(sub, 12f, RED))
         head.addView(t)
         col.addView(head)
     }
 
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
     private fun input(hint: String, value: String = "", number: Boolean = false) = EditText(this).apply {
-        this.hint = hint; setText(value); setTextColor(Color.WHITE); setHintTextColor(MUTED); textSize = 15f
+        this.hint = hint; setText(value); setTextColor(Ui.FG); setHintTextColor(MUTED); textSize = 15f
         background = ui.round(Ui.CARD2, 12, Ui.LINE); setPadding(ui.px(12), ui.px(10), ui.px(12), ui.px(10))
         if (number) inputType = InputType.TYPE_CLASS_PHONE
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(6) }
@@ -126,7 +126,7 @@ class HubActivity : Activity() {
         if (facts.isEmpty()) col.addView(ui.card().apply { addView(ui.text("Noch nichts gemerkt.", 14f, SOFT)) })
         facts.forEachIndexed { i, f ->
             col.addView(ui.card().apply {
-                addView(ui.text(f, 15f, Color.WHITE))
+                addView(ui.text(f, 15f, Ui.FG))
                 setOnClickListener {
                     val e = input("Eintrag", f)
                     AlertDialog.Builder(this@HubActivity).setTitle("Ändern").setView(e)
@@ -163,7 +163,7 @@ class HubActivity : Activity() {
             val on = prefs.personality == k
             col.addView(ui.card().apply {
                 background = ui.round(if (on) Color.argb(60, Color.red(RED), Color.green(RED), Color.blue(RED)) else Ui.CARD, 16, if (on) RED else Ui.LINE)
-                addView(ui.text((if (on) "● " else "○ ") + label, 15f, Color.WHITE, on))
+                addView(ui.text((if (on) "● " else "○ ") + label, 15f, Ui.FG, on))
                 setOnClickListener { prefs.personality = k; build() }
             })
         }
@@ -187,7 +187,7 @@ class HubActivity : Activity() {
         for (e in list.take(150)) {
             col.addView(ui.card().apply {
                 val top = ui.row()
-                top.addView(ui.weighted(ui.text(e.label, 15f, Color.WHITE, true)))
+                top.addView(ui.weighted(ui.text(e.label, 15f, Ui.FG, true)))
                 top.addView(ui.text(e.status, 12f, when (e.status) { "OK" -> GREEN; "Rückfrage" -> AMBER; else -> Color.rgb(255, 110, 110) }))
                 addView(top)
                 addView(ui.text(TimeLogic.short(e.at) + (if (e.detail.isNotBlank()) " · ${e.detail}" else ""), 12f, SOFT))
@@ -226,12 +226,14 @@ class HubActivity : Activity() {
         tile("$answers", "Lern-Antworten")
         tile("${log.size}", "Aktionen (Verlauf)")
         tile("${extra.list("routines").size}", "Eigene Kommandos")
+        tile("${FocusActivity.minutes(this, 7)} min", "Fokuszeit (7 Tage)")
+        tile("${FocusActivity.minutes(this, 3650) / 60} h", "Fokuszeit gesamt")
         col.addView(grid)
         col.addView(ui.section("Meistgenutzte Werkzeuge"))
         val top = log.groupBy { it.label }.mapValues { it.value.size }.entries.sortedByDescending { it.value }.take(8)
         col.addView(ui.card().apply {
             if (top.isEmpty()) addView(ui.text("Noch keine Daten.", 13f, MUTED))
-            top.forEach { (k, v) -> addView(ui.row().apply { addView(ui.weighted(ui.text(k, 14f, Color.WHITE))); addView(ui.text("$v×", 14f, RED, true)) }) }
+            top.forEach { (k, v) -> addView(ui.row().apply { addView(ui.weighted(ui.text(k, 14f, Ui.FG))); addView(ui.text("$v×", 14f, RED, true)) }) }
         })
     }
 
@@ -241,7 +243,7 @@ class HubActivity : Activity() {
         header("Meine Geräte", "GEKOPPELTE HANDYS")
         val bat = (getSystemService(BATTERY_SERVICE) as android.os.BatteryManager).getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
         col.addView(ui.card().apply {
-            addView(ui.text("📱 Dieses Handy", 16f, Color.WHITE, true))
+            addView(ui.text("📱 Dieses Handy", 16f, Ui.FG, true))
             addView(ui.text("${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL} · Online · Akku $bat %", 13f, GREEN))
             addView(ui.text("Alle Funktionen", 12f, MUTED))
         })
@@ -250,7 +252,7 @@ class HubActivity : Activity() {
         } else {
             val status = ui.text("Prüfe Verbindung …", 13f, AMBER)
             col.addView(ui.card().apply {
-                addView(ui.text("📱 ${prefs.remoteName.ifBlank { "Zweites Handy" }}", 16f, Color.WHITE, true))
+                addView(ui.text("📱 ${prefs.remoteName.ifBlank { "Zweites Handy" }}", 16f, Ui.FG, true))
                 addView(status)
                 addView(ui.text("Fernsteuerbar: Musik, Wecker, Timer, Taschenlampe, Lautstärke, Apps, Kamera …", 12f, MUTED))
             })
@@ -299,7 +301,7 @@ class HubActivity : Activity() {
             col.addView(ui.card(false).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 val info = LinearLayout(this@HubActivity).apply { orientation = LinearLayout.VERTICAL }
-                info.addView(ui.text(PhoneTools.labelFor(t.name), 15f, Color.WHITE, true))
+                info.addView(ui.text(PhoneTools.labelFor(t.name), 15f, Ui.FG, true))
                 info.addView(ui.text(t.definition.optString("description").take(90) + "…", 11f, MUTED))
                 if (t.permissions.isNotEmpty()) info.addView(ui.text("Braucht: " + t.permissions.joinToString { it.substringAfterLast('.').replace('_', ' ').lowercase() }, 11f, AMBER))
                 addView(info, LinearLayout.LayoutParams(0, -2, 1f))
@@ -316,21 +318,26 @@ class HubActivity : Activity() {
         fun choice(title: String, options: List<Pair<String, String>>, current: String, set: (String) -> Unit) {
             col.addView(ui.section(title))
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            for ((k, l) in options) row.addView(ui.text(l, 13f, Color.WHITE, k == current).apply {
+            for ((k, l) in options) row.addView(ui.text(l, 13f, if (k == current) Color.WHITE else Ui.FG, k == current).apply {
                 gravity = Gravity.CENTER; setPadding(ui.px(10), ui.px(10), ui.px(10), ui.px(10))
                 background = ui.round(if (k == current) RED else Ui.CARD2, 12, Ui.LINE)
                 setOnClickListener { set(k); Ui.load(prefs); recreate() }
             }, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(ui.px(3), 0, ui.px(3), 0) })
             col.addView(row)
         }
-        choice("Hintergrund", listOf("BLAU" to "Nachtblau", "LILA" to "Lila", "SCHWARZ" to "Schwarz"), prefs.uiTheme) { prefs.uiTheme = it }
+        choice("Hintergrund", listOf("BLAU" to "Nachtblau", "LILA" to "Lila", "SCHWARZ" to "Schwarz", "HELL" to "Hell"), prefs.uiTheme) { prefs.uiTheme = it }
         choice("Akzentfarbe", listOf("AUTO" to "Passend", "CYAN" to "Cyan", "GRUEN" to "Grün", "ROT" to "Rot", "GOLD" to "Gold"), prefs.accent) { prefs.accent = it }
         choice("Schriftgröße", listOf("0.9" to "Klein", "1.0" to "Normal", "1.15" to "Groß"), prefs.fontScale.toString()) { prefs.fontScale = it.toFloat() }
         choice("Startseite", listOf("home" to "Home", "tools" to "Tools", "system" to "System"), prefs.startPage) { prefs.startPage = it }
         col.addView(ui.section("Animationen"))
         col.addView(ui.card(false).apply {
-            addView(ui.weighted(ui.text("Leuchtender Kern & Partikel animieren", 14f, Color.WHITE)))
+            addView(ui.weighted(ui.text("Leuchtender Kern & Partikel animieren", 14f, Ui.FG)))
             addView(Switch(this@HubActivity).apply { isChecked = prefs.animations; setOnCheckedChangeListener { _, on -> prefs.animations = on } })
+        })
+        col.addView(ui.section("Begrüßung"))
+        col.addView(ui.card(false).apply {
+            addView(ui.weighted(ui.text("Beim Nachhausekommen begrüßen (Wetter, Aufgaben, Nachrichten) – braucht den Ort „Zuhause“", 14f, Ui.FG)))
+            addView(Switch(this@HubActivity).apply { isChecked = prefs.greetOnArrive; setOnCheckedChangeListener { _, on -> prefs.greetOnArrive = on; SmartHints.scheduleHome(this@HubActivity) } })
         })
         col.addView(ui.text("Stimme & Jarvis-Klang: ⚙ Einstellungen → Stimme. Widget: lange auf den Startbildschirm drücken → Widgets → Jarvis.", 12f, MUTED).apply { setPadding(0, ui.px(12), 0, 0) })
     }

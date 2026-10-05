@@ -16,9 +16,10 @@ object SchoolTool : JarvisTool {
     const val HOMEWORK = "Hausaufgaben"
 
     override val definition: JSONObject = JSONObject("""
-{"name":"school","description":"Schule. set_day: Stundenplan für einen Wochentag speichern (lessons = Liste wie '08:00 Mathe R12'). show: Stundenplan für heute/morgen/Wochentag. homework_add: Hausaufgabe (subject, text, due YYYY-MM-DD; ohne due = nächste Stunde in dem Fach) – erinnert am Vortag 17 Uhr. homework_list: offene Hausaufgaben. Erledigt markieren über tasks complete.",
+{"name":"school","description":"Schule. set_day: Stundenplan für einen Wochentag speichern (lessons = Liste wie '08:00 Mathe R12'). show: Stundenplan für heute/morgen/Wochentag. homework_add: Hausaufgabe (subject, text, due YYYY-MM-DD; ohne due = nächste Stunde in dem Fach) – erinnert am Vortag 17 Uhr. homework_list: offene Hausaufgaben. Erledigt markieren über tasks complete. pack: Packliste für einen Schultag (Fächer + was pro Fach mit muss + Hausaufgaben + Wetter-Hinweis). pack_set: festlegen, was für ein Fach mitmuss (subject, items = Liste, z. B. Sport: Sportzeug, Turnschuhe, Trinkflasche).",
  "input_schema":{"type":"object","properties":{
-  "action":{"type":"string","enum":["set_day","show","homework_add","homework_list"]},
+  "action":{"type":"string","enum":["set_day","show","homework_add","homework_list","pack","pack_set"]},
+  "items":{"type":"array","items":{"type":"string"}},
   "day":{"type":"string","description":"heute, morgen, mo..so oder Wochentag"},
   "lessons":{"type":"array","items":{"type":"string"}},
   "subject":{"type":"string"},"text":{"type":"string"},"due":{"type":"string"}},"required":["action"]}}
@@ -67,8 +68,37 @@ object SchoolTool : JarvisTool {
             val hw = AgendaStore(t.ctx).tasks().filter { !it.done && it.category == HOMEWORK }.sortedBy { it.due ?: Long.MAX_VALUE }
             if (hw.isEmpty()) Res.ok("Keine offenen Hausaufgaben.") else Res.ok("Offene Hausaufgaben:\n" + hw.joinToString("\n") { it.describe() })
         }
+        "pack_set" -> {
+            val subject = a.optString("subject").trim().ifBlank { return Res.error("Für welches Fach?") }
+            val arr = a.optJSONArray("items") ?: JSONArray()
+            val store = JsonStore(t.ctx)
+            store.saveObj("pack_items", store.obj("pack_items").put(subject.lowercase(), arr))
+            Res.ok("Für $subject merke ich mir: " + (0 until arr.length()).joinToString(", ") { arr.optString(it) } + ".")
+        }
+        "pack" -> pack(t.ctx, a.optString("day").ifBlank { if (java.time.LocalTime.now().hour >= 12) "morgen" else "heute" })
         else -> Res.error("Unbekannte Aktion.")
     } }
+
+    /** Packliste: Fächer des Tages, Material pro Fach, Hausaufgaben, Wetter. */
+    fun pack(ctx: Context, day: String): String {
+        val d = dayOf(day) ?: return Res.error("Welcher Tag?")
+        val l = lessons(ctx, d)
+        if (l.isEmpty()) return Res.ok("Für ${NAMES[d.value - 1]} ist kein Unterricht gespeichert – nichts zu packen.")
+        val subjects = l.map { it.replace(Regex("^\\d{1,2}[:.]\\d{2}\\s*"), "").substringBefore(" R").trim() }.filter { it.isNotBlank() }.distinct()
+        val items = JsonStore(ctx).obj("pack_items")
+        val lines = subjects.map { s ->
+            val arr = items.keys().asSequence().firstOrNull { k -> s.lowercase().contains(k) || k.contains(s.lowercase()) }?.let { items.optJSONArray(it) }
+            val extra = arr?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty()
+            "• $s: " + (listOf("Heft", "Buch") .takeIf { extra.isEmpty() } ?: extra).joinToString(", ")
+        }
+        val hw = homeworkFor(ctx, d)
+        val weather = try { WeatherTool.fetch(ctx).removePrefix("OK:").trim().lines().take(3).joinToString(" ") } catch (_: Exception) { "" }
+        val rain = Regex("regen|schauer|gewitter|niesel", RegexOption.IGNORE_CASE).containsMatchIn(weather)
+        return Res.ok("Packliste ${NAMES[d.value - 1]}:\n" + lines.joinToString("\n") +
+            "\n• Immer: Federmappe, Trinkflasche, Pausenbrot" + (if (rain) ", Regenschirm/Regenjacke" else "") + hw +
+            (if (weather.isNotBlank()) "\nWetter: $weather" else "") +
+            "\n(Was pro Fach mitmuss, kannst du ändern: „Für Sport brauche ich Sportzeug und Turnschuhe“.)")
+    }
 
     private fun homeworkFor(ctx: Context, d: DayOfWeek): String {
         val subjects = lessons(ctx, d).map { it.lowercase() }

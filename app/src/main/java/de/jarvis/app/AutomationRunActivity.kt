@@ -33,6 +33,7 @@ class AutomationRunActivity : Activity() {
                     "notify" -> { Notifier.post(this, Notifier.CH_REMINDER, 51_000 + i, a.optString("name", "Jarvis"), args.optString("text")); "OK" }
                     "speak" -> say(args.optString("text"))
                     "briefing" -> say(de.jarvis.app.tools.BriefingTool.build(applicationContext))
+                    "greet" -> say(SmartHints.greeting(applicationContext))
                     else -> tools.execute(tool, args)
                 }
                 results += "${Automations.describeStep(s)}: ${r.take(60)}"

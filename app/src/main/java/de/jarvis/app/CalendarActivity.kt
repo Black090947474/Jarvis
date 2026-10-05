@@ -37,20 +37,20 @@ class CalendarActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Ui.load(Prefs(this)); ui = Ui(this)
-        window.statusBarColor = BG; window.navigationBarColor = BG
+        window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(16), ui.px(18), ui.px(28)) }
 
         val head = ui.row()
-        head.addView(ui.text("‹", 30f, Color.WHITE).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
-        head.addView(ui.weighted(ui.text("Kalender", 20f, Color.WHITE, true).apply { gravity = Gravity.CENTER }))
+        head.addView(ui.text("‹", 30f, Ui.FG).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
+        head.addView(ui.weighted(ui.text("Kalender", 20f, Ui.FG, true).apply { gravity = Gravity.CENTER }))
         head.addView(ui.text("+", 30f, RED).apply { setPadding(ui.px(16), 0, 0, 0); setOnClickListener { newEvent() } })
         col.addView(head)
 
         val nav = ui.card(false).apply { gravity = Gravity.CENTER_VERTICAL }
-        nav.addView(ui.text("‹", 26f, Color.WHITE).apply { setPadding(ui.px(6), 0, ui.px(6), 0); setOnClickListener { selected = selected.minusWeeks(1); render() } })
-        monthText = ui.text("", 17f, Color.WHITE, true).apply { gravity = Gravity.CENTER }
+        nav.addView(ui.text("‹", 26f, Ui.FG).apply { setPadding(ui.px(6), 0, ui.px(6), 0); setOnClickListener { selected = selected.minusWeeks(1); render() } })
+        monthText = ui.text("", 17f, Ui.FG, true).apply { gravity = Gravity.CENTER }
         nav.addView(ui.weighted(monthText))
-        nav.addView(ui.text("›", 26f, Color.WHITE).apply { setPadding(ui.px(6), 0, ui.px(6), 0); setOnClickListener { selected = selected.plusWeeks(1); render() } })
+        nav.addView(ui.text("›", 26f, Ui.FG).apply { setPadding(ui.px(6), 0, ui.px(6), 0); setOnClickListener { selected = selected.plusWeeks(1); render() } })
         col.addView(nav)
 
         week = ui.card(false).apply { setPadding(ui.px(6), ui.px(10), ui.px(6), ui.px(10)) }
@@ -77,7 +77,7 @@ class CalendarActivity : Activity() {
                 setOnClickListener { selected = d; render() } }
             cell.addView(ui.text(names[i], 12f, MUTED).apply { gravity = Gravity.CENTER })
             val sel = d == selected; val today = d == LocalDate.now()
-            cell.addView(ui.text("${d.dayOfMonth}", 15f, Color.WHITE, sel).apply {
+            cell.addView(ui.text("${d.dayOfMonth}", 15f, Ui.FG, sel).apply {
                 gravity = Gravity.CENTER
                 if (sel || today) background = GradientDrawable().apply { shape = GradientDrawable.OVAL
                     if (sel) setColor(RED) else setStroke(ui.px(1), RED) }
@@ -118,7 +118,7 @@ class CalendarActivity : Activity() {
                     row.addView(View(this).apply { background = GradientDrawable().apply { setColor(it.color); cornerRadius = 3 * ui.dp } },
                         LinearLayout.LayoutParams(ui.px(4), ui.px(40)).apply { rightMargin = ui.px(12) })
                     val t = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-                    t.addView(ui.text(it.title, 16f, Color.WHITE, true).apply { maxLines = 2 })
+                    t.addView(ui.text(it.title, 16f, Ui.FG, true).apply { maxLines = 2 })
                     if (it.sub.isNotBlank()) t.addView(ui.text(it.sub, 12f, MUTED).apply { maxLines = 1 })
                     row.addView(t, LinearLayout.LayoutParams(0, -2, 1f))
                     list.addView(row)

@@ -172,7 +172,17 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("listening_enabled", false)
         set(v) = sp.edit().putBoolean("listening_enabled", v).apply()
 
-    /** Ab welcher Sicherheit (0..1) "Hey Jarvis" als erkannt gilt. Kleiner = reagiert leichter. */
+    /** Weckwort: "JARVIS" (nur „Jarvis“, Standard) oder "HEY" (klassisch „Hey Jarvis“). */
+    var wakeMode: String
+        get() = sp.getString("wake_mode", "JARVIS") ?: "JARVIS"
+        set(v) = sp.edit().putString("wake_mode", v).apply()
+
+    /** Begrüßung beim Nachhausekommen (WLAN/Ort „Zuhause“). */
+    var greetOnArrive: Boolean
+        get() = sp.getBoolean("greet_arrive", true)
+        set(v) = sp.edit().putBoolean("greet_arrive", v).apply()
+
+    /** Ab welcher Sicherheit (0..1) das Weckwort als erkannt gilt. Kleiner = reagiert leichter. */
     var sensitivity: Float
         get() = sp.getFloat("threshold", 0.5f)
         set(v) = sp.edit().putFloat("threshold", v.coerceIn(0.1f, 0.95f)).apply()

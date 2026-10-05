@@ -49,7 +49,7 @@ class PermissionsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = Ui(this); prefs = Prefs(this)
-        window.statusBarColor = BG; window.navigationBarColor = BG
+        window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(22), ui.px(18), ui.px(40)) }
         setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
     }
@@ -76,7 +76,7 @@ class PermissionsActivity : Activity() {
     private fun items(): List<Item> {
         val photo = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
         val list = mutableListOf(
-            Item("Mikrofon", "Für „Hey Jarvis“ und Spracheingabe. Wird nur auf dem Handy ausgewertet, bis du sprichst.", null,
+            Item("Mikrofon", "Für das Weckwort „Jarvis“ und Spracheingabe. Wird nur auf dem Handy ausgewertet, bis du sprichst.", null,
                 { has(Manifest.permission.RECORD_AUDIO) }, { ask(Manifest.permission.RECORD_AUDIO) }),
             Item("Kalender", "Termine anzeigen, suchen, freie Zeiten finden, eintragen, verschieben, löschen – Ändern nur nach deinem Ja.", "calendar",
                 { has(Manifest.permission.READ_CALENDAR) && has(Manifest.permission.WRITE_CALENDAR) },
@@ -99,7 +99,13 @@ class PermissionsActivity : Activity() {
             { has(Manifest.permission.ACCESS_BACKGROUND_LOCATION) },
             { if (!has(Manifest.permission.ACCESS_FINE_LOCATION)) toast("Erst „Standort“ erlauben.") else ask(Manifest.permission.ACCESS_BACKGROUND_LOCATION) })
         list += listOf(
-            Item("Fotos", "Neuestes Foto zeigen oder teilen, Fotos zählen.", "photos", { has(photo) }, { ask(photo) }),
+            Item("Fotos", "Fotos suchen (Zeitraum, Ordner), neuestes Foto zeigen oder teilen.", "photos", { has(photo) }, { ask(photo) }),
+            Item("Foto-Ortsdaten", "Für „Zeig mir Fotos vom Strand in …“: liest den Aufnahmeort aus deinen Fotos (bleibt auf dem Handy).", "photos",
+                { Build.VERSION.SDK_INT < 29 || has(Manifest.permission.ACCESS_MEDIA_LOCATION) },
+                { if (!has(photo)) toast("Erst „Fotos“ erlauben.") else if (Build.VERSION.SDK_INT >= 29) ask(Manifest.permission.ACCESS_MEDIA_LOCATION) }),
+            Item("Nicht stören (Fokus-Timer)", "Damit der Fokus-Timer beim Lernen „Nicht stören“ an- und danach wieder ausschalten darf.", null,
+                { (getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager).isNotificationPolicyAccessGranted },
+                { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }),
             Item("Kamera", "Kamera-App öffnen (Foto, Selfie, Video). Braucht keine eigene Freigabe.", "camera", { true }, {}),
             Item("Bildschirmsteuerung", "Apps bedienen wie ein Mensch und WLAN/Bluetooth-Kacheln umschalten (Bedienungshilfe).", "screen",
                 { secureListHas(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) }, { restrictedHint(); startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }),
@@ -109,7 +115,7 @@ class PermissionsActivity : Activity() {
             Item("Bluetooth-Geräte erkennen", "Für Automationen („Wenn Kopfhörer/Auto verbunden …“) und den Auto-Modus.", null,
                 { Build.VERSION.SDK_INT < 31 || has(Manifest.permission.BLUETOOTH_CONNECT) },
                 { if (Build.VERSION.SDK_INT >= 31) ask(Manifest.permission.BLUETOOTH_CONNECT) }),
-            Item("Über anderen Apps einblenden", "Damit Automationen und „Hey Jarvis“ Aktionen auch im Hintergrund starten dürfen.", null,
+            Item("Über anderen Apps einblenden", "Damit Automationen und „Jarvis“-Aktionen auch im Hintergrund starten dürfen.", null,
                 { Settings.canDrawOverlays(this) }, { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))) }),
             Item("Systemeinstellungen ändern", "Für die Bildschirmhelligkeit.", "settings",
                 { Settings.System.canWrite(this) }, { startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))) }),
@@ -131,7 +137,7 @@ class PermissionsActivity : Activity() {
 
     private fun build() {
         col.removeAllViews()
-        col.addView(ui.text("Berechtigungen", 28f, Color.WHITE, true))
+        col.addView(ui.text("Berechtigungen", 28f, Ui.FG, true))
         col.addView(ui.text("Was Jarvis darf – und wofür. Erteilen und Entziehen geht nur über Android; mit dem Schalter " +
             "kannst du eine Funktion für Jarvis zusätzlich sperren.", 13f, MUTED).apply { setPadding(0, ui.px(6), 0, 0) })
 
@@ -148,7 +154,7 @@ class PermissionsActivity : Activity() {
         val enabled = it.feature?.let { f -> prefs.feature(f) } ?: true
         val top = ui.row()
         top.addView(ui.text(if (ok) "✓" else "○", 18f, if (ok) GREEN else MUTED).apply { width = ui.px(28) })
-        top.addView(ui.weighted(ui.text(it.title, 16f, Color.WHITE, true)))
+        top.addView(ui.weighted(ui.text(it.title, 16f, Ui.FG, true)))
         if (it.feature != null) top.addView(Switch(this).apply {
             isChecked = enabled
             contentDescription = "Jarvis-Zugriff auf ${it.title}"
@@ -178,7 +184,7 @@ class PermissionsActivity : Activity() {
         fun sw(title: String, desc: String, value: Boolean, set: (Boolean) -> Unit) {
             val r = ui.row().apply { setPadding(0, ui.px(6), 0, ui.px(6)) }
             val t = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            t.addView(ui.text(title, 15f, Color.WHITE, true)); t.addView(ui.text(desc, 12f, MUTED))
+            t.addView(ui.text(title, 15f, Ui.FG, true)); t.addView(ui.text(desc, 12f, MUTED))
             r.addView(ui.weighted(t))
             r.addView(Switch(this).apply { isChecked = value; setOnCheckedChangeListener { _, on -> set(on); reschedule() } })
             c.addView(r)

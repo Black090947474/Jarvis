@@ -27,7 +27,7 @@ class AutomationsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Ui.load(Prefs(this)); ui = Ui(this)
-        window.statusBarColor = BG; window.navigationBarColor = BG
+        window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(16), ui.px(18), ui.px(32)) }
         setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
     }
@@ -37,7 +37,7 @@ class AutomationsActivity : Activity() {
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_LONG).show()
     private fun dlg() = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
     private fun field(hint: String, v: String = "", number: Boolean = false) = EditText(this).apply {
-        this.hint = hint; setText(v); setTextColor(Color.WHITE); setHintTextColor(MUTED)
+        this.hint = hint; setText(v); setTextColor(Ui.FG); setHintTextColor(MUTED)
         if (number) inputType = InputType.TYPE_CLASS_NUMBER
     }
     private fun box(vararg v: android.view.View) = LinearLayout(this).apply {
@@ -46,9 +46,9 @@ class AutomationsActivity : Activity() {
     private fun build() {
         col.removeAllViews()
         val head = ui.row()
-        head.addView(ui.text("‹", 30f, Color.WHITE).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
+        head.addView(ui.text("‹", 30f, Ui.FG).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
         val t = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        t.addView(ui.text("Automationen", 21f, Color.WHITE, true)); t.addView(ui.text("WENN … DANN …", 12f, RED))
+        t.addView(ui.text("Automationen", 21f, Ui.FG, true)); t.addView(ui.text("WENN … DANN …", 12f, RED))
         head.addView(t); col.addView(head)
 
         col.addView(ui.button("+ Neue Automation") { edit(JSONObject()) })
@@ -57,7 +57,7 @@ class AutomationsActivity : Activity() {
         for (a in list) {
             col.addView(ui.card().apply {
                 val top = ui.row()
-                top.addView(ui.weighted(ui.text(a.optString("name", "Automation"), 16f, Color.WHITE, true)))
+                top.addView(ui.weighted(ui.text(a.optString("name", "Automation"), 16f, Ui.FG, true)))
                 top.addView(Switch(this@AutomationsActivity).apply {
                     isChecked = a.optBoolean("on", true)
                     setOnCheckedChangeListener { _, on -> Automations.put(this@AutomationsActivity, a.put("on", on)) }
@@ -82,6 +82,7 @@ class AutomationsActivity : Activity() {
             "play_music" to JSONObject().put("query", "Meine Playlist").put("app", "spotify"), "set_volume" to JSONObject().put("percent", 40))
         tpl("Zuhause → Hausaufgaben", JSONObject().put("type", "place").put("name", "Zuhause").put("when", "arrive"),
             "notify" to JSONObject().put("text", "Willkommen zu Hause! Denk an deine Hausaufgaben."))
+        tpl("Nach Hause (WLAN) → Begrüßung", JSONObject().put("type", "wifi").put("ssid", ""), "greet" to JSONObject())
         tpl("Akku unter 15 %", JSONObject().put("type", "battery").put("below", 15),
             "speak" to JSONObject().put("text", "Achtung, dein Akku ist fast leer."))
         tpl("Morgens 7 Uhr → Briefing", JSONObject().put("type", "time").put("hour", 7).put("minute", 0).put("days", JSONArray(listOf(1, 2, 3, 4, 5))),
@@ -99,7 +100,7 @@ class AutomationsActivity : Activity() {
         val name = field("Name, z. B. Kopfhörer-Modus", a.optString("name"))
         val trig = ui.text("WENN: " + (a.optJSONObject("trigger")?.let { Automations.describeTrigger(it) } ?: "– antippen –"), 15f, RED, true).apply {
             setPadding(0, ui.px(12), 0, ui.px(6)) }
-        val stepsView = ui.text("", 14f, Color.WHITE)
+        val stepsView = ui.text("", 14f, Ui.FG)
         fun refresh() {
             trig.text = "WENN: " + (a.optJSONObject("trigger")?.let { Automations.describeTrigger(it) } ?: "– antippen zum Wählen –")
             stepsView.text = "DANN:\n" + if (steps.length() == 0) "– noch keine Aktion –" else

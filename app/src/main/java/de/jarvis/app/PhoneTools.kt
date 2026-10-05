@@ -84,6 +84,9 @@ class PhoneTools(private val activity: Activity) {
     fun label(name: String): String = LABELS[name] ?: "Arbeite …"
 
     /** Führt ein Werkzeug auf dem Hauptthread aus (aus einem Hintergrund-Thread aufrufen). */
+    /** Übersetzer: Text in einer Sprache laut vorlesen (gesetzt vom Sprachbildschirm). */
+    var onSayIn: ((String, String) -> String)? = null
+
     /** Wird von Jarvis/Chat gesetzt: zeigt die Aktions-PIN-Abfrage und wartet auf das Ergebnis (true = richtig). */
     var pinGate: ((String) -> Boolean)? = null
 
@@ -131,6 +134,7 @@ class PhoneTools(private val activity: Activity) {
             "location" -> return safe { location() }
             "second_phone" -> return safe { secondPhone(input) }
             "read_app" -> return safe { readApp(input) }
+            "say_in" -> onSayIn?.let { f -> return safe { f(input.optString("text"), input.optString("lang", "en")) } }
         }
         var result = "Fehler: Zeitüberschreitung"
         val latch = CountDownLatch(1)
@@ -176,6 +180,7 @@ class PhoneTools(private val activity: Activity) {
         "count_photos" -> countPhotos()
         "toggle" -> toggle(a.optString("what"))
         "show_card" -> onCard?.invoke(a) ?: "Fehler: Karten gehen hier nicht."
+        "say_in" -> "OK: (im Chat nur als Text) ${a.optString("text")}"
         "build_website" -> buildWebsite(a.optString("title"), a.optString("html"))
         else -> "Fehler: Unbekanntes Werkzeug $name"
     }
@@ -784,7 +789,7 @@ class PhoneTools(private val activity: Activity) {
             "call" to "comm", "send_message" to "comm", "notifications" to "comm",
             "navigate" to "device", "open_settings" to "device", "camera" to "device", "screen" to "device",
             "location" to "device", "latest_photo" to "device", "count_photos" to "device", "toggle" to "device",
-            "read_app" to "comm", "open_url" to "info", "forget" to "info", "build_website" to "info", "second_phone" to "info",
+            "read_app" to "comm", "say_in" to "info", "open_url" to "info", "forget" to "info", "build_website" to "info", "second_phone" to "info",
         )
 
         /** Welcher Funktionsschalter (Berechtigungszentrum) ein altes Werkzeug sperrt. */
@@ -819,7 +824,8 @@ class PhoneTools(private val activity: Activity) {
             "location" to "Bestimme Standort …", "latest_photo" to "Hole dein Foto …",
             "count_photos" to "Zähle Fotos …", "toggle" to "Schalte um …",
             "show_card" to "Erstelle Übersicht …", "build_website" to "Baue Website …",
-            "second_phone" to "Sende an zweites Handy …", "read_app" to "Lese die App …"
+            "second_phone" to "Sende an zweites Handy …", "read_app" to "Lese die App …", "say_in" to "Übersetze …",
+            "money" to "Taschengeld …", "party_quiz" to "Quiz-Abend …", "focus" to "Starte Fokus-Timer …", "photos" to "Suche Fotos …"
         )
 
         /** Beschreibung aller Werkzeuge für Claude (JSON-Schema). */
@@ -901,6 +907,8 @@ class PhoneTools(private val activity: Activity) {
    "note":{"type":"string","description":"Optionaler Hinweis unten"}},"required":["title","kind","items"]}},
  {"name":"build_website","description":"Baut eine einseitige Website und öffnet sie im Browser. html = vollständiges, kompaktes HTML mit eingebettetem CSS, ohne externe Dateien oder Bilder-Links, modern, dunkel oder hell passend zum Thema, mobilfreundlich, auf Deutsch. Sie liegt nur auf dem Handy (Downloads/Jarvis), nicht online.",
   "input_schema":{"type":"object","properties":{"title":{"type":"string"},"html":{"type":"string"}},"required":["title","html"]}},
+ {"name":"say_in","description":"Übersetzer-Modus: spricht einen Text laut in einer anderen Sprache (z. B. die Übersetzung für dein Gegenüber). Danach hört Jarvis einmal in dieser Sprache zu, damit das Gegenüber antworten kann – die Antwort übersetzt du dann wieder ins Deutsche.",
+  "input_schema":{"type":"object","properties":{"text":{"type":"string"},"lang":{"type":"string","description":"Sprachcode: en, es, fr, it, tr, pl, ar, ru, uk, pt, nl, el, hr …"}},"required":["text","lang"]}},
  {"name":"read_app","description":"Öffnet eine App und liest den sichtbaren Inhalt vor (nur lesen). Für 'Check meine E-Mails' app='mail' (öffnet die Mail-App und liest den Posteingang: Absender, Betreff, Vorschau). Auch für WhatsApp-Chats, Instagram, Kalender-Apps, Noten-Apps usw. pages = wie viele Bildschirmseiten (1-4). Danach zusammenfassen. Um eine bestimmte Mail zu öffnen danach screen tap + screen read.",
   "input_schema":{"type":"object","properties":{"app":{"type":"string","description":"App-Name oder 'mail'"},"pages":{"type":"integer"}},"required":["app"]}},
  {"name":"second_phone","description":"Führt eines deiner Werkzeuge auf dem zweiten Handy des Nutzers (der Jarvis-Station) aus, wenn er 'auf dem zweiten Handy', 'auf der Station' oder 'am anderen Handy' sagt. tool = Werkzeugname (z. B. play_music, media_control, set_alarm, set_timer, flashlight, set_volume, open_app, app_search, battery, camera, toggle, screen, notifications), args = dessen Parameter als JSON-Text.",

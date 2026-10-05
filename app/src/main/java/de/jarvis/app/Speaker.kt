@@ -56,7 +56,7 @@ class Speaker(
                         val ok = applyFx()
                         main.post { if (synthIds.remove(id)) { if (ok) playFile(id) else speakDirect(pendingText.remove(id) ?: "", id) } }
                     }
-                } else main.post { onDone(id) }
+                } else main.post { if (langPending) { langPending = false; try { tts.language = Locale.GERMANY; applySettings() } catch (_: Exception) {} }; onDone(id) }
             }
             @Deprecated("Deprecated in Java")
             override fun onError(id: String?) {
@@ -120,6 +120,18 @@ class Speaker(
         val file = File(ctx.cacheDir, "jarvis_voice.wav")
         val r = tts.synthesizeToFile(text, null, file, sid)
         if (r != TextToSpeech.SUCCESS) { synthIds -= sid; speakDirect(text, id) }
+    }
+
+    private var langPending = false
+
+    /** Text in einer anderen Sprache vorlesen (Übersetzer-Modus), danach wieder die deutsche Stimme. */
+    fun speakIn(text: String, locale: Locale, id: String) {
+        stop()
+        if (!ready) { main.post { onDone(id) }; return }
+        try { tts.language = locale } catch (_: Exception) {}
+        tts.setPitch(1f); tts.setSpeechRate(prefs.voiceRate)
+        langPending = true
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
     }
 
     private fun speakDirect(text: String, id: String) {

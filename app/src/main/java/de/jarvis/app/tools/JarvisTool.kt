@@ -74,7 +74,7 @@ object ToolRegistry {
     val all: List<JarvisTool> by lazy {
         listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool,
             WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool,
-            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool)
+            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool)
     }
 
     fun find(name: String): JarvisTool? = all.firstOrNull { it.name == name }
@@ -85,7 +85,8 @@ object ToolRegistry {
             "aufgabe", "todo", "to-do", "steht an", "wann", "verschieb", "lösch", "absag", "montag", "dienstag", "mittwoch",
             "donnerstag", "freitag", "samstag", "sonntag", "wochenende", "uhr", "datum", "geburtstag", "lernen", "hausaufgabe",
             "zuhause", "zu hause", "ankomm", "erledigt", "fertig", "liste", "schule", "stundenplan", "fach", "stunde",
-            "einkauf", "kaufen", "notiz", "notier", "aufschreib", "geburtstag", "mathe", "deutsch", "englisch"),
+            "einkauf", "kaufen", "notiz", "notier", "aufschreib", "geburtstag", "mathe", "deutsch", "englisch",
+            "geld", "taschengeld", "ausgegeben", "ausgabe", "spar", "euro", "€", "fokus", "pomodoro", "konzentr", "packen", "pack", "ranzen", "tasche"),
         "comm" to listOf("ruf", "anruf", "angerufen", "telefon", "nachricht", "schreib", "sms", "whatsapp", "mail", "e-mail",
             "antwort", "benachrichtig", "kontakt", "insta", "snap", "verpasst"),
         "device" to listOf("wlan", "wifi", "bluetooth", "flugmodus", "hotspot", "helligkeit", "hell", "dunkel", "einstellung",
@@ -94,7 +95,8 @@ object ToolRegistry {
             "like", "folg", "poste", "schick", "geparkt", "park", "auto steht", "merk dir den ort", "wo steht"),
         "info" to listOf("wetter", "regen", "temperatur", "sonne", "grad", "kalt", "warm", "jacke", "schirm", "website",
             "webseite", "homepage", "zweite", "station", "anderen handy", "vergiss", "merk", "vokabel", "abfrag",
-            "lern", "quiz", "teste mich", "karteikart"),
+            "lern", "quiz", "teste mich", "karteikart", "übersetz", "auf englisch", "auf französisch", "auf spanisch", "dolmetsch",
+            "geschichte", "witz", "punkte", "spieleabend", "runde"),
     )
 
     /** Welche Gruppen für diese Anfrage gebraucht werden ("core" immer). */

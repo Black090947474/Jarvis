@@ -17,7 +17,7 @@ import android.provider.Settings
 import android.util.Log
 
 /**
- * Läuft dauerhaft im Hintergrund und hört (offline) auf "Hey Jarvis".
+ * Läuft dauerhaft im Hintergrund und hört (offline) auf „Jarvis“.
  * Bei Erkennung wird das Mikrofon freigegeben und der Gesprächsbildschirm geöffnet.
  */
 class WakeWordService : Service() {
@@ -182,7 +182,7 @@ class WakeWordService : Service() {
     companion object {
         private const val TAG = "JarvisWake"
         const val ACTION_STOP = "de.jarvis.app.STOP"
-        const val READY_TEXT = "Sag „Hey Jarvis“, um zu reden"
+        const val READY_TEXT = "Sag „Jarvis“, um zu reden"
         const val CH_STATUS = "status"
         const val CH_WAKE = "wake"
         const val NOTIF_STATUS = 1

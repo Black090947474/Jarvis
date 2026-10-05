@@ -79,7 +79,7 @@ object Whisper {
     private val JUNK = listOf("untertitel", "zdf", "abonnier", "copyright", "swr ", "wdr ", "amara.org")
 
     /** Text erkennen. Wirft eine Exception bei Netz-/Schlüsselproblemen. */
-    fun transcribe(apiKey: String, pcm: ByteArray, hint: String = "Hey Jarvis"): String {
+    fun transcribe(apiKey: String, pcm: ByteArray, hint: String = "Jarvis", language: String? = "de"): String {
         val key = apiKey.filter { it.isLetterOrDigit() || it == '_' || it == '-' }
         val boundary = "----jarvis${System.currentTimeMillis()}"
         val body = ByteArrayOutputStream()
@@ -87,7 +87,7 @@ object Whisper {
             body.write("--$boundary\r\nContent-Disposition: form-data; name=\"$name\"\r\n\r\n$value\r\n".toByteArray())
         }
         field("model", "whisper-large-v3-turbo")
-        field("language", "de")
+        if (language != null) field("language", language)
         field("temperature", "0")
         field("response_format", "json")
         field("prompt", hint)

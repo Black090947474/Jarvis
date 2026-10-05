@@ -20,6 +20,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <!-- Assistent: Kalender, Anrufliste, Erinnerungen, Orte, Helligkeit -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
@@ -101,6 +103,8 @@
             android:taskAffinity="de.jarvis.app.auto"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name=".AppsActivity" android:exported="false" />
+        <activity android:name=".FocusActivity" android:exported="false" android:launchMode="singleTask" />
+        <activity android:name=".WakeTrainActivity" android:exported="false" />
 
         <!-- Berechtigungszentrum -->
         <activity

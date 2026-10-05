@@ -52,6 +52,7 @@ class JarvisActivity : Activity() {
         val t = PhoneTools(this).also { tools = it }
         t.onCard = { a -> showCard(a) }
         t.pinGate = { d -> PinGate.ask(this, d) }
+        t.onSayIn = { text, lang -> sayIn(text, lang) }
         if (!prefs.hasAnyKey) {
             jarvisText.text = "Mir fehlt noch ein Schlüssel. Trag den NVIDIA- oder Groq-Schlüssel in der Jarvis-App ein."
         } else {
@@ -63,7 +64,9 @@ class JarvisActivity : Activity() {
             onReady = { ok -> onTtsReady(ok) })
         // Sofort zuhören: "Jarvis, stell den Wecker auf 7" funktioniert in einem Satz.
         // Kurze Pause, damit der Wake-Word-Dienst das Mikrofon freigeben kann.
-        if (claude != null) main.postDelayed({ beep(); listen() }, 200)
+        val initialAsk = intent.getStringExtra("ask")?.takeIf { it.isNotBlank() }
+        if (claude != null && initialAsk != null) main.postDelayed({ onHeard(initialAsk) }, 700)
+        else if (claude != null) main.postDelayed({ beep(); listen() }, 200)
     }
 
     @Suppress("DEPRECATION")
@@ -93,9 +96,12 @@ class JarvisActivity : Activity() {
             Color.rgb(122, 122, 122), Color.rgb(200, 200, 200), true)
         CoreView.Style.GLAS -> Theme(Color.rgb(30, 36, 48), Color.rgb(11, 13, 18), Color.rgb(241, 243, 247),
             Color.rgb(140, 147, 163), Color.rgb(143, 176, 255), false)
+        CoreView.Style.SPHAERE -> Theme(Color.rgb(22, 5, 30), Color.rgb(6, 2, 10), Color.rgb(246, 236, 255),
+            Color.rgb(176, 146, 196), Color.rgb(232, 72, 255), true)
     }
 
     private lateinit var status: TextView
+    private var suggestions: android.view.View? = null
     private var clock: TextView? = null
     private lateinit var cardScroll: android.widget.ScrollView
     private lateinit var cardBox: LinearLayout
@@ -214,6 +220,25 @@ class JarvisActivity : Activity() {
                 }, lp(2))
             }
             CoreView.Style.LINIE -> {}
+            CoreView.Style.SPHAERE -> {
+                val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+                fun roundBtn(t: String, act: () -> Unit) = TextView(this).apply {
+                    text = t; textSize = 18f; setTextColor(th.fg); gravity = Gravity.CENTER
+                    background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL
+                        setColor(Color.argb(40, 255, 255, 255)) }
+                    setOnClickListener { act() }
+                }
+                row.addView(roundBtn("‹") { finish() }, LinearLayout.LayoutParams(px(40), px(40)))
+                val titles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(px(12), 0, 0, 0) }
+                titles.addView(TextView(this).apply { text = "Jarvis"; textSize = 16f; setTextColor(th.fg) })
+                titles.addView(TextView(this).apply { text = "Sprachassistent"; textSize = 11f; setTextColor(th.muted) })
+                row.addView(titles, LinearLayout.LayoutParams(0, -2, 1f))
+                row.addView(roundBtn("⋯") { startActivity(android.content.Intent(this, MainActivity::class.java)) }, LinearLayout.LayoutParams(px(40), px(40)))
+                root.addView(row, lp())
+                root.addView(android.view.View(this).apply { background = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(Color.TRANSPARENT, th.accent, Color.TRANSPARENT)) },
+                    LinearLayout.LayoutParams(-1, px(1)).apply { topMargin = px(14) })
+            }
         }
         // (PULS-Kopfzeile oben bereits gebaut)
 
@@ -255,8 +280,39 @@ class JarvisActivity : Activity() {
         texts.addView(status, lp())
         texts.addView(youText, lp(12))
         texts.addView(jarvisText, lp(10))
-        texts.addView(hint, lp(22))
+        texts.addView(hint, lp(18))
         root.addView(texts, lp(16))
+
+        // Vorschläge (verschwinden, sobald gesprochen wird)
+        val tips = listOf("Was steht heute an?", "Wie wird das Wetter?", "Lies meine Nachrichten", "Guten Morgen")
+        suggestions = android.widget.HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(LinearLayout(this@JarvisActivity).apply {
+                for (tip in tips) addView(TextView(this@JarvisActivity).apply {
+                    text = "„$tip“"; textSize = 13f; setTextColor(th.fg)
+                    setPadding(px(14), px(8), px(14), px(8))
+                    background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 18 * dp
+                        setColor(Color.argb(28, 255, 255, 255)); setStroke(px(1), Color.argb(70, Color.red(th.accent), Color.green(th.accent), Color.blue(th.accent))) }
+                    setOnClickListener { if (!busy) { recognizer?.cancel(); whisperGen++; listening = false; onHeard(tip) } }
+                }, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = px(8) })
+            })
+        }
+        root.addView(suggestions, lp(14))
+
+        // Bedienleiste: nochmal · Mikrofon · schließen
+        val bar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        fun small(t: String, act: () -> Unit) = TextView(this).apply {
+            text = t; textSize = 20f; setTextColor(th.muted); gravity = Gravity.CENTER; setOnClickListener { act() } }
+        bar.addView(small("↻") { onTap() }, LinearLayout.LayoutParams(0, px(56), 1f))
+        bar.addView(android.widget.ImageView(this).apply {
+            setImageResource(R.drawable.ic_mic); setPadding(px(16), px(16), px(16), px(16))
+            background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(th.accent, Color.argb(255, Color.red(th.accent) / 2 + 100, 60, 200))).apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
+            elevation = px(6).toFloat()
+            setOnClickListener { onTap() }
+        }, LinearLayout.LayoutParams(px(64), px(64)))
+        bar.addView(small("✕") { finish() }, LinearLayout.LayoutParams(0, px(56), 1f))
+        root.addView(bar, lp(16))
 
         setContentView(root)
         tickClock()
@@ -378,7 +434,21 @@ class JarvisActivity : Activity() {
         tts?.speak(text, id)
     }
 
+    @Volatile private var nextListenLang: String? = null
+    private var sayLatch: java.util.concurrent.CountDownLatch? = null
+
+    /** Übersetzung laut in der Zielsprache sprechen und warten, bis sie fertig ist (läuft im Hintergrund-Thread). */
+    private fun sayIn(text: String, lang: String): String {
+        val sp = tts ?: return "FEHLER: Sprachausgabe nicht bereit."
+        val l = java.util.concurrent.CountDownLatch(1); sayLatch = l
+        main.post { jarvisText.text = text; core.mode = CoreView.Mode.SPEAKING; sp.speakIn(text, Locale.forLanguageTag(lang), "say:$lang") }
+        l.await(60, java.util.concurrent.TimeUnit.SECONDS)
+        nextListenLang = lang
+        return "OK: In ${Locale.forLanguageTag(lang).getDisplayLanguage(Locale.GERMANY)} vorgelesen. Ich höre jetzt einmal in dieser Sprache zu."
+    }
+
     private fun afterSpeaking(id: String?) {
+        if (id?.startsWith("say:") == true) { sayLatch?.countDown(); return }
         if (isFinishing) return
         when (id) {
             ID_BYE -> finishWhenUnlocked()
@@ -420,7 +490,7 @@ class JarvisActivity : Activity() {
         recognizer = SpeechRecognizer.createSpeechRecognizer(this).also { it.setRecognitionListener(listener) }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, nextListenLang?.let { Locale.forLanguageTag(it).toLanguageTag() } ?: "de-DE")
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
@@ -447,7 +517,8 @@ class JarvisActivity : Activity() {
             if (cancelled()) return@thread
             if (pcm == null) { main.post { if (!cancelled()) { listening = false; onNothingHeard() } }; return@thread }
             main.post { core.mode = CoreView.Mode.THINKING; youText.text = "Verstehe …" }
-            val text = try { Whisper.transcribe(key, pcm) } catch (e: Exception) { null }
+            val lang = nextListenLang
+            val text = try { Whisper.transcribe(key, pcm, language = lang ?: "de") } catch (e: Exception) { null }
             main.post {
                 if (!cancelled()) listening = false
                 when {
@@ -514,7 +585,9 @@ class JarvisActivity : Activity() {
     }
 
     private fun onHeard(text: String) {
+        nextListenLang = null
         silentTries = 0
+        suggestions?.visibility = android.view.View.GONE
         youText.text = "„$text“"
         // Kurze Abschiedsfloskeln ("Danke", "Tschüss Jarvis", "Stopp") beenden das Gespräch
         val clean = text.lowercase(Locale.GERMANY).replace(Regex("[^a-zäöüß' ]"), "").trim()

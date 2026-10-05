@@ -18,7 +18,7 @@ import kotlin.math.sin
 /** Die animierte Mitte des Jarvis-Bildschirms – in vier Designs. */
 class CoreView(context: Context, val style: Style) : View(context) {
 
-    enum class Style { PULS, NEXUS, GLUT, AURORA, LINIE, GLAS }
+    enum class Style { PULS, NEXUS, GLUT, AURORA, LINIE, GLAS, SPHAERE }
     enum class Mode { IDLE, LISTENING, THINKING, SPEAKING }
 
     var onModeChanged: ((Mode) -> Unit)? = null
@@ -53,6 +53,7 @@ class CoreView(context: Context, val style: Style) : View(context) {
             Style.LINIE -> drawLinie(canvas, t, cx, cy, size)
             Style.GLAS -> drawGlas(canvas, t, cx, cy, size)
             Style.PULS -> drawPuls(canvas, t, cx, cy, size)
+            Style.SPHAERE -> drawSphaere(canvas, t, cx, cy, size)
         } } catch (e: Exception) {
             android.util.Log.w("JarvisCore", "Zeichnen fehlgeschlagen", e)
             fill.shader = null; stroke.shader = null; stroke.pathEffect = null
@@ -66,6 +67,50 @@ class CoreView(context: Context, val style: Style) : View(context) {
         Mode.LISTENING -> 0.03f * sin(t * 2.4f) + level * 0.18f
         Mode.THINKING -> 0.025f * sin(t * 7f)
         Mode.SPEAKING -> 0.07f * abs(sin(t * 6.5f)) * (0.6f + 0.4f * sin(t * 1.7f))
+    }
+
+    // ---------- Sphäre: violette Glaskugel mit Klangwelle ----------
+
+    private fun drawSphaere(c: Canvas, t: Float, cx: Float, cy: Float, size: Float) {
+        val r = size * 0.27f * (1f + pulse(t) * 0.8f)
+        val (a, b) = when (mode) {
+            Mode.THINKING -> Color.rgb(140, 90, 255) to Color.rgb(60, 200, 255)
+            Mode.SPEAKING -> Color.rgb(255, 70, 190) to Color.rgb(170, 60, 255)
+            Mode.LISTENING -> Color.rgb(230, 60, 255) to Color.rgb(120, 40, 220)
+            Mode.IDLE -> Color.rgb(150, 70, 210) to Color.rgb(70, 30, 130)
+        }
+        fun al(col: Int, al: Int) = Color.argb(al, Color.red(col), Color.green(col), Color.blue(col))
+        // Weiches Leuchten um die Kugel
+        fill.shader = RadialGradient(cx, cy, r * 2.4f, intArrayOf(al(a, 110), al(b, 40), Color.TRANSPARENT), floatArrayOf(0.3f, 0.6f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, r * 2.4f, fill)
+        // Kugel mit Lichtpunkt oben links
+        fill.shader = RadialGradient(cx - r * 0.35f, cy - r * 0.4f, r * 1.5f,
+            intArrayOf(Color.rgb(255, 210, 255), a, b, Color.rgb(25, 5, 40)), floatArrayOf(0f, 0.3f, 0.75f, 1f), Shader.TileMode.CLAMP)
+        c.drawCircle(cx, cy, r, fill)
+        fill.shader = null
+        // Klangwelle quer durch die Kugel
+        clip.reset(); clip.addCircle(cx, cy, r * 0.98f, Path.Direction.CW)
+        c.save(); c.clipPath(clip)
+        val amp = when (mode) { Mode.SPEAKING -> 0.5f + 0.35f * abs(sin(t * 5f)); Mode.LISTENING -> 0.2f + level * 0.9f
+            Mode.THINKING -> 0.25f; Mode.IDLE -> 0.12f }
+        for (k in 0 until 4) {
+            stroke.strokeWidth = (2.6f - k * 0.5f) * dp
+            stroke.color = al(if (k % 2 == 0) Color.WHITE else Color.rgb(255, 150, 240), 230 - k * 45)
+            val path = Path()
+            var x = cx - r
+            while (x <= cx + r) {
+                val u = (x - cx) / r
+                val env = (1f - u * u).coerceAtLeast(0f)
+                val y = cy + sin(u * (6f + k * 2.3f) + t * (4f + k) + k) * r * 0.42f * amp * env
+                if (x == cx - r) path.moveTo(x, y) else path.lineTo(x, y)
+                x += 2f * dp
+            }
+            c.drawPath(path, stroke)
+        }
+        c.restore()
+        // Glanzkante
+        stroke.strokeWidth = 1.2f * dp; stroke.color = al(Color.WHITE, 70)
+        c.drawCircle(cx, cy, r, stroke)
     }
 
     // ---------- 0 · Nexus (HUD) ----------

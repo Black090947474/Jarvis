@@ -43,7 +43,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
-        window.statusBarColor = BG
+        window.statusBarColor = BG; Ui.lightBars(window)
         window.navigationBarColor = BG
 
         val col = LinearLayout(this).apply {
@@ -54,7 +54,7 @@ class MainActivity : Activity() {
             text = "JARVIS"; textSize = 34f; setTextColor(RED)
             typeface = Typeface.create("sans-serif-black", Typeface.NORMAL); letterSpacing = 0.15f
         })
-        col.addView(label("Sag „Hey Jarvis“ – auch bei gesperrtem Handy.", 15f, MUTED))
+        col.addView(label("Sag einfach „Jarvis“ – auch bei gesperrtem Handy.", 15f, MUTED))
         crashCard(col)
         col.addView(button("Chat öffnen (Text & Bilder)") {
             save(); startActivity(Intent(this, ChatActivity::class.java))
@@ -142,7 +142,7 @@ class MainActivity : Activity() {
         col.addView(label(
             "So geht's: Auf dem zweiten Handy Jarvis installieren und „Dieses Handy als Station starten“ tippen. " +
             "Dann hier auf „Station suchen“ und den Code eingeben, der auf der Station steht. " +
-            "Beide Handys müssen im selben WLAN sein. Danach z. B.: „Hey Jarvis, spiel auf dem zweiten Handy Musik.“",
+            "Beide Handys müssen im selben WLAN sein. Danach z. B.: „Jarvis, spiel auf dem zweiten Handy Musik.“",
             13f, MUTED))
     }
 
@@ -218,7 +218,7 @@ class MainActivity : Activity() {
         }
         box.addView(TextView(this).apply {
             this.text = "Jarvis ist zuletzt abgestürzt. Mach einen Screenshot davon und schick ihn Claude."
-            textSize = 14f; setTextColor(Color.WHITE)
+            textSize = 14f; setTextColor(Ui.FG)
         })
         box.addView(TextView(this).apply {
             this.text = text.lines().take(18).joinToString("\n")
@@ -246,6 +246,7 @@ class MainActivity : Activity() {
     private lateinit var designButton: Button
 
     private val designs = listOf(
+        "SPHAERE" to "Sphäre – violette Glaskugel mit Klangwelle (neu)",
         "PULS" to "Puls – Leuchtkern, Ringe & Schallwelle",
         "NEXUS" to "Nexus – HUD mit Ringen & Reticle",
         "GLUT" to "Glut – rote, atmende Kugel",
@@ -338,10 +339,23 @@ class MainActivity : Activity() {
         col.addView(label("Whisper versteht dich deutlich genauer (auch Namen, Dialekt, Hintergrundlärm), braucht aber einen Groq-Schlüssel " +
             "(kostenlos, eigenes Limit nur für Spracherkennung). Ohne Groq-Schlüssel nutzt Jarvis automatisch Google.", 13f, MUTED))
 
+        col.addView(section("Weckwort"))
+        col.addView(button("Weckwort: " + (if (prefs.wakeMode == "HEY") "„Hey Jarvis“" else "nur „Jarvis“"), filled = false) {
+            android.app.AlertDialog.Builder(this).setTitle("Worauf soll Jarvis hören?")
+                .setItems(arrayOf("Nur „Jarvis“ (empfohlen)", "„Hey Jarvis“ (klassisch, am wenigsten Fehlalarme)")) { _, w ->
+                    prefs.wakeMode = if (w == 0) "JARVIS" else "HEY"; WakeWordService.instance?.let { it.pause(); it.resume() }; recreate() }.show()
+        })
+        val trained = PersonalWake.load(this) != null
+        col.addView(button(if (trained) "Weckwort neu trainieren (deine Stimme)" else "Weckwort auf meine Stimme trainieren", filled = !trained) {
+            save(); startActivity(Intent(this, WakeTrainActivity::class.java))
+        })
+        col.addView(label("Für „nur Jarvis“: einmal 1 Minute trainieren (6× „Jarvis“ sagen). Dann erkennt Jarvis dich viel zuverlässiger. " +
+            "Ohne Training reagiert das eingebaute Modell auch auf „Jarvis“ allein, aber nicht ganz so sicher. „Hey Jarvis“ funktioniert immer.", 13f, MUTED))
+
         col.addView(section("Design"))
-        col.addView(button("Farbschema App: " + (if (prefs.uiTheme == "LILA") "Lila" else "Blau (Command Center)"), filled = false) {
+        col.addView(button("Farbschema App: " + when (prefs.uiTheme) { "LILA" -> "Lila"; "SCHWARZ" -> "Schwarz"; "HELL" -> "Hell"; else -> "Blau (Command Center)" }, filled = false) {
             android.app.AlertDialog.Builder(this).setTitle("Farbschema")
-                .setItems(arrayOf("Blau (Command Center)", "Lila")) { _, w -> prefs.uiTheme = if (w == 0) "BLAU" else "LILA"; recreate() }.show()
+                .setItems(arrayOf("Blau (Command Center)", "Lila", "Schwarz (OLED)", "Hell")) { _, w -> prefs.uiTheme = listOf("BLAU", "LILA", "SCHWARZ", "HELL")[w]; Ui.load(prefs); recreate() }.show()
         })
         designButton = button(designLabel(), filled = false) { chooseDesign() }
         col.addView(designButton)
@@ -481,7 +495,7 @@ class MainActivity : Activity() {
         if (!hasPerm(Manifest.permission.RECORD_AUDIO)) { askRuntimePerms(); return }
         WakeWordService.start(this)
         toggle.postDelayed({ refresh() }, 500)
-        toast("Sag einfach „Hey Jarvis“")
+        toast("Sag einfach „Jarvis“")
     }
 
     private fun save() {
@@ -532,7 +546,7 @@ class MainActivity : Activity() {
                 setPadding(px(14), px(10), px(8), px(10))
                 background = round(CARD)
             }
-            row.addView(TextView(this).apply { text = f; textSize = 14f; setTextColor(Color.WHITE) },
+            row.addView(TextView(this).apply { text = f; textSize = 14f; setTextColor(Ui.FG) },
                 LinearLayout.LayoutParams(0, -2, 1f))
             row.addView(TextView(this).apply {
                 text = "Löschen"; textSize = 13f; setTextColor(RED); setPadding(px(10), px(6), px(6), px(6))
@@ -572,7 +586,7 @@ class MainActivity : Activity() {
             setTextColor(if (ok) Color.rgb(60, 210, 120) else MUTED)
             width = px(30)
         })
-        row.addView(TextView(this).apply { text = name; textSize = 15f; setTextColor(Color.WHITE) },
+        row.addView(TextView(this).apply { text = name; textSize = 15f; setTextColor(Ui.FG) },
             LinearLayout.LayoutParams(0, -2, 1f))
         if (!ok) row.addView(TextView(this).apply { text = "Erlauben ›"; textSize = 14f; setTextColor(RED) })
         checklist.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(8) })
@@ -595,7 +609,7 @@ class MainActivity : Activity() {
 
     private fun input(hint: String, value: String, secret: Boolean = false) = EditText(this).apply {
         this.hint = hint; setText(value); textSize = 15f
-        setTextColor(Color.WHITE); setHintTextColor(MUTED)
+        setTextColor(Ui.FG); setHintTextColor(MUTED)
         isSingleLine = true
         inputType = InputType.TYPE_CLASS_TEXT or
             (if (secret) InputType.TYPE_TEXT_VARIATION_PASSWORD else InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
@@ -605,7 +619,7 @@ class MainActivity : Activity() {
     }
 
     private fun button(t: String, filled: Boolean = true, onClick: () -> Unit) = Button(this).apply {
-        text = t; isAllCaps = false; textSize = 16f; setTextColor(Color.WHITE)
+        text = t; isAllCaps = false; textSize = 16f; setTextColor(if (filled) Color.WHITE else Ui.FG)
         background = round(if (filled) RED else CARD)
         stateListAnimator = null
         setOnClickListener { onClick() }

@@ -47,6 +47,7 @@ object Automations {
         "flashlight" to "Taschenlampe",
         "brightness" to "Helligkeit",
         "briefing" to "Tagesüberblick vorlesen",
+        "greet" to "Begrüßung („Willkommen zurück“)",
         "routines" to "Eigenes Kommando ausführen",
     )
 
@@ -106,6 +107,7 @@ object Automations {
             "flashlight" -> "Taschenlampe ${if (a.optBoolean("on", true)) "an" else "aus"}"
             "brightness" -> "Helligkeit ${a.optInt("percent")} %"
             "briefing" -> "Tagesüberblick vorlesen"
+            "greet" -> "Begrüßung sprechen"
             "routines" -> "Kommando „${a.optString("name")}“"
             else -> PhoneTools.labelFor(s.optString("tool"))
         }

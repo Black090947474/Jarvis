@@ -61,8 +61,38 @@ object SmartHints {
     }
 
     /** Zu Hause angekommen (Geofence). */
+    /** Gesprochene Begrüßung beim Heimkommen: Name, Wetter, offene Aufgaben, neue Nachrichten. */
+    fun greeting(ctx: Context): String {
+        val p = Prefs(ctx)
+        val h = java.time.LocalTime.now().hour
+        val name = p.userName.trim().ifBlank { null }
+        val sb = StringBuilder(if (h < 11) "Guten Morgen" else if (h >= 18) "Willkommen zurück" else "Willkommen zu Hause")
+        if (name != null) sb.append(", ").append(name)
+        sb.append(".")
+        try {
+            val c = org.json.JSONObject(p.weatherCache)
+            if (c.has("t")) sb.append(" Draußen sind es ${c.optInt("t")} Grad" + (c.optString("desc").takeIf { it.isNotBlank() }?.let { ", $it" } ?: "") + ".")
+        } catch (_: Exception) {}
+        val (_, tomorrowEnd) = TimeLogic.range("morgen")
+        val open = AgendaStore(ctx).tasks().filter { !it.done && (it.due == null || it.due < tomorrowEnd) }
+        val hw = open.filter { it.category == SchoolTool.HOMEWORK }
+        when {
+            hw.isNotEmpty() -> sb.append(" Noch offen: ${hw.size} Hausaufgabe" + (if (hw.size > 1) "n" else "") + ", zum Beispiel ${hw.first().title.substringAfter(": ")}.")
+            open.isNotEmpty() -> sb.append(" Du hast noch ${open.size} offene Aufgabe" + (if (open.size > 1) "n" else "") + ".")
+            else -> sb.append(" Für heute ist alles erledigt.")
+        }
+        val n = JarvisNotificationListener.recent(null, 30).size
+        if (n > 0) sb.append(" Es gibt $n neue Benachrichtigung" + (if (n > 1) "en" else "") + ".")
+        return sb.toString()
+    }
+
     fun arrivedHome(ctx: Context) {
         val p = Prefs(ctx)
+        if (p.greetOnArrive) {
+            val h = java.time.LocalTime.now().hour
+            if (h in 7..21) Automations.run(ctx, org.json.JSONObject().put("name", "Willkommen zu Hause")
+                .put("steps", org.json.JSONArray().put(org.json.JSONObject().put("tool", "greet").put("args", org.json.JSONObject()))))
+        }
         if (!enabled(p)) return
         val (_, tomorrowEnd) = TimeLogic.range("morgen")
         val open = AgendaStore(ctx).tasks().filter { !it.done && (it.due == null || it.due < tomorrowEnd) }
@@ -78,7 +108,7 @@ object SmartHints {
     fun scheduleHome(ctx: Context) {
         val p = Prefs(ctx)
         val r = Reminder(899_999, "home", null, null, place = Place("Zuhause", p.homeLat, p.homeLon, 150f, true))
-        if (enabled(p) && p.homeSet) Scheduler.addGeofence(ctx, r) else Scheduler.cancel(ctx, r)
+        if ((enabled(p) || p.greetOnArrive) && p.homeSet) Scheduler.addGeofence(ctx, r) else Scheduler.cancel(ctx, r)
     }
 
     @Suppress("unused") private val keep = IntentFilter::class

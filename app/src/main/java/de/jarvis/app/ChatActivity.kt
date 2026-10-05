@@ -53,13 +53,13 @@ import kotlin.concurrent.thread
 class ChatActivity : Activity() {
 
     // ---------- Farben (passend zum Puls/Nexus-Look) ----------
-    private val BG1 = Color.rgb(6, 7, 15)
-    private val BG2 = Color.rgb(12, 8, 26)
-    private val FG = Color.rgb(232, 236, 255)
-    private val MUTED = Color.rgb(124, 130, 168)
-    private val ACCENT = Color.rgb(34, 224, 224)
+    private val BG1 get() = if (Ui.light) Color.rgb(246, 246, 252) else Color.rgb(6, 7, 15)
+    private val BG2 get() = if (Ui.light) Color.rgb(236, 232, 252) else Color.rgb(12, 8, 26)
+    private val FG get() = if (Ui.light) Color.rgb(20, 24, 38) else Color.rgb(232, 236, 255)
+    private val MUTED get() = if (Ui.light) Color.rgb(110, 112, 132) else Color.rgb(124, 130, 168)
+    private val ACCENT get() = if (Ui.light) Color.rgb(0, 140, 165) else Color.rgb(34, 224, 224)
     private val VIOLET = Color.rgb(106, 91, 255)
-    private val CARD = Color.argb(26, 255, 255, 255)
+    private val CARD get() = if (Ui.light) Color.argb(255, 255, 255, 255) else Color.argb(26, 255, 255, 255)
 
     private data class Msg(val role: String, val text: String, val image: String? = null, val time: Long = System.currentTimeMillis())
 
@@ -90,8 +90,10 @@ class ChatActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Ui.load(Prefs(this))
         window.statusBarColor = BG1
         window.navigationBarColor = BG2
+        Ui.lightBars(window)
         @Suppress("DEPRECATION")
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         buildUi()
@@ -190,7 +192,7 @@ class ChatActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
-                cornerRadius = 26 * dp; setColor(Color.argb(20, 255, 255, 255)); setStroke(px(1), Color.argb(60, 34, 224, 224))
+                cornerRadius = 26 * dp; setColor(if (Ui.light) Color.WHITE else Color.argb(20, 255, 255, 255)); setStroke(px(1), Color.argb(60, 34, 224, 224))
             }
             setPadding(px(4), px(2), px(4), px(2))
         }
@@ -487,6 +489,8 @@ class ChatActivity : Activity() {
         @Suppress("DEPRECATION")
         (i.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))?.let { attach(it) }
         i.getStringExtra(Intent.EXTRA_TEXT)?.let { input.setText(it) }
+        // Von der Startseite: direkt absenden
+        if (i.getBooleanExtra("send", false)) input.post { send() }
     }
 
     /** Bild verkleinern (max. 1280 px), als JPEG speichern und als Vorschau zeigen. */

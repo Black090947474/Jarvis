@@ -26,14 +26,14 @@ class AppsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Ui.load(Prefs(this)); ui = Ui(this)
-        window.statusBarColor = BG; window.navigationBarColor = BG
+        window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(16), ui.px(18), ui.px(28)) }
         val head = ui.row()
-        head.addView(ui.text("‹", 30f, Color.WHITE).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
-        head.addView(ui.text("Apps", 20f, Color.WHITE, true))
+        head.addView(ui.text("‹", 30f, Ui.FG).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
+        head.addView(ui.text("Apps", 20f, Ui.FG, true))
         col.addView(head)
         val search = EditText(this).apply {
-            hint = "Apps durchsuchen …"; setTextColor(Color.WHITE); setHintTextColor(MUTED); isSingleLine = true
+            hint = "Apps durchsuchen …"; setTextColor(Ui.FG); setHintTextColor(MUTED); isSingleLine = true
             background = ui.round(Ui.CARD2, 22, Ui.LINE); setPadding(ui.px(16), ui.px(12), ui.px(16), ui.px(12))
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
