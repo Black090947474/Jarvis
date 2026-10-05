@@ -1,0 +1,21 @@
+name: Wake-Word-Test
+on:
+  push:
+    branches: [ww-test]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install "piper-tts==1.2.0" onnxruntime numpy
+      - name: Stimmen laden
+        run: |
+          mkdir voices && cd voices
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0
+          for v in de/de_DE/thorsten/medium/de_DE-thorsten-medium de/de_DE/karlsson/low/de_DE-karlsson-low de/de_DE/pavoque/low/de_DE-pavoque-low de/de_DE/kerstin/low/de_DE-kerstin-low de/de_DE/eva_k/x_low/de_DE-eva_k-x_low en/en_US/ryan/medium/en_US-ryan-medium; do
+            curl -sSLf -O "$base/$v.onnx" && curl -sSLf -O "$base/$v.onnx.json" || echo "fehlt $v"
+          done
+          ls -la
+      - run: python tools/wwtest/test.py
