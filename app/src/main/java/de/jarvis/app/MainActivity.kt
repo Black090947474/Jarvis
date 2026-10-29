@@ -246,7 +246,8 @@ class MainActivity : Activity() {
     private lateinit var designButton: Button
 
     private val designs = listOf(
-        "SPHAERE" to "Sphäre – violette Glaskugel mit Klangwelle (neu)",
+        "HOLO" to "Hologramm – 3D-Kopf & Themen-Hologramme (neu)",
+        "SPHAERE" to "Sphäre – violette Glaskugel mit Klangwelle",
         "PULS" to "Puls – Leuchtkern, Ringe & Schallwelle",
         "NEXUS" to "Nexus – HUD mit Ringen & Reticle",
         "GLUT" to "Glut – rote, atmende Kugel",

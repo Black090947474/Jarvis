@@ -70,17 +70,23 @@ class DashboardActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var liveBox: LinearLayout
     private lateinit var historyBox: LinearLayout
+    private var hud: HudCoreView? = null
+    private var hudStatus: TextView? = null
+    private var timeline: TimelineView? = null
+    private var nowText: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        prefs = Prefs(this); Ui.load(prefs); ui = Ui(this)
+        prefs = Prefs(this)
+        if (!prefs.v20Migrated) { prefs.design = "HOLO"; if (prefs.uiTheme != "HELL") prefs.uiTheme = "BLAU"; prefs.v20Migrated = true }
+        Ui.load(prefs); ui = Ui(this)
         window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         Notifier.channels(this)
 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(BG) }
         content = android.widget.FrameLayout(this)
         root.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(buildNav(), LinearLayout.LayoutParams(-1, -2))
+        root.addView(buildNav(), LinearLayout.LayoutParams(-1, -2).apply { setMargins(ui.px(14), 0, ui.px(14), ui.px(12)) })
         pages["home"] = buildHome(); pages["tools"] = buildTools(); pages["system"] = buildSystem()
         pages.values.forEach { content.addView(it, android.widget.FrameLayout.LayoutParams(-1, -1)) }
         setContentView(root)
@@ -107,8 +113,9 @@ class DashboardActivity : Activity() {
     private fun buildNav(): LinearLayout {
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            background = android.graphics.drawable.GradientDrawable().apply { setColor(Ui.CARD); setStroke(ui.px(1), Ui.LINE) }
-            setPadding(0, ui.px(8), 0, ui.px(10))
+            background = ui.glass(22)
+            setPadding(0, ui.px(8), 0, ui.px(8))
+            elevation = ui.px(8).toFloat()
         }
         for ((key, icon, label) in listOf(Triple("home", "home", "Home"), Triple("chat", "chat", "Chat"),
                 Triple("tools", "tools", "Tools"), Triple("system", "gear", "System"))) {
@@ -116,7 +123,8 @@ class DashboardActivity : Activity() {
                 setOnClickListener { if (key == "chat") startActivity(Intent(this@DashboardActivity, ChatActivity::class.java)) else show(key) } }
             val iv = IconView(this, icon, RED)
             item.addView(iv, LinearLayout.LayoutParams(ui.px(24), ui.px(24)))
-            val tv = ui.text(label, 11f, MUTED).apply { gravity = Gravity.CENTER; setPadding(0, ui.px(3), 0, 0) }
+            val tv = ui.text(label.uppercase(), 9.5f, MUTED).apply { gravity = Gravity.CENTER; setPadding(0, ui.px(3), 0, 0)
+                typeface = Typeface.MONOSPACE; letterSpacing = 0.16f }
             item.addView(tv)
             navViews[key] = iv to tv
             nav.addView(item, LinearLayout.LayoutParams(0, -2, 1f))
@@ -143,73 +151,69 @@ class DashboardActivity : Activity() {
 
     private fun buildHome(): ScrollView {
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(18), ui.px(18), ui.px(28)) }
-        // Kopf: Profil-Kreis, Name, Einstellungen
+        // Kopf: Menü · J.A.R.V.I.S + Status · Einstellungen
         val head = ui.row()
-        val initial = (prefs.userName.firstOrNull() ?: 'J').uppercaseChar().toString()
-        head.addView(ui.text(initial, 18f, Color.WHITE, true).apply {
-            gravity = Gravity.CENTER; background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                intArrayOf(RED, Ui.ACCENT2)).apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
-            setOnClickListener { HubActivity.open(this@DashboardActivity, "memory") }
-        }, LinearLayout.LayoutParams(ui.px(44), ui.px(44)))
-        head.addView(ui.weighted(ui.text("   J A R V I S", 14f, MUTED).apply { letterSpacing = 0.3f }))
-        head.addView(IconView(this, "gear", SOFT).apply {
-            background = ui.round(Ui.CARD2, 14, Ui.LINE); setPadding(ui.px(9), ui.px(9), ui.px(9), ui.px(9))
-            setOnClickListener { startActivity(Intent(this@DashboardActivity, MainActivity::class.java)) }
-        }, LinearLayout.LayoutParams(ui.px(44), ui.px(44)))
+        fun headBtn(icon: String, act: () -> Unit) = IconView(this, icon, Ui.ACCENT2).apply {
+            background = ui.glass(12); setPadding(ui.px(9), ui.px(9), ui.px(9), ui.px(9)); setOnClickListener { act() } }
+        head.addView(headBtn("brain") { HubActivity.open(this@DashboardActivity, "memory") }, LinearLayout.LayoutParams(ui.px(40), ui.px(40)))
+        val brand = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
+        brand.addView(ui.text("J.A.R.V.I.S", 15f, Color.rgb(200, 246, 255), true).apply { letterSpacing = 0.42f
+            setShadowLayer(14f, 0f, 0f, Color.argb(150, 0, 240, 255)) })
+        hudStatus = ui.text("● ALLE SYSTEME BEREIT", 9.5f, RED).apply { letterSpacing = 0.18f; typeface = Typeface.MONOSPACE; setPadding(0, ui.px(3), 0, 0) }
+        brand.addView(hudStatus)
+        head.addView(brand, LinearLayout.LayoutParams(0, -2, 1f))
+        head.addView(headBtn("gear") { startActivity(Intent(this@DashboardActivity, MainActivity::class.java)) }, LinearLayout.LayoutParams(ui.px(40), ui.px(40)))
         col.addView(head)
 
-        // Große Begrüßung
-        greeting = ui.text("", 27f, Ui.FG).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-            setPadding(0, ui.px(18), 0, 0); setLineSpacing(0f, 1.1f) }
+        // HUD-Kern – antippen zum Sprechen
+        hud = HudCoreView(this).apply { setOnClickListener { talk() } }
+        col.addView(hud, LinearLayout.LayoutParams(-1, ui.px(250)).apply { topMargin = ui.px(6) })
+
+        // Begrüßung
+        greeting = ui.text("", 25f, Ui.FG).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+            setPadding(0, ui.px(6), 0, 0); setLineSpacing(0f, 1.1f) }
         col.addView(greeting)
-        dateText = ui.text("", 13f, MUTED).apply { setPadding(0, ui.px(4), 0, 0) }
+        dateText = ui.text("", 12.5f, MUTED).apply { setPadding(0, ui.px(4), 0, 0) }
         col.addView(dateText)
 
-        // Suchfeld „Frag Jarvis …“
-        val search = ui.row().apply { background = ui.round(Ui.CARD, 26, Ui.LINE); setPadding(ui.px(16), ui.px(4), ui.px(6), ui.px(4)) }
+        // Befehlszeile
+        val search = ui.row().apply { background = ui.glass(14); setPadding(ui.px(14), ui.px(4), ui.px(6), ui.px(4)) }
+        search.addView(ui.text(">_", 15f, RED, true).apply { typeface = Typeface.MONOSPACE; setPadding(0, 0, ui.px(10), 0)
+            setShadowLayer(10f, 0f, 0f, RED) })
         val field = android.widget.EditText(this).apply {
-            hint = "Frag Jarvis …"; setHintTextColor(MUTED); setTextColor(Ui.FG); textSize = 15f * Ui.fontScale
+            hint = "Befehl eingeben oder „Jarvis“ sagen"; setHintTextColor(MUTED); setTextColor(Ui.FG); textSize = 14f * Ui.fontScale
             background = null; isSingleLine = true; imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
             setOnEditorActionListener { v, _, _ -> val q = v.text.toString().trim(); if (q.isNotEmpty()) { v.text = ""; askJarvis(q, send = true) }; true }
         }
         search.addView(field, LinearLayout.LayoutParams(0, -2, 1f))
-        search.addView(IconView(this, "mic", Color.WHITE).apply {
+        search.addView(IconView(this, "mic", Color.rgb(0, 16, 24)).apply {
             background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(RED, Ui.ACCENT2))
-                .apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
+                .apply { cornerRadius = 12 * ui.dp }
             setPadding(ui.px(10), ui.px(10), ui.px(10), ui.px(10)); setOnClickListener { talk() }
-        }, LinearLayout.LayoutParams(ui.px(44), ui.px(44)))
-        col.addView(search, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(16) })
+        }, LinearLayout.LayoutParams(ui.px(42), ui.px(42)))
+        col.addView(search, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(14) })
 
-        // Leuchtender Kern – antippen zum Sprechen
-        val orb = OrbView(this).apply { setOnClickListener { talk() } }
-        col.addView(orb, LinearLayout.LayoutParams(-1, ui.px(220)).apply { topMargin = ui.px(6) })
-        col.addView(ui.text("Tippen oder „Jarvis“ sagen", 12f, RED).apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(-1, -2))
+        // Schnellknöpfe (Sechsecke)
+        val hex = ui.row().apply { setPadding(0, ui.px(14), 0, 0) }
+        fun hx(icon: String, label: String, act: () -> Unit) = hex.addView(HexButton(this, icon, label).apply { setOnClickListener { act() } }, LinearLayout.LayoutParams(0, -2, 1f))
+        hx("sun", "Briefing") { showBriefing() }
+        hx("timer", "Fokus") { startActivity(Intent(this, FocusActivity::class.java)) }
+        hx("school", "Packen") { thread {
+            val r = try { de.jarvis.app.tools.SchoolTool.pack(this, if (java.time.LocalTime.now().hour >= 12) "morgen" else "heute") } catch (e: Exception) { Res.error(e.message ?: "Fehler") }
+            runOnUiThread { android.app.AlertDialog.Builder(this).setTitle("🎒 Packliste").setMessage(Res.spoken(r)).setPositiveButton("OK", null).show() } } }
+        hx("music", "Musik") { musicDialog() }
+        hx("learn", "Lernen") { askJarvis("Frag mich Vokabeln ab.") }
+        col.addView(hex)
 
-        // Karten-Karussell
-        val carousel = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, ui.px(14), 0, 0) }
-        fun feature(icon: String, title: String, sub: String, hero: Boolean, act: () -> Unit) {
-            val c = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL; setPadding(ui.px(14), ui.px(14), ui.px(14), ui.px(14))
-                background = if (hero) ui.gradient(RED, Color.argb(255, Color.red(RED) / 3, Color.green(RED) / 4, Color.blue(RED) / 2), 20)
-                             else android.graphics.drawable.GradientDrawable().apply { setColor(Ui.CARD); cornerRadius = 20 * ui.dp; setStroke(ui.px(1), Ui.LINE) }
-                setOnClickListener { act() }
-            }
-            c.addView(IconView(this, icon, if (hero) Color.WHITE else Ui.RED).apply {
-                background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.argb(45, 255, 255, 255)) }
-                setPadding(ui.px(7), ui.px(7), ui.px(7), ui.px(7)) }, LinearLayout.LayoutParams(ui.px(36), ui.px(36)))
-            c.addView(ui.text(title, 15f, if (hero) Color.WHITE else Ui.FG, true).apply { setPadding(0, ui.px(22), 0, 0) })
-            c.addView(ui.row().apply {
-                addView(ui.weighted(ui.text(sub, 12f, if (hero) Color.argb(220, 255, 255, 255) else MUTED).apply { maxLines = 2 }))
-                addView(ui.text("↗", 15f, if (hero) Color.WHITE else Ui.FG))
-            })
-            carousel.addView(c, LinearLayout.LayoutParams(ui.px(150), ui.px(160)).apply { rightMargin = ui.px(10) })
-        }
-        feature("sun", "Briefing", "Dein Tag in 20 Sekunden", true) { showBriefing() }
-        feature("learn", "Lernen", "Vokabeln & Prüfung üben", false) { askJarvis("Frag mich Vokabeln ab.") }
-        feature("bolt", "Automationen", "Wenn … dann …", false) { startActivity(Intent(this, AutomationsActivity::class.java)) }
-        feature("calendar", "Kalender", "Termine & freie Zeit", false) { startActivity(Intent(this, CalendarActivity::class.java)) }
-        feature("notes", "Dateien", "Finden & zusammenfassen", false) { filesDialog() }
-        col.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(carousel) })
+        // Zeitleiste „Heute“
+        val tl = ui.card().apply { setOnClickListener { startActivity(Intent(this@DashboardActivity, CalendarActivity::class.java)) } }
+        tl.addView(ui.row().apply {
+            addView(ui.weighted(ui.text("HEUTE", 10f, RED).apply { letterSpacing = 0.2f; typeface = Typeface.MONOSPACE }))
+            nowText = ui.text("", 10f, MUTED).apply { letterSpacing = 0.2f; typeface = Typeface.MONOSPACE }; addView(nowText)
+        })
+        timeline = TimelineView(this)
+        tl.addView(timeline, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(8) })
+        col.addView(tl, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(12) })
 
         // Verlauf: letzte Fragen
         historyBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -281,6 +285,7 @@ class DashboardActivity : Activity() {
         tile("flash", "Taschenlampe", "An / aus") { toggleTorch() }
         tile("pin", "Parkplatz", "Merken & finden") { parkingDialog() }
         tile("song", "Lied erkennen", "Was läuft gerade?") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
+        tile("brain", "Hologramme", "3D: Dinos, Planeten …") { voice("Erklär mir den T-Rex in drei Sätzen.") }
         tile("timer", "Fokus-Timer", "Pomodoro & Nicht stören") { startActivity(Intent(this, FocusActivity::class.java)) }
         tile("school", "Packliste", "Was muss in die Tasche?") { thread {
             val r = try { de.jarvis.app.tools.SchoolTool.pack(this, if (java.time.LocalTime.now().hour >= 12) "morgen" else "heute") } catch (e: Exception) { Res.error(e.message ?: "Fehler") }
@@ -340,11 +345,12 @@ class DashboardActivity : Activity() {
         val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
         val hi = when (h) { in 5..10 -> "Guten Morgen"; in 11..17 -> "Hallo"; in 18..22 -> "Guten Abend"; else -> "Gute Nacht" }
         greeting.text = android.text.SpannableStringBuilder().apply {
-            append("$hi")
-            if (prefs.userName.isNotBlank()) { append(", "); val st = length; append(prefs.userName)
-                setSpan(android.text.style.StyleSpan(Typeface.BOLD), st, length, 0) }
-            append(",\nwie kann ich dir helfen?")
+            append("$hi, "); val st = length; append(prefs.userName.trim().ifBlank { "Sir" })
+            setSpan(android.text.style.StyleSpan(Typeface.BOLD), st, length, 0)
+            setSpan(android.text.style.ForegroundColorSpan(RED), st, length, 0)
+            append(".")
         }
+        refreshHud()
         refreshHistory()
         refreshChips()
         refreshLive()
@@ -353,6 +359,19 @@ class DashboardActivity : Activity() {
         refreshMessages()
         refreshExtras()
         JarvisWidget.updateAll(this)
+    }
+
+    /** Anzeigen am HUD-Kern: Weckwort, KI, Wetter, Akku. */
+    private fun refreshHud() {
+        val bat = (getSystemService(BATTERY_SERVICE) as android.os.BatteryManager).getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        val w = runCatching { JSONObject(prefs.weatherCache) }.getOrNull()
+        val ki = when { prefs.nvidiaKey.isNotBlank() -> "NVIDIA"; prefs.groqKey.isNotBlank() -> "GROQ"; prefs.hasAnyKey -> "BEREIT"; else -> "KEIN SCHLÜSSEL" }
+        hud?.callouts = listOf(
+            "Wake" to (if (WakeWordService.isRunning) "„Jarvis“" else "aus"),
+            "Akku" to (if (bat in 0..100) "$bat %" else "?"),
+            "KI-Kern" to ki,
+            "Wetter" to (w?.let { "${it.optInt("t")}° " + it.optString("desc").take(10) } ?: "–"))
+        hudStatus?.text = if (prefs.hasAnyKey) "● ALLE SYSTEME BEREIT" else "● SCHLÜSSEL FEHLT"
     }
 
     private fun online(): Boolean {
@@ -379,6 +398,7 @@ class DashboardActivity : Activity() {
     // ---------- Wetter ----------
 
     private fun showWeather() {
+        refreshHud()
         weatherBox.removeAllViews()
         val c = runCatching { JSONObject(prefs.weatherCache) }.getOrNull()
         if (c == null) {
@@ -426,6 +446,9 @@ class DashboardActivity : Activity() {
     }
 
     private fun showAgenda(ag: AgendaTool.Agenda, week: String) {
+        timeline?.items = ag.events.filter { !it.allDay }.map { TimelineView.Item(it.begin, it.title) } +
+            ag.reminders.mapNotNull { r -> r.next?.let { TimelineView.Item(it, r.text, warn = true) } }
+        nowText?.text = "JETZT " + TimeLogic.time(System.currentTimeMillis())
         todayBox.removeAllViews()
         weekText.text = "Woche: " + week.removePrefix("Diese Woche: ").removePrefix("Diese Woche ")
         if (!ag.calendarAllowed) todayBox.addView(ui.text("Kalender nicht freigegeben – tippen zum Erlauben", 13f, AMBER).apply {
@@ -638,6 +661,31 @@ class DashboardActivity : Activity() {
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
                 systemBox.removeAllViews()
+                // Diagnose oben: Akku-Ring + Balken
+                val diag = ui.row()
+                diag.addView(ui.card().apply { gravity = Gravity.CENTER_HORIZONTAL
+                    addView(GaugeView(this@DashboardActivity).apply { value = bat.coerceAtLeast(0); label = if (charging) "LÄDT %" else "AKKU %" },
+                        LinearLayout.LayoutParams(ui.px(120), ui.px(120)))
+                }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = ui.px(8) })
+                val bars = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                fun bar(title: String, value: String, frac: Float) = bars.addView(ui.card().apply {
+                    setPadding(ui.px(12), ui.px(10), ui.px(12), ui.px(10))
+                    addView(ui.row().apply {
+                        addView(ui.weighted(ui.text(title, 9.5f, RED).apply { typeface = Typeface.MONOSPACE; letterSpacing = 0.18f }))
+                        addView(ui.text(value, 9.5f, MUTED).apply { typeface = Typeface.MONOSPACE }) })
+                    addView(android.widget.ProgressBar(this@DashboardActivity, null, android.R.attr.progressBarStyleHorizontal).apply {
+                        max = 100; progress = (frac * 100).toInt().coerceIn(0, 100)
+                        progressTintList = android.content.res.ColorStateList.valueOf(RED)
+                        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Ui.LINE)
+                    }, LinearLayout.LayoutParams(-1, ui.px(6)).apply { topMargin = ui.px(6) })
+                }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(if (bars.childCount == 0) 10 else 6) })
+                val total = try { android.os.StatFs(android.os.Environment.getDataDirectory().path).totalBytes / 1_000_000_000f } catch (_: Exception) { 0f }
+                bar("SPEICHER", if (free >= 0) "$free GB frei" else "?", if (total > 0 && free >= 0) 1f - free / total else 0f)
+                val mi = android.app.ActivityManager.MemoryInfo().also { getSystemService(android.app.ActivityManager::class.java)?.getMemoryInfo(it) }
+                bar("RAM", "%.1f / %.0f GB".format(Locale.GERMANY, (mi.totalMem - mi.availMem) / 1e9, mi.totalMem / 1e9), if (mi.totalMem > 0) 1f - mi.availMem.toFloat() / mi.totalMem else 0f)
+                bar("NETZ", net, if (caps != null) 0.9f else 0f)
+                diag.addView(bars, LinearLayout.LayoutParams(0, -2, 1.1f))
+                systemBox.addView(diag)
                 val grid = GridLayout(this).apply { columnCount = 2 }
                 fun tile(icon: String, label: String, value: String, ok: Boolean? = null, action: (() -> Unit)? = null) {
                     val box = ui.card(false).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(ui.px(12), ui.px(14), ui.px(10), ui.px(14))

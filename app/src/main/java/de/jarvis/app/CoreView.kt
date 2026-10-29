@@ -18,7 +18,7 @@ import kotlin.math.sin
 /** Die animierte Mitte des Jarvis-Bildschirms – in vier Designs. */
 class CoreView(context: Context, val style: Style) : View(context) {
 
-    enum class Style { PULS, NEXUS, GLUT, AURORA, LINIE, GLAS, SPHAERE }
+    enum class Style { HOLO, PULS, NEXUS, GLUT, AURORA, LINIE, GLAS, SPHAERE }
     enum class Mode { IDLE, LISTENING, THINKING, SPEAKING }
 
     var onModeChanged: ((Mode) -> Unit)? = null
@@ -47,7 +47,7 @@ class CoreView(context: Context, val style: Style) : View(context) {
         val size = min(width, height).toFloat()
         if (size < 24f * dp) { postInvalidateOnAnimation(); return }   // zu klein zum Zeichnen
         try { when (style) {
-            Style.NEXUS -> drawNexus(canvas, t, cx, cy, size)
+            Style.NEXUS, Style.HOLO -> drawNexus(canvas, t, cx, cy, size)
             Style.GLUT -> drawGlut(canvas, t, cx, cy, size)
             Style.AURORA -> drawAurora(canvas, t, cx, cy, size)
             Style.LINIE -> drawLinie(canvas, t, cx, cy, size)
@@ -377,6 +377,6 @@ class CoreView(context: Context, val style: Style) : View(context) {
     private fun withAlpha(color: Int, a: Int) = Color.argb(a, Color.red(color), Color.green(color), Color.blue(color))
 
     companion object {
-        fun styleFrom(name: String): Style = Style.entries.firstOrNull { it.name == name } ?: Style.GLUT
+        fun styleFrom(name: String): Style = Style.entries.firstOrNull { it.name == name } ?: Style.HOLO
     }
 }

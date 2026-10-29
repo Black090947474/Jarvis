@@ -53,11 +53,11 @@ import kotlin.concurrent.thread
 class ChatActivity : Activity() {
 
     // ---------- Farben (passend zum Puls/Nexus-Look) ----------
-    private val BG1 get() = if (Ui.light) Color.rgb(246, 246, 252) else Color.rgb(6, 7, 15)
-    private val BG2 get() = if (Ui.light) Color.rgb(236, 232, 252) else Color.rgb(12, 8, 26)
+    private val BG1 get() = if (Ui.light) Color.rgb(246, 246, 252) else Color.rgb(2, 7, 14)
+    private val BG2 get() = if (Ui.light) Color.rgb(236, 232, 252) else Color.rgb(4, 14, 26)
     private val FG get() = if (Ui.light) Color.rgb(20, 24, 38) else Color.rgb(232, 236, 255)
     private val MUTED get() = if (Ui.light) Color.rgb(110, 112, 132) else Color.rgb(124, 130, 168)
-    private val ACCENT get() = if (Ui.light) Color.rgb(0, 140, 165) else Color.rgb(34, 224, 224)
+    private val ACCENT get() = if (Ui.light) Color.rgb(0, 140, 165) else Color.rgb(0, 230, 255)
     private val VIOLET = Color.rgb(106, 91, 255)
     private val CARD get() = if (Ui.light) Color.argb(255, 255, 255, 255) else Color.argb(26, 255, 255, 255)
 
@@ -305,17 +305,19 @@ class ChatActivity : Activity() {
         }
         val tv = TextView(this).apply {
             text = if (mine) m.text else markdown(m.text)
-            textSize = 15.5f; setTextColor(FG); setLineSpacing(0f, 1.25f)
+            textSize = 15.5f; setTextColor(if (mine) Color.WHITE else FG); setLineSpacing(0f, 1.25f)
             setTextIsSelectable(true)
             setPadding(px(14), px(10), px(14), px(10))
             background = GradientDrawable().apply {
                 if (mine) {
-                    cornerRadii = floatArrayOf(18 * dp, 18 * dp, 4 * dp, 4 * dp, 18 * dp, 18 * dp, 18 * dp, 18 * dp)
-                    colors = intArrayOf(Color.argb(90, 106, 91, 255), Color.argb(70, 34, 224, 224))
+                    cornerRadii = floatArrayOf(16 * dp, 16 * dp, 16 * dp, 16 * dp, 4 * dp, 4 * dp, 16 * dp, 16 * dp)
+                    colors = intArrayOf(Color.rgb(10, 168, 232), Color.rgb(47, 91, 255))
                     orientation = GradientDrawable.Orientation.TL_BR
                 } else {
-                    cornerRadii = floatArrayOf(4 * dp, 4 * dp, 18 * dp, 18 * dp, 18 * dp, 18 * dp, 18 * dp, 18 * dp)
-                    setColor(CARD); setStroke(px(1), Color.argb(45, 34, 224, 224))
+                    cornerRadii = floatArrayOf(4 * dp, 4 * dp, 16 * dp, 16 * dp, 16 * dp, 16 * dp, 16 * dp, 16 * dp)
+                    colors = if (Ui.light) intArrayOf(Color.WHITE, Color.WHITE) else intArrayOf(Color.argb(70, 40, 120, 180), Color.argb(160, 6, 22, 38))
+                    orientation = GradientDrawable.Orientation.TL_BR
+                    setStroke(px(1), Color.argb(55, 80, 200, 255))
                 }
             }
             setOnLongClickListener { copy(m.text); true }

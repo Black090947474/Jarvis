@@ -84,6 +84,8 @@ class JarvisActivity : Activity() {
     private class Theme(val bg: Int, val bg2: Int, val fg: Int, val muted: Int, val accent: Int, val center: Boolean)
 
     private fun theme(style: CoreView.Style) = when (style) {
+        CoreView.Style.HOLO -> Theme(Color.rgb(1, 5, 11), Color.rgb(3, 12, 22), Color.rgb(232, 248, 255),
+            Color.rgb(93, 132, 162), Color.rgb(0, 240, 255), true)
         CoreView.Style.PULS -> Theme(Color.rgb(6, 7, 15), Color.rgb(12, 8, 26), Color.rgb(232, 236, 255),
             Color.rgb(124, 130, 168), Color.rgb(34, 224, 224), true)
         CoreView.Style.NEXUS -> Theme(Color.rgb(4, 9, 12), Color.rgb(2, 5, 7), Color.rgb(222, 244, 248),
@@ -108,6 +110,10 @@ class JarvisActivity : Activity() {
     private var cardText = ""
     private var cardShown = false
     private var th: Theme? = null
+    private var holo: HoloView? = null
+    private var holoImg: HoloImageView? = null
+    private var holoTopic: TextView? = null
+    @Volatile private var holoGen = 0
 
     private fun buildUi() {
         val dp = resources.displayMetrics.density
@@ -129,8 +135,8 @@ class JarvisActivity : Activity() {
         core.onModeChanged = { m ->
             status.text = statusText(m)
             headStatus?.text = "● " + when (m) {
-                CoreView.Mode.IDLE -> "STANDBY"; CoreView.Mode.LISTENING -> "LISTENING"
-                CoreView.Mode.THINKING -> "PROCESSING"; CoreView.Mode.SPEAKING -> "SPEAKING"
+                CoreView.Mode.IDLE -> "BEREIT"; CoreView.Mode.LISTENING -> "HÖRE ZU"
+                CoreView.Mode.THINKING -> "ANALYSIERE"; CoreView.Mode.SPEAKING -> "SPRICHT"
             }
         }
         status.text = statusText(CoreView.Mode.IDLE)
@@ -139,7 +145,7 @@ class JarvisActivity : Activity() {
             maxLines = 3; ellipsize = android.text.TextUtils.TruncateAt.END
         }
         jarvisText = TextView(this).apply {
-            setTextColor(th.fg); textSize = if (style == CoreView.Style.GLAS) 20f else 23f
+            setTextColor(th.fg); textSize = if (style == CoreView.Style.GLAS) 20f else if (style == CoreView.Style.HOLO) 18f else 23f
             typeface = light; gravity = align; setLineSpacing(0f, 1.25f)
             maxLines = 7; ellipsize = android.text.TextUtils.TruncateAt.END
         }
@@ -220,6 +226,25 @@ class JarvisActivity : Activity() {
                 }, lp(2))
             }
             CoreView.Style.LINIE -> {}
+            CoreView.Style.HOLO -> {
+                root.addView(TextView(this).apply {
+                    text = "J.A.R.V.I.S"; textSize = 15f; letterSpacing = 0.42f; setTextColor(Color.rgb(200, 246, 255))
+                    gravity = Gravity.CENTER_HORIZONTAL; setShadowLayer(14f, 0f, 0f, Color.argb(160, 0, 240, 255))
+                }, lp())
+                headStatus = TextView(this).apply {
+                    text = "● STANDBY"; textSize = 10f; letterSpacing = 0.2f; setTextColor(th.accent)
+                    typeface = android.graphics.Typeface.MONOSPACE; gravity = Gravity.CENTER_HORIZONTAL
+                }
+                root.addView(headStatus, lp(4))
+                holoTopic = TextView(this).apply {
+                    textSize = 10f; letterSpacing = 0.16f; setTextColor(th.accent); typeface = android.graphics.Typeface.MONOSPACE
+                    setPadding(px(10), px(5), px(10), px(5)); visibility = android.view.View.GONE
+                    background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 8 * dp
+                        setColor(Color.argb(18, 0, 240, 255)); setStroke(px(1), Color.argb(60, 80, 200, 255)) }
+                }
+                root.addView(holoTopic, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.CENTER_HORIZONTAL; topMargin = px(8) })
+                status.visibility = android.view.View.GONE
+            }
             CoreView.Style.SPHAERE -> {
                 val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
                 fun roundBtn(t: String, act: () -> Unit) = TextView(this).apply {
@@ -242,9 +267,23 @@ class JarvisActivity : Activity() {
         }
         // (PULS-Kopfzeile oben bereits gebaut)
 
-        // Kern
+        // Kern (beim Hologramm-Design: echter 3D-Kopf bzw. Themen-Hologramm)
         core.minimumHeight = px(120)
-        root.addView(core, LinearLayout.LayoutParams(-1, 0, 1f))
+        if (style == CoreView.Style.HOLO) {
+            val frame = android.widget.FrameLayout(this)
+            val hv = HoloView(this).also { holo = it }
+            hv.onTap = { onTap() }
+            val img = HoloImageView(this).apply { visibility = android.view.View.GONE; setOnClickListener { onTap() } }
+            holoImg = img
+            frame.addView(hv, android.widget.FrameLayout.LayoutParams(-1, -1))
+            frame.addView(img, android.widget.FrameLayout.LayoutParams(-1, -1))
+            frame.minimumHeight = px(160)
+            root.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f))
+            root.setPadding(px(22), px(40), px(22), px(28))
+            val prev = core.onModeChanged
+            core.onModeChanged = { m -> prev?.invoke(m); hv.mode = m.ordinal }
+            hv.levelSource = { core.level }
+        } else root.addView(core, LinearLayout.LayoutParams(-1, 0, 1f))
 
         // Ergebnis-Karte (erscheint, wenn Jarvis einen Plan, eine Liste o. ä. zeigt)
         cardBox = LinearLayout(this).apply {
@@ -268,7 +307,12 @@ class JarvisActivity : Activity() {
         // Text-Bereich
         val texts = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            if (style == CoreView.Style.GLAS) {
+            if (style == CoreView.Style.HOLO) {
+                setPadding(px(18), px(14), px(18), px(14))
+                background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                    intArrayOf(Color.argb(60, 40, 120, 180), Color.argb(150, 6, 22, 38))).apply {
+                    cornerRadius = 16 * dp; setStroke(px(1), Color.argb(55, 80, 200, 255)) }
+            } else if (style == CoreView.Style.GLAS) {
                 setPadding(px(22), px(20), px(22), px(18))
                 background = android.graphics.drawable.GradientDrawable().apply {
                     cornerRadius = 28 * dp
@@ -589,6 +633,7 @@ class JarvisActivity : Activity() {
         silentTries = 0
         suggestions?.visibility = android.view.View.GONE
         youText.text = "„$text“"
+        holoFor(text, fromAnswer = false)
         // Kurze Abschiedsfloskeln ("Danke", "Tschüss Jarvis", "Stopp") beenden das Gespräch
         val clean = text.lowercase(Locale.GERMANY).replace(Regex("[^a-zäöüß' ]"), "").trim()
         if (clean.split(" ").size <= 3 && BYE_WORDS.any { clean == it || clean.startsWith("$it ") }) {
@@ -623,11 +668,53 @@ class JarvisActivity : Activity() {
                     finishWhenUnlocked()
                     return@post
                 }
+                holoFor(reply, fromAnswer = true)
                 // Wurde eine andere App geöffnet (Anruf, Maps, Spotify …), verabschiedet sich Jarvis danach
                 speak(reply, if (tools?.leftApp == true) ID_BYE else ID_LISTEN_AFTER)
             }
         }
     }
+
+    // ---------- Hologramme ----------
+
+    /** Passendes Hologramm zur Frage (bzw. Antwort) zeigen: eingebautes 3D-Modell oder Wikipedia-Bild. */
+    private fun holoFor(text: String, fromAnswer: Boolean) {
+        val hv = holo ?: return
+        val scene = de.jarvis.app.logic.HoloTopics.match(text)
+        if (fromAnswer) {
+            // Antwort nennt ein Thema, die Frage aber nicht → nachträglich zeigen
+            if (scene != null && hv.scene == de.jarvis.app.logic.HoloTopics.Scene.HEAD && holoImg?.visibility != android.view.View.VISIBLE) showScene(scene)
+            return
+        }
+        val gen = ++holoGen
+        if (scene != null) { showScene(scene); return }
+        if (de.jarvis.app.logic.HoloTopics.isKnowledgeQuestion(text) && Offline.isOnline(this)) {
+            val term = de.jarvis.app.logic.HoloTopics.searchTerm(text)
+            thread {
+                val r = try { HoloImageView.wikiImage(term) } catch (_: Exception) { null }
+                main.post { if (gen == holoGen && !isFinishing && r != null) showImage(r.first, r.second) }
+            }
+        } else showScene(de.jarvis.app.logic.HoloTopics.Scene.HEAD)
+    }
+
+    private fun showScene(s: de.jarvis.app.logic.HoloTopics.Scene) {
+        holoImg?.show(null, "")
+        holo?.visibility = android.view.View.VISIBLE
+        holo?.show(s)
+        holoTopic?.apply {
+            visibility = if (s == de.jarvis.app.logic.HoloTopics.Scene.HEAD) android.view.View.GONE else android.view.View.VISIBLE
+            text = "◆ HOLOGRAMM · " + s.label.uppercase()
+        }
+    }
+
+    private fun showImage(b: android.graphics.Bitmap, title: String) {
+        holo?.visibility = android.view.View.GONE
+        holoImg?.show(b, title)
+        holoTopic?.apply { visibility = android.view.View.VISIBLE; text = "◆ HOLOGRAMM · " + title.uppercase().take(28) }
+    }
+
+    override fun onPause() { super.onPause(); holo?.onPause() }
+    override fun onResume() { super.onResume(); holo?.onResume() }
 
     private fun onTap() {
         // Tippen unterbricht Jarvis und hört wieder zu

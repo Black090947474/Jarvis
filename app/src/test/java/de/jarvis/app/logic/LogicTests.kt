@@ -143,6 +143,24 @@ fun main() {
     check("schlechte Trennung wird erkannt", !WakeMath.calibrate(listOf(0.5f, 0.52f, 0.55f), 0.6f).good)
     check("Kosinus identisch = 1", Math.abs(WakeMath.cos(word[0], word[0], FloatArray(0)) - 1f) < 1e-4)
 
+    println("HoloTopics (Hologramme)")
+    val H = HoloTopics
+    check("Dinos allgemein = Brachiosaurus", H.match("Erklär mir mal, wie groß die Dinosaurier waren") == HoloTopics.Scene.BRACHIO)
+    check("T-Rex", H.match("Wie schnell war ein T-Rex?") == HoloTopics.Scene.TREX && H.match("tyrannosaurus rex") == HoloTopics.Scene.TREX)
+    check("Triceratops", H.match("Was hat der Triceratops gegessen") == HoloTopics.Scene.TRICERA)
+    check("Saturn/Planeten", H.match("Wie viele Planeten gibt es?") == HoloTopics.Scene.PLANET)
+    check("Erde", H.match("Wie alt ist die Erde?") == HoloTopics.Scene.EARTH)
+    check("Erdbeere ist keine Erde", H.match("Wie viel Vitamin C hat eine Erdbeere") == null)
+    check("Rakete", H.match("Wie fliegt eine Rakete ins All") == HoloTopics.Scene.ROCKET)
+    check("Herz", H.match("Wie funktioniert das Herz?") == HoloTopics.Scene.HEART)
+    check("herzlich ≠ Herz", H.match("Herzlichen Glückwunsch") == null)
+    check("Vulkan", H.match("Warum bricht ein Vulkan aus") == HoloTopics.Scene.VOLCANO)
+    check("Atom", H.match("Was ist ein Atom") == HoloTopics.Scene.ATOM)
+    check("Wecker = kein Hologramm", H.match("Stell den Wecker auf 7 Uhr") == null)
+    check("Wissensfrage erkannt", H.isKnowledgeQuestion("Jarvis, wie hoch ist der Eiffelturm?") && H.isKnowledgeQuestion("Erklär mir Photosynthese"))
+    check("Befehl keine Wissensfrage", !H.isKnowledgeQuestion("Stell einen Timer auf 5 Minuten"))
+    check("Suchbegriff", H.searchTerm("Jarvis, wie hoch ist eigentlich der Eiffelturm?") == "eiffelturm") { H.searchTerm("Jarvis, wie hoch ist eigentlich der Eiffelturm?") }
+
     println("\n$passed bestanden, $failed fehlgeschlagen")
     if (failed > 0) kotlin.system.exitProcess(1)
 }

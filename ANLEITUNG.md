@@ -86,6 +86,12 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 20 – Hightech-HUD & 3D-Hologramme
+- **Neues Design „HUD“:** Startseite mit drehendem HUD-Kern (Radar, Skalen, Anzeigen für Weckwort, Akku, KI, Wetter), Befehlszeile, Sechseck-Schnellknöpfe, Zeitleiste „Heute“, Glas-Kacheln und schwebender Leiste unten. Neue Systemdiagnose mit Akku-Ring und Balken.
+- **Jarvis als 3D-Hologramm-Kopf** im Sprach-Bildschirm. Er dreht sich leicht, ein Scan-Licht läuft darüber, beim Sprechen bewegt sich der Mund. Mit dem Finger drehen, antippen = zuhören.
+- **Themen-Hologramme:** Redest du über Dinos, Planeten, Erde, Raketen, das Herz, Vulkane oder Atome, projiziert Jarvis ein animiertes 3D-Modell (T-Rex, Brachiosaurus, Triceratops, Saturn, Erde, Rakete, Herz, Vulkan, Atom). Bei anderen Wissensfragen („Wie hoch ist der Eiffelturm?“) holt er ein Bild aus Wikipedia und zeigt es als Hologramm.
+- Läuft komplett auf dem Handy (OpenGL). Design wechseln: ⚙ Einstellungen → Design („Hologramm“ ist jetzt Standard).
+
 ### Neu in Version 19
 - **Nur noch „Jarvis“** als Weckwort (statt „Hey Jarvis“). Für beste Erkennung: ⚙ Einstellungen → Weckwort → **„Weckwort auf meine Stimme trainieren“** (6× „Jarvis“ sagen, dann einen normalen Satz). Es werden nur Zahlen-Merkmale gespeichert, keine Aufnahmen. „Hey Jarvis“ geht weiterhin.
 - **Neues Design:** Startseite im Lila-„Aivio“-Stil (Begrüßung, Suchfeld, Karten, Verlauf), neuer Kern **„Sphäre“**, neuer Sprach-Bildschirm, **heller Modus** (Personalisieren → Hintergrund → Hell).

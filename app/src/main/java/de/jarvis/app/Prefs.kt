@@ -140,8 +140,13 @@ class Prefs(context: Context) {
         set(v) = sp.edit().putString("tts_engine", v).apply()
 
     /** Design des Gesprächsbildschirms: GLUT, AURORA, LINIE oder GLAS. */
+    /** Einmalige Umstellung auf das neue Hologramm-Design (Version 20). */
+    var v20Migrated: Boolean
+        get() = sp.getBoolean("v20_mig", false)
+        set(v) = sp.edit().putBoolean("v20_mig", v).apply()
+
     var design: String
-        get() = sp.getString("design", "NEXUS") ?: "NEXUS"
+        get() = sp.getString("design", "HOLO") ?: "HOLO"
         set(v) = sp.edit().putString("design", v).apply()
 
     // ---------- Zweites Handy ----------
