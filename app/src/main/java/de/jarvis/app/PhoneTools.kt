@@ -825,7 +825,7 @@ class PhoneTools(private val activity: Activity) {
             "count_photos" to "Zähle Fotos …", "toggle" to "Schalte um …",
             "show_card" to "Erstelle Übersicht …", "build_website" to "Baue Website …",
             "second_phone" to "Sende an zweites Handy …", "read_app" to "Lese die App …", "say_in" to "Übersetze …",
-            "money" to "Taschengeld …", "party_quiz" to "Quiz-Abend …", "focus" to "Starte Fokus-Timer …", "photos" to "Suche Fotos …"
+            "look_screen" to "Schaue auf den Bildschirm …", "call_control" to "Telefon …", "money" to "Taschengeld …", "party_quiz" to "Quiz-Abend …", "focus" to "Starte Fokus-Timer …", "photos" to "Suche Fotos …"
         )
 
         /** Beschreibung aller Werkzeuge für Claude (JSON-Schema). */

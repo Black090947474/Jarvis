@@ -84,6 +84,8 @@ class MainActivity : Activity() {
         buildVoiceSection(col)
 
         col.addView(section("2 · Berechtigungen"))
+        col.addView(button("Alles freigeben – Schritt für Schritt") { save(); startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) })
+        
         col.addView(button("Berechtigungszentrum öffnen (Kalender, Erinnerungen, Hinweise …)", filled = false) {
             startActivity(Intent(this, PermissionsActivity::class.java))
         })

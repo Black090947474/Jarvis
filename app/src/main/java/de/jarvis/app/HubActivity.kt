@@ -334,6 +334,11 @@ class HubActivity : Activity() {
             addView(ui.weighted(ui.text("Leuchtender Kern & Partikel animieren", 14f, Ui.FG)))
             addView(Switch(this@HubActivity).apply { isChecked = prefs.animations; setOnCheckedChangeListener { _, on -> prefs.animations = on } })
         })
+        col.addView(ui.section("Anrufe"))
+        col.addView(ui.card(false).apply {
+            addView(ui.weighted(ui.text("Anrufer laut ansagen („Anruf von Mama“) – braucht „Anrufe annehmen & ansagen“", 14f, Ui.FG)))
+            addView(Switch(this@HubActivity).apply { isChecked = prefs.announceCalls; setOnCheckedChangeListener { _, on -> prefs.announceCalls = on } })
+        })
         col.addView(ui.section("Begrüßung"))
         col.addView(ui.card(false).apply {
             addView(ui.weighted(ui.text("Beim Nachhausekommen begrüßen (Wetter, Aufgaben, Nachrichten) – braucht den Ort „Zuhause“", 14f, Ui.FG)))

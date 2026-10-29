@@ -76,6 +76,8 @@ class PermissionsActivity : Activity() {
     private fun items(): List<Item> {
         val photo = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
         val list = mutableListOf(
+            Item("Benachrichtigungen anzeigen", "Damit Jarvis dich erinnern und Hinweise schicken kann.", null,
+                { notifOk() }, { ask(Manifest.permission.POST_NOTIFICATIONS) }),
             Item("Mikrofon", "Für das Weckwort „Jarvis“ und Spracheingabe. Wird nur auf dem Handy ausgewertet, bis du sprichst.", null,
                 { has(Manifest.permission.RECORD_AUDIO) }, { ask(Manifest.permission.RECORD_AUDIO) }),
             Item("Kalender", "Termine anzeigen, suchen, freie Zeiten finden, eintragen, verschieben, löschen – Ändern nur nach deinem Ja.", "calendar",
@@ -117,6 +119,13 @@ class PermissionsActivity : Activity() {
                 { if (Build.VERSION.SDK_INT >= 31) ask(Manifest.permission.BLUETOOTH_CONNECT) }),
             Item("Über anderen Apps einblenden", "Damit Automationen und „Jarvis“-Aktionen auch im Hintergrund starten dürfen.", null,
                 { Settings.canDrawOverlays(this) }, { startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))) }),
+            Item("Anrufe annehmen & ansagen", "„Jarvis, nimm ab“ / „leg auf“ – und Jarvis sagt dir, wer anruft.", "calls",
+                { has(Manifest.permission.ANSWER_PHONE_CALLS) && has(Manifest.permission.READ_PHONE_STATE) },
+                { ask(Manifest.permission.ANSWER_PHONE_CALLS, Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_CONTACTS) }),
+            Item("Akku: nicht einschränken", "Damit Android Jarvis im Hintergrund nicht schlafen legt (Weckwort, Automationen, Erinnerungen).", null,
+                { getSystemService(android.os.PowerManager::class.java)!!.isIgnoringBatteryOptimizations(packageName) },
+                { try { startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))) }
+                  catch (_: Exception) { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } }),
             Item("Systemeinstellungen ändern", "Für die Bildschirmhelligkeit.", "settings",
                 { Settings.System.canWrite(this) }, { startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))) }),
         )
@@ -135,13 +144,60 @@ class PermissionsActivity : Activity() {
         "Ausgegraut oder „Eingeschränkte Einstellung“? Einstellungen → Apps → Jarvis → ⋮ → „Eingeschränkte Einstellungen zulassen“.",
         Toast.LENGTH_LONG).show()
 
+    private val skipped = mutableSetOf<String>()
+    private val wizard get() = intent.getBooleanExtra("wizard", false)
+
+    /** „Alles freigeben“-Assistent: eine Freigabe nach der anderen, mit Fortschritt. */
+    private fun buildWizard() {
+        col.removeAllViews()
+        val all = items().filter { it.feature?.let { f -> prefs.feature(f) } ?: true }
+        val done = all.count { it.granted() }
+        val next = all.firstOrNull { !it.granted() && it.title !in skipped }
+        col.addView(ui.text("ALLES FREIGEBEN", 10.5f, RED).apply { letterSpacing = 0.22f; typeface = android.graphics.Typeface.MONOSPACE })
+        col.addView(ui.text(if (next == null) "Fertig!" else "Schritt ${done + 1} von ${all.size}", 26f, Ui.FG, true).apply { setPadding(0, ui.px(4), 0, 0) })
+        col.addView(android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = all.size; progress = done
+            progressTintList = android.content.res.ColorStateList.valueOf(RED)
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Ui.LINE)
+        }, LinearLayout.LayoutParams(-1, ui.px(8)).apply { topMargin = ui.px(12) })
+        col.addView(ui.text("$done von ${all.size} Freigaben erteilt", 12f, MUTED).apply { setPadding(0, ui.px(6), 0, 0) })
+        if (next == null) {
+            val missing = all.filter { !it.granted() }
+            col.addView(ui.card().apply {
+                addView(ui.text(if (missing.isEmpty()) "✓ Jarvis hat jetzt alle Freigaben." else "Übersprungen:", 16f, if (missing.isEmpty()) GREEN else Ui.FG, true))
+                missing.forEach { m -> addView(ui.text("○ " + m.title, 14f, AMBER).apply { setPadding(0, ui.px(6), 0, 0); setOnClickListener { skipped -= m.title; build() } }) }
+                if (missing.isNotEmpty()) addView(ui.text("Antippen, um es doch noch zu erlauben.", 12f, MUTED).apply { setPadding(0, ui.px(8), 0, 0) })
+            })
+            col.addView(ui.button("Fertig") { finish() })
+            col.addView(ui.button("Zur Übersicht", filled = false) { intent.removeExtra("wizard"); build() })
+            return
+        }
+        col.addView(ui.card().apply {
+            setPadding(ui.px(18), ui.px(18), ui.px(18), ui.px(18))
+            addView(ui.text(next.title, 22f, Ui.FG, true))
+            addView(ui.text(next.why, 15f, SOFT).apply { setPadding(0, ui.px(8), 0, 0) })
+            val restricted = next.title in setOf("Bildschirmsteuerung", "Benachrichtigungen lesen")
+            if (restricted) addView(ui.text("Samsung-Tipp: Ist der Schalter ausgegraut, zuerst Einstellungen → Apps → Jarvis → ⋮ (oben rechts) → " +
+                "„Eingeschränkte Einstellungen zulassen“. Danach hierher zurück.", 13f, AMBER).apply { setPadding(0, ui.px(10), 0, 0) })
+            if (next.title == "Bildschirmsteuerung") addView(ui.text("In der Liste „Installierte Apps“ → Jarvis → einschalten.", 13f, MUTED).apply { setPadding(0, ui.px(6), 0, 0) })
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(18) })
+        col.addView(ui.button("Erlauben") { next.grant() })
+        if (next.title in setOf("Bildschirmsteuerung", "Benachrichtigungen lesen"))
+            col.addView(ui.button("Eingeschränkte Einstellungen öffnen", filled = false) { appSettings() })
+        col.addView(ui.button("Überspringen", filled = false) { skipped += next.title; build() })
+        col.addView(ui.text("Jarvis umgeht keine Sicherheitsfunktionen: Jede Freigabe erteilst du selbst in Android und kannst sie dort jederzeit wieder entziehen.", 12f, MUTED).apply { setPadding(0, ui.px(16), 0, 0) })
+    }
+
     private fun build() {
+        if (wizard) { buildWizard(); return }
         col.removeAllViews()
         col.addView(ui.text("Berechtigungen", 28f, Ui.FG, true))
         col.addView(ui.text("Was Jarvis darf – und wofür. Erteilen und Entziehen geht nur über Android; mit dem Schalter " +
             "kannst du eine Funktion für Jarvis zusätzlich sperren.", 13f, MUTED).apply { setPadding(0, ui.px(6), 0, 0) })
 
         col.addView(ui.section("Zugriffe"))
+        val missing = items().count { !it.granted() }
+        if (missing > 0) col.addView(ui.button("Alles freigeben – Assistent ($missing offen)") { intent.putExtra("wizard", true); build() })
         for (it in items()) col.addView(itemCard(it))
         col.addView(ui.button("Alle Android-Berechtigungen von Jarvis", filled = false) { appSettings() })
 

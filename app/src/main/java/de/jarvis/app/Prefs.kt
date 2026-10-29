@@ -182,6 +182,16 @@ class Prefs(context: Context) {
         get() = sp.getString("wake_mode", "JARVIS") ?: "JARVIS"
         set(v) = sp.edit().putString("wake_mode", v).apply()
 
+    /** „Alles freigeben“-Assistent wurde einmal gezeigt. */
+    var wizardShown: Boolean
+        get() = sp.getBoolean("wizard_shown", false)
+        set(v) = sp.edit().putBoolean("wizard_shown", v).apply()
+
+    /** Anrufer laut ansagen („Anruf von Mama“). */
+    var announceCalls: Boolean
+        get() = sp.getBoolean("announce_calls", true)
+        set(v) = sp.edit().putBoolean("announce_calls", v).apply()
+
     /** Begrüßung beim Nachhausekommen (WLAN/Ort „Zuhause“). */
     var greetOnArrive: Boolean
         get() = sp.getBoolean("greet_arrive", true)

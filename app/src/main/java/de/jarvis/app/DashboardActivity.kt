@@ -79,6 +79,7 @@ class DashboardActivity : Activity() {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
         if (!prefs.v20Migrated) { prefs.design = "HOLO"; if (prefs.uiTheme != "HELL") prefs.uiTheme = "BLAU"; prefs.v20Migrated = true }
+        if (!prefs.wizardShown) { prefs.wizardShown = true; startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) }
         Ui.load(prefs); ui = Ui(this)
         window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         Notifier.channels(this)
@@ -285,6 +286,7 @@ class DashboardActivity : Activity() {
         tile("flash", "Taschenlampe", "An / aus") { toggleTorch() }
         tile("pin", "Parkplatz", "Merken & finden") { parkingDialog() }
         tile("song", "Lied erkennen", "Was läuft gerade?") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
+        tile("shield", "Alles freigeben", "Assistent für alle Rechte") { startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) }
         tile("brain", "Hologramme", "3D: Dinos, Planeten …") { voice("Erklär mir den T-Rex in drei Sätzen.") }
         tile("timer", "Fokus-Timer", "Pomodoro & Nicht stören") { startActivity(Intent(this, FocusActivity::class.java)) }
         tile("school", "Packliste", "Was muss in die Tasche?") { thread {

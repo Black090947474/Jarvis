@@ -35,6 +35,43 @@ class JarvisAccessibility : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean { if (instance === this) instance = null; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
 
+    // ---------- Bildschirmfoto (nur im Arbeitsspeicher, nur auf Nachfrage an die KI) ----------
+
+    @Volatile private var lastShot: android.graphics.Bitmap? = null
+    @Volatile private var lastShotAt = 0L
+
+    /** Merkt sich, was gerade auf dem Bildschirm ist (beim Weckwort, bevor Jarvis sich öffnet). Wird nicht gespeichert. */
+    fun grabForLater() {
+        if (android.os.Build.VERSION.SDK_INT < 30) return
+        if (rootInActiveWindow?.packageName == packageName) return
+        try {
+            takeScreenshot(android.view.Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
+                override fun onSuccess(r: ScreenshotResult) {
+                    try {
+                        val hw = android.graphics.Bitmap.wrapHardwareBuffer(r.hardwareBuffer, r.colorSpace)
+                        val sw = hw?.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                        r.hardwareBuffer.close()
+                        if (sw != null) { lastShot?.recycle(); lastShot = sw; lastShotAt = android.os.SystemClock.elapsedRealtime() }
+                    } catch (_: Exception) {}
+                }
+                override fun onFailure(code: Int) {}
+            })
+        } catch (_: Exception) {}
+    }
+
+    /** Das gemerkte Bildschirmfoto als JPEG (Base64), höchstens 3 Minuten alt; danach wird es verworfen. */
+    fun recentScreenJpeg(): String? {
+        val b = lastShot ?: return null
+        if (android.os.SystemClock.elapsedRealtime() - lastShotAt > 180_000) { forgetScreen(); return null }
+        val scale = minOf(1f, 1080f / b.width)
+        val sb = if (scale < 1f) android.graphics.Bitmap.createScaledBitmap(b, (b.width * scale).toInt(), (b.height * scale).toInt(), true) else b
+        val out = java.io.ByteArrayOutputStream()
+        sb.compress(android.graphics.Bitmap.CompressFormat.JPEG, 72, out)
+        return android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP)
+    }
+
+    fun forgetScreen() { lastShot?.recycle(); lastShot = null }
+
     // ---------- Lesen ----------
 
     /** Wartet kurz, bis nicht mehr Jarvis selbst im Vordergrund ist. */

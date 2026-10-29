@@ -96,6 +96,7 @@ class WakeWordService : Service() {
     private fun onWakeWord() {
         if (paused) return
         pause()
+        JarvisAccessibility.instance?.grabForLater()   // für „Was ist auf meinem Bildschirm?“
         wakeScreen()
         launchConversation()
     }

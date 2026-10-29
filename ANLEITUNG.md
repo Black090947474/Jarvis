@@ -86,6 +86,12 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 21 – Jarvis darf mehr selbst
+- **„Alles freigeben“-Assistent:** führt dich Schritt für Schritt durch alle Freigaben (mit Samsung-Tipp für „Eingeschränkte Einstellungen“) und zeigt am Ende, was noch fehlt. Zu finden unter Tools → „Alles freigeben“ oder ⚙ Einstellungen → Schritt 2.
+- **Bildschirm verstehen:** Öffne eine App, sag „Jarvis, was steht hier?“ oder „Erklär mir das auf meinem Bildschirm“. Jarvis merkt sich beim Weckwort kurz, was auf dem Bildschirm war (nur im Arbeitsspeicher, nach 3 Minuten verworfen) und schickt es nur auf deine Frage an die KI. Braucht die Bildschirmsteuerung und Android 11+.
+- **Anrufe:** „Jarvis, nimm ab“ / „leg auf“, und Jarvis sagt an, wer anruft („Anruf von Mama“). Ansage abschaltbar unter Personalisieren. Freigabe: „Anrufe annehmen & ansagen“.
+- **Akku-Freigabe** im Berechtigungszentrum, damit Android Jarvis nicht schlafen legt.
+
 ### Neu in Version 20 – Hightech-HUD & 3D-Hologramme
 - **Neues Design „HUD“:** Startseite mit drehendem HUD-Kern (Radar, Skalen, Anzeigen für Weckwort, Akku, KI, Wetter), Befehlszeile, Sechseck-Schnellknöpfe, Zeitleiste „Heute“, Glas-Kacheln und schwebender Leiste unten. Neue Systemdiagnose mit Akku-Ring und Balken.
 - **Jarvis als 3D-Hologramm-Kopf** im Sprach-Bildschirm. Er dreht sich leicht, ein Scan-Licht läuft darüber, beim Sprechen bewegt sich der Mund. Mit dem Finger drehen, antippen = zuhören.

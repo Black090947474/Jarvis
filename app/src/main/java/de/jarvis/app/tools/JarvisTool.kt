@@ -74,7 +74,7 @@ object ToolRegistry {
     val all: List<JarvisTool> by lazy {
         listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool,
             WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool,
-            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool)
+            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool, LookScreenTool, CallControlTool)
     }
 
     fun find(name: String): JarvisTool? = all.firstOrNull { it.name == name }
@@ -88,11 +88,11 @@ object ToolRegistry {
             "einkauf", "kaufen", "notiz", "notier", "aufschreib", "geburtstag", "mathe", "deutsch", "englisch",
             "geld", "taschengeld", "ausgegeben", "ausgabe", "spar", "euro", "€", "fokus", "pomodoro", "konzentr", "packen", "pack", "ranzen", "tasche"),
         "comm" to listOf("ruf", "anruf", "angerufen", "telefon", "nachricht", "schreib", "sms", "whatsapp", "mail", "e-mail",
-            "antwort", "benachrichtig", "kontakt", "insta", "snap", "verpasst"),
+            "antwort", "benachrichtig", "kontakt", "insta", "snap", "verpasst", "nimm ab", "leg auf", "ruft an", "klingelt"),
         "device" to listOf("wlan", "wifi", "bluetooth", "flugmodus", "hotspot", "helligkeit", "hell", "dunkel", "einstellung",
             "kamera", "foto", "bild", "selfie", "screenshot", "bildschirm", "tipp", "scroll", "öffne", "app", "standort",
             "wo bin", "navig", "fahr", "route", "nähe", "karte", "maps", "drehen", "nicht stören", "daten", "zurück", "sperr",
-            "like", "folg", "poste", "schick", "geparkt", "park", "auto steht", "merk dir den ort", "wo steht"),
+            "like", "folg", "poste", "schick", "bildschirm", "was steht da", "was steht hier", "was ist das", "hier drauf", "geparkt", "park", "auto steht", "merk dir den ort", "wo steht"),
         "info" to listOf("wetter", "regen", "temperatur", "sonne", "grad", "kalt", "warm", "jacke", "schirm", "website",
             "webseite", "homepage", "zweite", "station", "anderen handy", "vergiss", "merk", "vokabel", "abfrag",
             "lern", "quiz", "teste mich", "karteikart", "übersetz", "auf englisch", "auf französisch", "auf spanisch", "dolmetsch",

@@ -640,6 +640,11 @@ class JarvisActivity : Activity() {
             speak(listOf("Bis später.", "Gern geschehen.", "Jederzeit.").random(), ID_BYE)
             return
         }
+        // Anruf annehmen/auflegen sofort, ohne KI – danach Jarvis schließen, damit das Mikrofon frei ist
+        CallControl.handleLocal(this, text)?.let { r ->
+            jarvisText.text = de.jarvis.app.tools.Res.spoken(r)
+            if (r.startsWith("OK")) { main.postDelayed({ finish() }, 400); return }
+        }
         val client = claude
         val t = tools
         busy = true
