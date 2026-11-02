@@ -53,10 +53,13 @@ object ProShell {
             val out = StringBuilder()
             val reader = Thread { try { out.append(p.inputStream.bufferedReader().readText()); out.append(p.errorStream.bufferedReader().readText()) } catch (_: Exception) {} }
             reader.start()
-            val done = p.waitFor(timeoutSec, TimeUnit.SECONDS)
-            if (!done) { p.destroy(); return -2 to "Zeitüberschreitung" }
-            reader.join(1000)
-            p.exitValue() to out.toString().trim()
+            // Shizuku kennt kein „warten mit Zeitlimit“ → im eigenen Thread warten und selbst begrenzen
+            var exit = -99
+            val waiter = Thread { try { exit = p.waitFor() } catch (_: Throwable) {} }
+            waiter.start(); waiter.join(timeoutSec * 1000)
+            if (waiter.isAlive) { try { p.destroy() } catch (_: Throwable) {}; return -2 to "Zeitüberschreitung" }
+            reader.join(1500)
+            exit to out.toString().trim()
         } catch (e: Throwable) { -3 to (e.cause?.message ?: e.message ?: "Fehler") }
     }
 
@@ -70,9 +73,12 @@ object ProShell {
         fun step(label: String, cmd: String) { val (code, out) = run(cmd); log += (if (code == 0) "✓ " else "✗ ") + label + (if (code != 0 && out.isNotBlank()) " ($out)".take(90) else "") }
         step("Systemeinstellungen schreiben (für Bedienungshilfe-Schutz)", "pm grant $pkg android.permission.WRITE_SECURE_SETTINGS")
         val mine = "$pkg/$pkg.JarvisAccessibility"
-        val current = run("settings get secure enabled_accessibility_services").second
-        val merged = de.jarvis.app.logic.ProCommands.addAccessibility(current, mine)
-        step("Bildschirmsteuerung einschalten", "settings put secure enabled_accessibility_services '$merged' && settings put secure accessibility_enabled 1")
+        val (gc, current) = run("settings get secure enabled_accessibility_services")
+        if (gc == 0) {
+            // andere Bedienungshilfen bleiben erhalten – Jarvis wird nur dazugeschrieben
+            val merged = de.jarvis.app.logic.ProCommands.addAccessibility(current, mine)
+            step("Bildschirmsteuerung einschalten", "settings put secure enabled_accessibility_services '$merged' && settings put secure accessibility_enabled 1")
+        } else log += "✗ Bildschirmsteuerung: aktuelle Liste nicht lesbar – bitte von Hand einschalten"
         step("Über anderen Apps einblenden", "appops set $pkg SYSTEM_ALERT_WINDOW allow")
         step("Akku: nicht einschränken", "dumpsys deviceidle whitelist +$pkg")
         step("Systemeinstellungen ändern (Helligkeit)", "appops set $pkg WRITE_SETTINGS allow")

@@ -84,7 +84,7 @@ object ProCommands {
 
     /** Jarvis in die Liste der Bedienungshilfen aufnehmen, ohne andere zu entfernen. */
     fun addAccessibility(current: String?, mine: String): String {
-        val list = current.orEmpty().split(':').map { it.trim() }.filter { it.isNotEmpty() && it != "null" }.toMutableList()
+        val list = current.orEmpty().split(':').map { it.trim() }.filter { it.isNotEmpty() && it != "null" && it.contains('/') && !it.contains(' ') }.toMutableList()
         if (list.none { it.equals(mine, true) }) list += mine
         return list.joinToString(":")
     }
