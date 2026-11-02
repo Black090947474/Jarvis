@@ -86,6 +86,10 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 23 – Updates ohne Löschen
+- Jarvis hat jetzt einen **festen Schlüssel**: Neue Versionen installieren sich einfach über die alte, deine Daten bleiben. (Einmalig, beim Wechsel auf Version 23, muss die alte App noch ein letztes Mal gelöscht werden.)
+- **Selbst-Update:** Jarvis schaut alle paar Stunden nach einer neuen Version und fragt dich. Oder: Tools → „Update“ bzw. ⚙ Einstellungen → „Nach Updates suchen“. Beim ersten Mal „Unbekannte Apps installieren“ für Jarvis erlauben.
+
 ### Neu in Version 22 – Profi-Modus (Shizuku)
 Jarvis schaltet das System selbst: „Flugmodus an“, „mobile Daten aus“, „WLAN/Bluetooth/NFC/Standort an“, „Dunkelmodus an“, „Energiesparmodus an“, „Nicht stören an“, „Bildschirm nach 2 Minuten aus“, „Screenshot“, „nimm 20 Sekunden den Bildschirm auf“, „beende Instagram“, „deinstalliere …“, „starte neu“ (die letzten drei nur nach deinem Ja). Einfache Schalter gehen sofort und auch ohne Internet.
 Einrichtung: Tools → **Profi-Modus** → Shizuku aus dem Play Store installieren, „Kabelloses Debugging“ in den Entwickleroptionen an, Shizuku koppeln und starten, „Jarvis verbinden“. Danach **„Auto-Einrichtung“** tippen: Jarvis bekommt alle Freigaben auf einmal (auch die Bildschirmsteuerung ohne die Samsung-Sperre). Nach jedem Handy-Neustart Shizuku einmal neu starten.

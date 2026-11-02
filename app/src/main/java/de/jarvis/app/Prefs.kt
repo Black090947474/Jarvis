@@ -182,6 +182,11 @@ class Prefs(context: Context) {
         get() = sp.getString("wake_mode", "JARVIS") ?: "JARVIS"
         set(v) = sp.edit().putString("wake_mode", v).apply()
 
+    /** Wann zuletzt nach Updates gesucht wurde. */
+    var lastUpdateCheck: Long
+        get() = sp.getLong("last_update_check", 0)
+        set(v) = sp.edit().putLong("last_update_check", v).apply()
+
     /** „Alles freigeben“-Assistent wurde einmal gezeigt. */
     var wizardShown: Boolean
         get() = sp.getBoolean("wizard_shown", false)

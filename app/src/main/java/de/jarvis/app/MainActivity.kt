@@ -84,6 +84,7 @@ class MainActivity : Activity() {
         buildVoiceSection(col)
 
         col.addView(section("2 · Berechtigungen"))
+        col.addView(button("Nach Updates suchen (Version ${Updater.installedName(this)})", filled = false) { Updater.check(this, quiet = false) })
         col.addView(button("Profi-Modus (Shizuku) – Jarvis schaltet das System selbst", filled = false) { save(); startActivity(Intent(this, ProActivity::class.java)) })
         col.addView(button("Alles freigeben – Schritt für Schritt") { save(); startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) })
         

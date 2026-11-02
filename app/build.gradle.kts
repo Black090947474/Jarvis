@@ -11,15 +11,25 @@ android {
         applicationId = "de.jarvis.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 34
-        versionName = "22.1"
+        versionCode = 35
+        versionName = "23.0"
         // Nur für moderne Handys (64-Bit ARM) – macht die App viel kleiner
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 
+    // Fester Schlüssel: jede neue Version installiert sich ÜBER die alte (kein Löschen mehr nötig)
+    signingConfigs {
+        create("jarvis") {
+            storeFile = file("jarvis.keystore")
+            storePassword = "c97ccb371ad9751903dcdbf2289956a2"
+            keyAlias = "jarvis"
+            keyPassword = "c97ccb371ad9751903dcdbf2289956a2"
+        }
+    }
+
     buildTypes {
-        // Debug-Build: wird automatisch signiert und lässt sich direkt installieren.
-        debug { isMinifyEnabled = false }
+        // Debug-Build mit festem Schlüssel, lässt sich direkt installieren und updaten.
+        debug { isMinifyEnabled = false; signingConfig = signingConfigs.getByName("jarvis") }
         release { isMinifyEnabled = false }
     }
 
