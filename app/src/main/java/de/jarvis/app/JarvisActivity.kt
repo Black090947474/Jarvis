@@ -647,7 +647,10 @@ class JarvisActivity : Activity() {
         }
         val client = claude
         val t = tools
+        val gen = ++askGen
         busy = true
+        busySince = android.os.SystemClock.elapsedRealtime()
+        main.post(thinkTicker)
         core.mode = CoreView.Mode.THINKING
         jarvisText.text = "…"
         tools?.leftApp = false
@@ -666,6 +669,7 @@ class JarvisActivity : Activity() {
             val reply = reply0
             Convo(this).let { c -> c.add("user", text); c.add("assistant", reply) }
             main.post {
+                if (gen != askGen) return@post   // inzwischen abgebrochen
                 busy = false
                 if (isFinishing) return@post
                 if (tools?.silentExit == true && tools?.leftApp == true) {
@@ -721,9 +725,26 @@ class JarvisActivity : Activity() {
     override fun onPause() { super.onPause(); holo?.onPause() }
     override fun onResume() { super.onResume(); holo?.onResume() }
 
+    @Volatile private var askGen = 0
+    private var busySince = 0L
+    /** Zeigt beim Nachdenken die Sekunden an; nach 90 s wird abgebrochen, damit nichts ewig hängt. */
+    private val thinkTicker = object : Runnable {
+        override fun run() {
+            if (!busy || isFinishing) { hint.text = "Tippen = nochmal zuhören · „Danke“ = beenden"; return }
+            val sec = (android.os.SystemClock.elapsedRealtime() - busySince) / 1000
+            hint.text = "Denke nach … $sec s · antippen = abbrechen"
+            if (sec >= 90) {
+                askGen++; busy = false
+                speak("Die KI antwortet gerade nicht. Vielleicht ist der Server überlastet oder das Internet weg. Versuch es gleich nochmal.", ID_LISTEN_AFTER)
+                return
+            }
+            main.postDelayed(this, 1000)
+        }
+    }
+
     private fun onTap() {
-        // Tippen unterbricht Jarvis und hört wieder zu
-        if (busy) return
+        // Tippen unterbricht Jarvis (auch beim Nachdenken) und hört wieder zu
+        if (busy) { askGen++; busy = false; jarvisText.text = "Abgebrochen."; core.mode = CoreView.Mode.IDLE }
         whisperGen++
         tts?.stop()
         recognizer?.cancel()

@@ -73,7 +73,10 @@ class AiClient(
     /** Komplexe Aufgabe? Dann zuerst ein stärkeres Modell (Model-Router). */
     private var complex = false
 
+    @Volatile private var askStart = 0L
+
     override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
+        askStart = System.currentTimeMillis()
         complex = userText.length > 160 || ModelStatus.COMPLEX.containsMatchIn(userText)
         lastQuery = userText
         tools.noteQuery(userText)
@@ -166,8 +169,16 @@ class AiClient(
             var i = 0
             val list = if (vision) visionModels else if (complex) (provider.strong + models).distinct().toMutableList() else models
             while (i < list.size) {
+                if (System.currentTimeMillis() - askStart > DEADLINE_MS)
+                    throw Brain.Unavailable("${provider.name} antwortet gerade viel zu langsam. Versuch es gleich nochmal.")
                 try {
                     return post(list[i]).also { ModelStatus.set(provider.name, list[i], vision, complex) }
+                } catch (e: java.net.SocketTimeoutException) {
+                    // Modell hängt (überlastet) → sofort das nächste probieren statt ewig zu warten
+                    step("${provider.name} ist langsam – nehme ein anderes Modell …")
+                    i++
+                    if (i >= list.size) throw Brain.Unavailable("${provider.name} ist gerade überlastet und antwortet nicht. Versuch es gleich nochmal.")
+                    continue
                 } catch (e: ApiException) {
                     lastErr = e
                     when {
@@ -249,8 +260,8 @@ class AiClient(
 
         val conn = (URL(provider.url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
-            connectTimeout = 15_000
-            readTimeout = 60_000
+            connectTimeout = 10_000
+            readTimeout = if (vision) 45_000 else 28_000
             doOutput = true
             setRequestProperty("content-type", "application/json")
             setRequestProperty("authorization", "Bearer $apiKey")
@@ -272,6 +283,8 @@ class AiClient(
 
     companion object {
         private const val MAX_ROUNDS = 16
+        /** Spätestens nach so langer Zeit gibt dieser Anbieter auf (dann kommt der nächste oder eine Meldung). */
+        private const val DEADLINE_MS = 75_000L
         private const val MAX_MESSAGES = 20
     }
 }

@@ -11,8 +11,8 @@ android {
         applicationId = "de.jarvis.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 33
-        versionName = "22.0"
+        versionCode = 34
+        versionName = "22.1"
         // Nur für moderne Handys (64-Bit ARM) – macht die App viel kleiner
         ndk { abiFilters += listOf("arm64-v8a") }
     }
