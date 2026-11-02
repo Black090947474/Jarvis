@@ -62,6 +62,9 @@ class MainActivity : Activity() {
 
         // --- Schritt 1: Schlüssel ---
         col.addView(section("1 · Schlüssel"))
+        keysButton = button("") { save(); startActivity(Intent(this, ProvidersActivity::class.java)) }
+        col.addView(keysButton)
+        col.addView(label("Am einfachsten: Knopf oben → bei einem Anbieter „Schlüssel holen“ → kopieren → „Einfügen“. Oder hier unten von Hand eintragen:", 13f, MUTED))
         nvidiaInput = input("NVIDIA API-Key (nvapi-…, empfohlen)", prefs.nvidiaKey, secret = true)
         col.addView(nvidiaInput)
         col.addView(link("Kostenlos holen: build.nvidia.com → API Key", "https://build.nvidia.com/settings/api-keys"))
@@ -76,8 +79,6 @@ class MainActivity : Activity() {
         claudeInput = input("Claude API-Key (optional, als Ersatz)", prefs.anthropicKey, secret = true)
         col.addView(claudeInput)
         col.addView(link("Optional, kostet Guthaben: console.anthropic.com", "https://console.anthropic.com/settings/keys"))
-        col.addView(button("Weitere KI-Anbieter (${prefs.extraList().count { it.optBoolean("on", true) }} zusätzlich) – weniger Pausen") {
-            save(); startActivity(Intent(this, ProvidersActivity::class.java)) })
         nameInput = input("Dein Name (optional)", prefs.userName)
         col.addView(nameInput)
         col.addView(button("Speichern") { save(); toast("Gespeichert") })
@@ -437,8 +438,18 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
+    private lateinit var keysButton: Button
+
+    override fun onPause() { save(); super.onPause() }
+
     override fun onResume() {
         super.onResume()
+        // Schlüssel, die woanders (z. B. KI-Schlüssel-Seite) eingetragen wurden, hier übernehmen – sonst würden sie überschrieben
+        nvidiaInput.setText(prefs.nvidiaKey); groqInput.setText(prefs.groqKey); mistralInput.setText(prefs.mistralKey)
+        geminiInput.setText(prefs.geminiKey); claudeInput.setText(prefs.anthropicKey)
+        val n = listOf(prefs.nvidiaKey, prefs.groqKey, prefs.mistralKey, prefs.geminiKey, prefs.anthropicKey).count { it.isNotBlank() } +
+            prefs.extraList().count { it.optBoolean("on", true) }
+        keysButton.text = if (n == 0) "🔑 KI-Schlüssel einrichten (ganz einfach)" else "🔑 KI-Schlüssel: $n aktiv – mehr hinzufügen"
         refresh()
     }
 

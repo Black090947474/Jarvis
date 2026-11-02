@@ -163,7 +163,8 @@ class DashboardActivity : Activity() {
         val brand = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
         brand.addView(ui.text("J.A.R.V.I.S", 15f, Color.rgb(200, 246, 255), true).apply { letterSpacing = 0.42f
             setShadowLayer(14f, 0f, 0f, Color.argb(150, 0, 240, 255)) })
-        hudStatus = ui.text("● ALLE SYSTEME BEREIT", 9.5f, RED).apply { letterSpacing = 0.18f; typeface = Typeface.MONOSPACE; setPadding(0, ui.px(3), 0, 0) }
+        hudStatus = ui.text("● ALLE SYSTEME BEREIT", 9.5f, RED).apply { letterSpacing = 0.18f; typeface = Typeface.MONOSPACE; setPadding(0, ui.px(3), 0, 0)
+            setOnClickListener { if (!prefs.hasAnyKey) startActivity(Intent(this@DashboardActivity, ProvidersActivity::class.java)) } }
         brand.addView(hudStatus)
         head.addView(brand, LinearLayout.LayoutParams(0, -2, 1f))
         head.addView(headBtn("gear") { startActivity(Intent(this@DashboardActivity, MainActivity::class.java)) }, LinearLayout.LayoutParams(ui.px(40), ui.px(40)))
@@ -296,7 +297,7 @@ class DashboardActivity : Activity() {
         tile("brain", "Rätsel", "Knobeln mit Jarvis") { voice("Gib mir ein kniffliges, aber lösbares Rätsel. Verrate die Lösung erst, wenn ich aufgebe.") }
         tile("sun", "Abenteuer", "Du entscheidest die Story") { voice("Starte ein kurzes Abenteuer, in dem ich der Held bin. Gib mir nach jedem Abschnitt zwei oder drei Möglichkeiten.") }
         tile("phone", "Handy finden", "Klingeln & Blinken") { FindActivity.start(this) }
-        tile("brain", "KI-Anbieter", "Mehr Anbieter = weniger Pausen") { startActivity(Intent(this, ProvidersActivity::class.java)) }
+        tile("brain", "KI-Schlüssel", "Mehr Anbieter = weniger Pausen") { startActivity(Intent(this, ProvidersActivity::class.java)) }
         tile("storage", "Update", "Neue Version installieren") { Updater.check(this, quiet = false) }
         tile("bolt", "Profi-Modus", "Systemschalter direkt (Shizuku)") { startActivity(Intent(this, ProActivity::class.java)) }
         tile("shield", "Alles freigeben", "Assistent für alle Rechte") { startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) }
@@ -386,7 +387,7 @@ class DashboardActivity : Activity() {
             "Akku" to (if (bat in 0..100) "$bat %" else "?"),
             "KI-Kern" to ki,
             "Wetter" to (w?.let { "${it.optInt("t")}° " + it.optString("desc").take(10) } ?: "–"))
-        hudStatus?.text = if (prefs.hasAnyKey) "● ALLE SYSTEME BEREIT" else "● SCHLÜSSEL FEHLT"
+        hudStatus?.text = if (prefs.hasAnyKey) "● ALLE SYSTEME BEREIT" else "● SCHLÜSSEL FEHLT – ANTIPPEN"
     }
 
     private fun online(): Boolean {
