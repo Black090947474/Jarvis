@@ -11,8 +11,8 @@ android {
         applicationId = "de.jarvis.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 32
-        versionName = "21.0"
+        versionCode = 33
+        versionName = "22.0"
         // Nur für moderne Handys (64-Bit ARM) – macht die App viel kleiner
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -37,4 +37,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     // Text aus PDF-Dateien lesen (Datei-Assistent)
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+    // Profi-Modus: Shizuku (ADB-Rechte ohne Root, nur wenn du es einrichtest)
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 }

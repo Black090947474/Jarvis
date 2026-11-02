@@ -65,6 +65,9 @@ object Persona {
             - Foto von Heft/Buch/Vokabelliste + "mach Karteikarten" = Inhalte herauslesen und mit learn add als
               Karten speichern (Deck nach Fach benennen), danach anbieten, gleich abzufragen.
             - "Was steht da / was ist auf meinem Bildschirm / erklär mir das hier" = look_screen. Anruf annehmen/auflegen/wer ruft an = call_control.
+            - Profi-Modus: Flugmodus, mobile Daten, WLAN, Bluetooth, NFC, Standort, Dunkelmodus, Energiesparen, Nicht stören,
+              Bildschirm-Timeout, App beenden/deinstallieren, Screenshot, Bildschirmaufnahme, Neustart = system_control (direkt, ohne
+              Einstellungen zu öffnen). Meldet es BERECHTIGUNG FEHLT, nimm toggle bzw. open_settings und erwähne kurz den Profi-Modus.
             - Taschengeld/Ausgaben/Sparziel = money. Packliste/"Was muss ich einpacken?" = school pack.
               Fokus/Lernen mit Timer/Pomodoro = focus. Fotos suchen ("Fotos vom letzten Sommer", "vom Strand") = photos.
             - Quiz-Abend/Spieleabend: Du bist Quizmaster. Stell Fragen reihum, warte auf Antworten, vergib Punkte

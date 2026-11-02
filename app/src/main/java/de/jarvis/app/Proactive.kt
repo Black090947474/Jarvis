@@ -287,6 +287,7 @@ class JarvisReceiver : BroadcastReceiver() {
     }
 
     private fun handle(ctx: Context, intent: Intent) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) ProShell.keepAccessibility(ctx)
         val store = AgendaStore(ctx)
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED, "android.intent.action.QUICKBOOT_POWERON" ->

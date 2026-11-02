@@ -24,6 +24,10 @@ object Offline {
         de.jarvis.app.tools.RoutineTool.find(tools.appContext, text)?.let { r ->
             return Res.spoken(tools.execute("routines", JSONObject().put("action", "run").put("name", r.optString("name"))))
         }
+        // Profi-Modus: Schalter sofort und ohne Internet
+        if (ProShell.ready) de.jarvis.app.logic.ProCommands.parseLocal(text)?.let { (what, on) ->
+            return Res.spoken(tools.execute("system_control", JSONObject().put("action", what).put("on", on)))
+        }
         val c = LocalCommands.parse(text) ?: return null
         // "Taschenlampe an und Timer 5 Minuten" ist ein Mehrfach-Befehl → das macht die KI
         if (low.contains(" und ") && c.tool in setOf("flashlight", "set_timer", "set_alarm", "battery", "agenda")) return null

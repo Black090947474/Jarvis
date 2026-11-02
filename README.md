@@ -86,6 +86,11 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 22 – Profi-Modus (Shizuku)
+Jarvis schaltet das System selbst: „Flugmodus an“, „mobile Daten aus“, „WLAN/Bluetooth/NFC/Standort an“, „Dunkelmodus an“, „Energiesparmodus an“, „Nicht stören an“, „Bildschirm nach 2 Minuten aus“, „Screenshot“, „nimm 20 Sekunden den Bildschirm auf“, „beende Instagram“, „deinstalliere …“, „starte neu“ (die letzten drei nur nach deinem Ja). Einfache Schalter gehen sofort und auch ohne Internet.
+Einrichtung: Tools → **Profi-Modus** → Shizuku aus dem Play Store installieren, „Kabelloses Debugging“ in den Entwickleroptionen an, Shizuku koppeln und starten, „Jarvis verbinden“. Danach **„Auto-Einrichtung“** tippen: Jarvis bekommt alle Freigaben auf einmal (auch die Bildschirmsteuerung ohne die Samsung-Sperre). Nach jedem Handy-Neustart Shizuku einmal neu starten.
+Sicherheit: nur eine feste Befehlsliste, keine freien Shell-Befehle; geschützte Apps (Family Link, Play-Dienste, Einstellungen, Telefon) fasst Jarvis nicht an.
+
 ### Neu in Version 21 – Jarvis darf mehr selbst
 - **„Alles freigeben“-Assistent:** führt dich Schritt für Schritt durch alle Freigaben (mit Samsung-Tipp für „Eingeschränkte Einstellungen“) und zeigt am Ende, was noch fehlt. Zu finden unter Tools → „Alles freigeben“ oder ⚙ Einstellungen → Schritt 2.
 - **Bildschirm verstehen:** Öffne eine App, sag „Jarvis, was steht hier?“ oder „Erklär mir das auf meinem Bildschirm“. Jarvis merkt sich beim Weckwort kurz, was auf dem Bildschirm war (nur im Arbeitsspeicher, nach 3 Minuten verworfen) und schickt es nur auf deine Frage an die KI. Braucht die Bildschirmsteuerung und Android 11+.

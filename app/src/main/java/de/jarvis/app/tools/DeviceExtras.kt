@@ -54,3 +54,32 @@ object CallControlTool : JarvisTool {
                 else if (CallControl.inCall) Res.ok("Du telefonierst gerade.") else Res.ok("Gerade ruft niemand an.")
     }
 }
+
+/** Profi-Modus (Shizuku): Systemschalter direkt umlegen – nur feste, geprüfte Aktionen. */
+object SystemControlTool : JarvisTool {
+    override val name = "system_control"
+    override val group = "device"
+    override val feature: String? = null
+    override val permissions = emptyList<String>()
+
+    override val definition: JSONObject = JSONObject("""
+{"name":"system_control","description":"Profi-Modus: schaltet Systemfunktionen direkt (ohne Einstellungen zu öffnen). action: airplane, mobile_data, wifi, bluetooth, nfc, location, dark_mode, battery_saver, dnd (Nicht stören) mit on=true/false; screen_timeout (value = Sekunden); force_stop / uninstall (value = Paketname, vorher apps bzw. open_app nutzen um ihn zu finden); screenshot; screen_record (value = Sekunden); reboot. force_stop/uninstall/reboot brauchen confirmed=true nach Ja des Nutzers.",
+ "input_schema":{"type":"object","properties":{
+  "action":{"type":"string","enum":["airplane","mobile_data","wifi","bluetooth","nfc","location","dark_mode","battery_saver","dnd","screen_timeout","force_stop","uninstall","screenshot","screen_record","reboot"]},
+  "on":{"type":"boolean"},"value":{"type":"string"},"confirmed":{"type":"boolean"}},"required":["action"]}}
+""".trimIndent())
+
+    override fun run(t: ToolContext, a: JSONObject): String {
+        if (!de.jarvis.app.ProShell.ready) return Res.noPermission("Systemschalter",
+            "Dafür muss der Profi-Modus aktiv sein: Jarvis → Tools → „Profi-Modus“ (Shizuku starten und Jarvis erlauben).")
+        val on = if (a.has("on")) a.optBoolean("on") else null
+        val (cmd, err) = de.jarvis.app.logic.ProCommands.build(a.optString("action"), on, a.optString("value"), android.os.Build.VERSION.SDK_INT)
+        if (cmd == null) return Res.error(err ?: "Geht nicht.")
+        if (cmd.confirm != null && !a.optBoolean("confirmed")) return Res.confirm(cmd.confirm)
+        for (c in cmd.shell) {
+            val (code, out) = de.jarvis.app.ProShell.run(c)
+            if (code != 0 && !c.endsWith("&")) return Res.error("Das System hat abgelehnt: ${out.take(120).ifBlank { "Code $code" }}")
+        }
+        return Res.ok(cmd.done)
+    }
+}
