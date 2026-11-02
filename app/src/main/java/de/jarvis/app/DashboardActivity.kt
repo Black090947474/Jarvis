@@ -247,28 +247,23 @@ class DashboardActivity : Activity() {
 
     // ---------- Tools ----------
 
+    private class ToolTile(val icon: String, val name: String, val sub: String, val action: () -> Unit)
+
+    private fun toolCategory(name: String): String = when (name) {
+        "Was ist das?", "Schwebender Jarvis", "Hologramme", "Handy finden", "Profi-Modus" -> "⭐ Highlights"
+        "Chat", "Telefon", "Nachrichten", "E-Mails", "Übersetzer" -> "💬 Kommunikation"
+        "Schule", "Lernen", "Packliste", "Fokus-Timer", "Klassenarbeit-Coach" -> "🎓 Schule & Lernen"
+        "Quiz-Abend", "Geschichte", "Witz", "Wer bin ich?", "Rätsel", "Abenteuer" -> "🎮 Spaß"
+        "Automationen", "Kommandos", "Gedächtnis", "Persönlichkeit", "KI-Schlüssel", "Update", "Alles freigeben", "Berechtigungen",
+        "Weckwort trainieren", "Meine Geräte", "Aktionsverlauf", "Statistik", "Plugins", "Personalisieren", "Sicherung", "Notfall" -> "⚙ Jarvis & System"
+        else -> "🏠 Alltag"
+    }
+
     private fun buildTools(): ScrollView {
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(18), ui.px(18), ui.px(28)) }
         col.addView(title("J A R V I S", "WERKZEUGE", gear = true))
-        val hi = ui.card().apply { background = ui.gradient(Color.argb(90, Color.red(RED), Color.green(RED), Color.blue(RED)), Ui.CARD, 18) }
-        hi.addView(ui.text("Was soll ich für dich tun?", 17f, Ui.FG, true))
-        hi.addView(ui.text("Tippe ein Werkzeug an oder sag es einfach.", 13f, SOFT))
-        col.addView(hi)
-        val grid = GridLayout(this).apply { columnCount = 2 }
-        fun tile(icon: String, name: String, sub: String, action: () -> Unit) {
-            val box = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                    intArrayOf(Ui.CARD2, Ui.CARD)).apply { cornerRadius = 16 * ui.dp; setStroke(ui.px(1), Ui.LINE) }
-                setPadding(ui.px(14), ui.px(14), ui.px(10), ui.px(14))
-                setOnClickListener { action() }
-            }
-            box.addView(IconView(this, icon, RED), LinearLayout.LayoutParams(ui.px(30), ui.px(30)))
-            box.addView(ui.text(name, 15f, Ui.FG, true).apply { setPadding(0, ui.px(10), 0, 0); maxLines = 1 })
-            box.addView(ui.text(sub, 11f, RED).apply { maxLines = 1 })
-            grid.addView(box, GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f)).apply {
-                width = 0; setMargins(ui.px(5), ui.px(5), ui.px(5), ui.px(5)) })
-        }
+        val all = mutableListOf<ToolTile>()
+        fun tile(icon: String, name: String, sub: String, action: () -> Unit) { all += ToolTile(icon, name, sub, action) }
         tile("chat", "Chat", "Mit Jarvis schreiben") { startActivity(Intent(this, ChatActivity::class.java)) }
         tile("calendar", "Kalender", "Termine & Planung") { startActivity(Intent(this, CalendarActivity::class.java)) }
         tile("bell", "Erinnerungen", "Aufgaben & Erinnerungen") { remindersDialog() }
@@ -326,7 +321,60 @@ class DashboardActivity : Activity() {
         tile("storage", "Sicherung", "Daten sichern") { HubActivity.open(this, "backup") }
         tile("shield", "Notfall", "112 & Notfallkontakt") { HubActivity.open(this, "emergency") }
         tile("shield", "Berechtigungen", "Was Jarvis darf") { startActivity(Intent(this, PermissionsActivity::class.java)) }
-        col.addView(grid, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(8) })
+        // Suche + Kategorien
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        var cat = "Alle"; var query = ""
+        val chips = LinearLayout(this)
+        fun render() {
+            box.removeAllViews()
+            val list = all.filter { (cat == "Alle" || toolCategory(it.name) == cat) &&
+                (query.isBlank() || (it.name + " " + it.sub).contains(query, true)) }
+            if (list.isEmpty()) { box.addView(ui.text("Nichts gefunden – frag Jarvis einfach direkt.", 13f, MUTED).apply { setPadding(ui.px(4), ui.px(16), 0, 0) }); return }
+            for ((c, items) in list.groupBy { toolCategory(it.name) }.toSortedMap(compareBy { listOf("⭐ Highlights", "💬 Kommunikation", "🏠 Alltag", "🎓 Schule & Lernen", "🎮 Spaß", "⚙ Jarvis & System").indexOf(it) })) {
+                if (cat == "Alle") box.addView(ui.section(c))
+                val grid = GridLayout(this).apply { columnCount = 2 }
+                for (t in items) {
+                    val tb = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL; background = ui.glass(16)
+                        setPadding(ui.px(14), ui.px(14), ui.px(10), ui.px(14)); setOnClickListener { t.action() }
+                    }
+                    tb.addView(IconView(this, t.icon, RED).apply {
+                        background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 10 * ui.dp
+                            setColor(Color.argb(28, Color.red(RED), Color.green(RED), Color.blue(RED))) }
+                        setPadding(ui.px(6), ui.px(6), ui.px(6), ui.px(6)) }, LinearLayout.LayoutParams(ui.px(34), ui.px(34)))
+                    tb.addView(ui.text(t.name, 14.5f, Ui.FG, true).apply { setPadding(0, ui.px(10), 0, 0); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+                    tb.addView(ui.text(t.sub, 11f, MUTED).apply { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END })
+                    grid.addView(tb, GridLayout.LayoutParams(GridLayout.spec(GridLayout.UNDEFINED), GridLayout.spec(GridLayout.UNDEFINED, 1f)).apply {
+                        width = 0; setMargins(ui.px(4), ui.px(4), ui.px(4), ui.px(4)) })
+                }
+                box.addView(grid)
+            }
+        }
+        val search = ui.row().apply { background = ui.glass(14); setPadding(ui.px(14), ui.px(2), ui.px(10), ui.px(2)) }
+        search.addView(ui.text("⌕", 18f, RED).apply { setPadding(0, 0, ui.px(8), 0) })
+        search.addView(android.widget.EditText(this).apply {
+            hint = "Werkzeug suchen …"; setHintTextColor(MUTED); setTextColor(Ui.FG); textSize = 14f * Ui.fontScale; background = null; isSingleLine = true
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun afterTextChanged(e: android.text.Editable?) { query = e?.toString().orEmpty().trim(); render() }
+                override fun beforeTextChanged(a: CharSequence?, b: Int, c: Int, d: Int) {}
+                override fun onTextChanged(a: CharSequence?, b: Int, c: Int, d: Int) {}
+            })
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        col.addView(search, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(14) })
+        val cats = listOf("Alle", "⭐ Highlights", "💬 Kommunikation", "🏠 Alltag", "🎓 Schule & Lernen", "🎮 Spaß", "⚙ Jarvis & System")
+        fun paintChips() {
+            chips.removeAllViews()
+            for (c in cats) chips.addView(ui.text(c, 12.5f, if (c == cat) Color.rgb(0, 16, 24) else Ui.SOFT, c == cat).apply {
+                setPadding(ui.px(13), ui.px(8), ui.px(13), ui.px(8))
+                background = if (c == cat) ui.gradient(RED, Ui.ACCENT2, 18) else ui.round(Ui.CARD2, 18, Ui.LINE)
+                setOnClickListener { cat = c; paintChips(); render() }
+            }, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = ui.px(6) })
+        }
+        paintChips()
+        col.addView(android.widget.HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(chips) },
+            LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(10); bottomMargin = ui.px(4) })
+        render()
+        col.addView(box)
         return page(col)
     }
 

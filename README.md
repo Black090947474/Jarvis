@@ -86,6 +86,11 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 26 – Nachrichten in allen Apps + Design
+- **Nachrichten über Snapchat, Instagram, WhatsApp, Telegram, Discord, Signal, Messenger, TikTok:** „Jarvis, schreib Lena auf Snapchat: Bin gleich da.“ Jarvis fragt einmal nach („An Lena auf Snapchat: … senden?“), nach deinem Ja öffnet er die App, sucht die Person, öffnet den Chat, schreibt und sendet. Braucht die Bildschirmsteuerung (Profi-Modus → Auto-Einrichtung). Der Name muss so heißen wie in der App.
+- **Tools-Seite neu:** Suchfeld, Kategorien (Highlights, Kommunikation, Alltag, Schule & Lernen, Spaß, Jarvis & System), Glas-Kacheln mit Symbol-Hintergrund.
+- Knöpfe einheitlicher und nicht mehr abgeschnitten.
+
 ### Neu in Version 25.1 – KI-Schlüssel ganz einfach
 Tools → **KI-Schlüssel** (oder ⚙ → „🔑 KI-Schlüssel“): alle Anbieter auf einer Seite, empfohlene oben. Pro Anbieter nur zwei Knöpfe: **① Schlüssel holen** (Seite öffnet sich, anmelden, Schlüssel kopieren) und **② Einfügen** – Jarvis speichert und testet sofort. Kommst du mit kopiertem Schlüssel zurück, fragt Jarvis sogar von selbst. Oben siehst du, wie viele aktiv sind und wie oft noch Pausen drohen.
 

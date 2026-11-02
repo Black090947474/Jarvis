@@ -329,6 +329,8 @@ class PhoneTools(private val activity: Activity) {
     }
 
     private fun sendMessage(who: String, text: String, app: String): String {
+        if (!app.equals("sms", true) && !app.equals("whatsapp", true))
+            return "FEHLER: Für ${app} bitte das Werkzeug app_message benutzen (bedient die App selbst, nach Ja des Nutzers)."
         val number = resolveNumber(who) ?: return contactError(who)
         if (number.startsWith("Fehler") || number.startsWith("MEHRERE")) return number
         if (app.equals("whatsapp", true)) {
@@ -825,7 +827,7 @@ class PhoneTools(private val activity: Activity) {
             "count_photos" to "Zähle Fotos …", "toggle" to "Schalte um …",
             "show_card" to "Erstelle Übersicht …", "build_website" to "Baue Website …",
             "second_phone" to "Sende an zweites Handy …", "read_app" to "Lese die App …", "say_in" to "Übersetze …",
-            "look_screen" to "Schaue auf den Bildschirm …", "system_control" to "Schalte das System …", "call_control" to "Telefon …", "money" to "Taschengeld …", "party_quiz" to "Quiz-Abend …", "focus" to "Starte Fokus-Timer …", "photos" to "Suche Fotos …"
+            "look_screen" to "Schaue auf den Bildschirm …", "app_message" to "Schreibe in der App …", "system_control" to "Schalte das System …", "call_control" to "Telefon …", "money" to "Taschengeld …", "party_quiz" to "Quiz-Abend …", "focus" to "Starte Fokus-Timer …", "photos" to "Suche Fotos …"
         )
 
         /** Beschreibung aller Werkzeuge für Claude (JSON-Schema). */

@@ -57,16 +57,18 @@ class Ui(private val a: Activity) {
         layoutParams = LinearLayout.LayoutParams(-2, -2).apply { rightMargin = px(6); topMargin = px(6) }
     }
 
-    fun button(t: String, filled: Boolean = true, onClick: () -> Unit) = text(t, 15f, Color.WHITE, true).apply {
+    fun button(t: String, filled: Boolean = true, onClick: () -> Unit) = text(t, 14.5f, if (filled && !light) Color.rgb(0, 16, 24) else Color.WHITE, true).apply {
         gravity = Gravity.CENTER
-        background = if (filled) gradient(RED, ACCENT2, 14) else round(CARD2, 14, LINE)
+        background = if (filled) gradient(RED, ACCENT2, 14) else round(CARD2, 14, Color.argb(110, Color.red(RED), Color.green(RED), Color.blue(RED)))
+        minHeight = px(46)
+        if (filled) elevation = 4 * dp
         if (!filled) setTextColor(FG)
         setPadding(px(14), px(12), px(14), px(12))
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(10) }
     }
 
-    fun row() = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+    fun row() = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; isBaselineAligned = false }
 
     fun weighted(v: View, w: Float = 1f) = v.apply { layoutParams = LinearLayout.LayoutParams(0, -2, w) }
 

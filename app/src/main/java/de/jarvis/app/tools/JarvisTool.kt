@@ -74,7 +74,7 @@ object ToolRegistry {
     val all: List<JarvisTool> by lazy {
         listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool,
             WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool,
-            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool, LookScreenTool, CallControlTool, SystemControlTool)
+            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool, LookScreenTool, CallControlTool, SystemControlTool, AppMessageTool)
     }
 
     fun find(name: String): JarvisTool? = all.firstOrNull { it.name == name }
@@ -88,7 +88,7 @@ object ToolRegistry {
             "einkauf", "kaufen", "notiz", "notier", "aufschreib", "geburtstag", "mathe", "deutsch", "englisch",
             "geld", "taschengeld", "ausgegeben", "ausgabe", "spar", "euro", "€", "fokus", "pomodoro", "konzentr", "packen", "pack", "ranzen", "tasche"),
         "comm" to listOf("ruf", "anruf", "angerufen", "telefon", "nachricht", "schreib", "sms", "whatsapp", "mail", "e-mail",
-            "antwort", "benachrichtig", "kontakt", "insta", "snap", "verpasst", "nimm ab", "leg auf", "ruft an", "klingelt"),
+            "antwort", "benachrichtig", "kontakt", "insta", "snap", "telegram", "discord", "tiktok", "signal", "messenger", "dm", "verpasst", "nimm ab", "leg auf", "ruft an", "klingelt"),
         "device" to listOf("wlan", "wifi", "bluetooth", "flugmodus", "hotspot", "helligkeit", "hell", "dunkel", "einstellung",
             "kamera", "foto", "bild", "selfie", "screenshot", "bildschirm", "tipp", "scroll", "öffne", "app", "standort",
             "flugmodus", "mobile daten", "datenverbindung", "dunkelmodus", "dark mode", "energiespar", "stromspar", "nfc", "neustart", "neu starten",

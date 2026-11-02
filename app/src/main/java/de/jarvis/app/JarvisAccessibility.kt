@@ -230,6 +230,96 @@ class JarvisAccessibility : AccessibilityService() {
         return if (performGlobalAction(id)) msg else "Fehler: $msg hat nicht geklappt."
     }
 
+    // ---------- Nachrichten in beliebigen Apps (Snapchat, Instagram, WhatsApp, Telegram …) ----------
+
+    private fun allNodes(root: AccessibilityNodeInfo?): List<AccessibilityNodeInfo> {
+        val out = mutableListOf<AccessibilityNodeInfo>()
+        fun walk(n: AccessibilityNodeInfo?, d: Int) {
+            if (n == null || d > 45 || out.size > 400) return
+            if (n.isVisibleToUser) out += n
+            for (i in 0 until n.childCount) walk(n.getChild(i), d + 1)
+        }
+        walk(root, 0); return out
+    }
+
+    private fun waitFor(pkg: String, ms: Long): AccessibilityNodeInfo? {
+        val end = System.currentTimeMillis() + ms
+        while (System.currentTimeMillis() < end) {
+            val r = rootInActiveWindow
+            if (r != null && r.packageName?.toString() == pkg) return r
+            Thread.sleep(250)
+        }
+        return null
+    }
+
+    private fun click(n: AccessibilityNodeInfo): Boolean {
+        val t = if (n.isClickable) n else clickableParent(n)
+        return t?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true || tapAt(n)
+    }
+
+    private fun findLabel(root: AccessibilityNodeInfo?, re: Regex, editable: Boolean? = null): AccessibilityNodeInfo? =
+        allNodes(root).firstOrNull { (editable == null || it.isEditable == editable) && re.containsMatchIn(label(it) + " " + (idName(it) ?: "")) }
+
+    private fun setText(field: AccessibilityNodeInfo, text: String): Boolean {
+        field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+        field.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        return field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
+            Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text) })
+    }
+
+    /**
+     * Öffnet die App, sucht die Person, öffnet den Chat, schreibt [text] und tippt auf Senden.
+     * Wird erst nach der Bestätigung des Nutzers aufgerufen. [step] meldet den Fortschritt.
+     */
+    fun chatSend(pkg: String, who: String, text: String, step: (String) -> Unit): String {
+        val launch = packageManager.getLaunchIntentForPackage(pkg) ?: return "Fehler: Die App ist nicht installiert."
+        step("Öffne die App …")
+        startActivity(launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED))
+        var root = waitFor(pkg, 8000) ?: return "Fehler: Die App ist nicht aufgegangen."
+        Thread.sleep(1200)
+        root = rootInActiveWindow ?: root
+        // Zum Chat-Bereich (Snapchat, Instagram …)
+        val chatTab = Regex("(?i)^(chat|chats|nachrichten|messages|direct|posteingang|inbox)\\b")
+        findLabel(root, chatTab, editable = false)?.let { click(it); Thread.sleep(1200); root = rootInActiveWindow ?: root }
+        if (pkg == "com.instagram.android") findLabel(root, Regex("(?i)messenger|direct|nachricht"), false)?.let { click(it); Thread.sleep(1500); root = rootInActiveWindow ?: root }
+        // Suche öffnen
+        step("Suche $who …")
+        val searchRe = Regex("(?i)such|search|freunde finden|find friends")
+        var field = findLabel(root, searchRe, editable = true)
+        if (field == null) {
+            findLabel(root, searchRe, editable = false)?.let { click(it); Thread.sleep(1200) }
+            root = rootInActiveWindow ?: root
+            field = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable } ?: firstEditable(root)
+        }
+        if (field == null) return "Fehler: Ich finde in der App kein Suchfeld. Öffne den Chat mit $who selbst, dann kann ich den Text eintragen."
+        setText(field, who)
+        Thread.sleep(1800)
+        root = rootInActiveWindow ?: root
+        // Treffer antippen (nicht das Suchfeld selbst)
+        val name = who.trim().lowercase()
+        val hit = allNodes(root).filter { !it.isEditable && label(it).lowercase().contains(name) }
+            .sortedBy { val r = Rect(); it.getBoundsInScreen(r); r.top }.firstOrNull { val r = Rect(); it.getBoundsInScreen(r); r.height() > 0 }
+            ?: return "Fehler: Ich finde „$who“ in der App nicht. Stimmt der Name so, wie er dort heißt?"
+        step("Öffne den Chat …")
+        click(hit)
+        Thread.sleep(1800)
+        root = rootInActiveWindow ?: root
+        // Eventuell Profil statt Chat → „Chat“/„Nachricht senden“ antippen
+        if (firstEditable(root) == null) findLabel(root, Regex("(?i)^(chat|nachricht|message|senden)"), false)?.let { click(it); Thread.sleep(1500); root = rootInActiveWindow ?: root }
+        val input = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.takeIf { it.isEditable } ?: firstEditable(root)
+            ?: return "Fehler: Ich finde das Eingabefeld im Chat nicht."
+        step("Schreibe …")
+        if (!setText(input, text)) return "Fehler: Schreiben hat nicht geklappt."
+        Thread.sleep(700)
+        root = rootInActiveWindow ?: root
+        val send = findLabel(root, Regex("(?i)^(senden|send|abschicken|absenden)\\b|send button|button send"), editable = false)
+        val sent = (send != null && click(send)) ||
+            (Build.VERSION.SDK_INT >= 30 && input.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id))
+        if (!sent) return "Fehler: Text steht drin, aber ich finde den Senden-Knopf nicht. Tipp bitte selbst auf Senden."
+        Thread.sleep(800)
+        return "OK: Nachricht an $who gesendet."
+    }
+
     /** Nach einer Aktion kurz warten und den neuen Bildschirm (gekürzt) mitliefern. */
     private fun after(msg: String): String {
         Thread.sleep(900)
