@@ -42,6 +42,7 @@ class JarvisActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         isOpen = true
+        BubbleService.instance?.setHidden(true)
         showOverLockScreen()
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).cancel(WakeWordService.NOTIF_WAKE)
         WakeWordService.instance?.pause() // Mikrofon für die Spracherkennung freigeben
@@ -640,6 +641,8 @@ class JarvisActivity : Activity() {
             speak(listOf("Bis später.", "Gern geschehen.", "Jederzeit.").random(), ID_BYE)
             return
         }
+        // „Wo bist du?“ – Handy klingeln lassen
+        if (FindActivity.matches(text)) { FindActivity.start(this); finish(); return }
         // Anruf annehmen/auflegen sofort, ohne KI – danach Jarvis schließen, damit das Mikrofon frei ist
         CallControl.handleLocal(this, text)?.let { r ->
             jarvisText.text = de.jarvis.app.tools.Res.spoken(r)
@@ -764,6 +767,7 @@ class JarvisActivity : Activity() {
     override fun onDestroy() {
         whisperGen++
         isOpen = false
+        BubbleService.instance?.setHidden(false)
         main.removeCallbacksAndMessages(null)
         recognizer?.destroy()
         recognizer = null

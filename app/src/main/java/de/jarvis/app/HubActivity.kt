@@ -334,6 +334,18 @@ class HubActivity : Activity() {
             addView(ui.weighted(ui.text("Leuchtender Kern & Partikel animieren", 14f, Ui.FG)))
             addView(Switch(this@HubActivity).apply { isChecked = prefs.animations; setOnCheckedChangeListener { _, on -> prefs.animations = on } })
         })
+        col.addView(ui.section("Unterwegs"))
+        col.addView(ui.card(false).apply {
+            addView(ui.weighted(ui.text("Beim Verlassen von Zuhause erinnern (Schirm bei Regen, Schulfächer, Fälliges)", 14f, Ui.FG)))
+            addView(Switch(this@HubActivity).apply { isChecked = prefs.leaveHint; setOnCheckedChangeListener { _, on -> prefs.leaveHint = on; SmartHints.scheduleHome(this@HubActivity) } })
+        })
+        col.addView(ui.card(false).apply {
+            addView(ui.weighted(ui.text("Schwebender Jarvis (Kugel über allen Apps)", 14f, Ui.FG)))
+            addView(Switch(this@HubActivity).apply { isChecked = prefs.bubble; setOnCheckedChangeListener { _, on ->
+                if (on) { if (android.provider.Settings.canDrawOverlays(this@HubActivity)) BubbleService.start(this@HubActivity)
+                          else { isChecked = false; startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:$packageName"))) } }
+                else BubbleService.stop(this@HubActivity) } })
+        })
         col.addView(ui.section("Anrufe"))
         col.addView(ui.card(false).apply {
             addView(ui.weighted(ui.text("Anrufer laut ansagen („Anruf von Mama“) – braucht „Anrufe annehmen & ansagen“", 14f, Ui.FG)))

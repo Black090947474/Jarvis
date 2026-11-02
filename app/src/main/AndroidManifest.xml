@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -194,6 +197,12 @@
             android:name=".WakeWordService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <service
+            android:name=".BubbleService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Schwebende Assistenten-Taste über anderen Apps" />
+        </service>
         <!-- Startbildschirm-Widget -->
         <receiver
             android:name=".JarvisWidget"
@@ -217,6 +226,8 @@
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <activity android:name=".ProActivity" android:exported="false" />
         <activity android:name=".ProvidersActivity" android:exported="false" />
+        <activity android:name=".ScanActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".FindActivity" android:exported="false" android:launchMode="singleTask" />
         <receiver android:name=".UpdateReceiver" android:exported="false" />
         <receiver
             android:name=".CallReceiver"

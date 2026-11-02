@@ -80,6 +80,7 @@ class DashboardActivity : Activity() {
         prefs = Prefs(this)
         if (!prefs.v20Migrated) { prefs.design = "HOLO"; if (prefs.uiTheme != "HELL") prefs.uiTheme = "BLAU"; prefs.v20Migrated = true }
         thread { ProShell.keepAccessibility(applicationContext) }
+        if (prefs.bubble && BubbleService.instance == null) BubbleService.start(this)
         if (System.currentTimeMillis() - prefs.lastUpdateCheck > 6 * 3_600_000L) { prefs.lastUpdateCheck = System.currentTimeMillis(); Updater.check(this, quiet = true) }
         if (!prefs.wizardShown) { prefs.wizardShown = true; startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) }
         Ui.load(prefs); ui = Ui(this)
@@ -288,6 +289,13 @@ class DashboardActivity : Activity() {
         tile("flash", "Taschenlampe", "An / aus") { toggleTorch() }
         tile("pin", "Parkplatz", "Merken & finden") { parkingDialog() }
         tile("song", "Lied erkennen", "Was läuft gerade?") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
+        tile("camera", "Was ist das?", "Kamera-Scan mit KI") { startActivity(Intent(this, ScanActivity::class.java)) }
+        tile("mic", "Schwebender Jarvis", if (prefs.bubble) "An – antippen zum Ausschalten" else "Kugel über allen Apps") { toggleBubble() }
+        tile("learn", "Klassenarbeit-Coach", "Lernplan bis zur Arbeit") { voice("Ich schreibe bald eine Klassenarbeit. Frag mich nach Fach, Datum und Thema und mach mir dann einen Lernplan.") }
+        tile("chat", "Wer bin ich?", "Ratespiel mit Jarvis") { voice("Lass uns „Wer bin ich?“ spielen. Du denkst dir eine berühmte Person oder Figur aus, ich stelle Ja-Nein-Fragen.") }
+        tile("brain", "Rätsel", "Knobeln mit Jarvis") { voice("Gib mir ein kniffliges, aber lösbares Rätsel. Verrate die Lösung erst, wenn ich aufgebe.") }
+        tile("sun", "Abenteuer", "Du entscheidest die Story") { voice("Starte ein kurzes Abenteuer, in dem ich der Held bin. Gib mir nach jedem Abschnitt zwei oder drei Möglichkeiten.") }
+        tile("phone", "Handy finden", "Klingeln & Blinken") { FindActivity.start(this) }
         tile("brain", "KI-Anbieter", "Mehr Anbieter = weniger Pausen") { startActivity(Intent(this, ProvidersActivity::class.java)) }
         tile("storage", "Update", "Neue Version installieren") { Updater.check(this, quiet = false) }
         tile("bolt", "Profi-Modus", "Systemschalter direkt (Shizuku)") { startActivity(Intent(this, ProActivity::class.java)) }
@@ -805,6 +813,15 @@ class DashboardActivity : Activity() {
     // ---------- Aktionen ----------
 
     private fun talk() = startActivity(Intent(this, JarvisActivity::class.java))
+
+    private fun toggleBubble() {
+        if (BubbleService.instance != null || prefs.bubble) { BubbleService.stop(this); toast("Schwebender Jarvis aus."); return }
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+            toast("Bitte „Über anderen Apps einblenden“ für Jarvis erlauben, dann nochmal tippen.")
+            startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:$packageName"))); return
+        }
+        BubbleService.start(this); toast("Schwebender Jarvis an – die Kugel liegt am Bildschirmrand.")
+    }
 
     private fun voice(q: String) = startActivity(Intent(this, JarvisActivity::class.java).putExtra("ask", q))
 

@@ -192,6 +192,22 @@ class Prefs(context: Context) {
         get() = sp.getString("wake_mode", "JARVIS") ?: "JARVIS"
         set(v) = sp.edit().putString("wake_mode", v).apply()
 
+    /** Schwebender Jarvis (Kugel über allen Apps). */
+    var bubble: Boolean
+        get() = sp.getBoolean("bubble", false)
+        set(v) = sp.edit().putBoolean("bubble", v).apply()
+    var bubbleX: Int
+        get() = sp.getInt("bubble_x", -1)
+        set(v) = sp.edit().putInt("bubble_x", v).apply()
+    var bubbleY: Int
+        get() = sp.getInt("bubble_y", -1)
+        set(v) = sp.edit().putInt("bubble_y", v).apply()
+
+    /** Hinweis beim Verlassen von Zuhause (Schirm, Schulsachen). */
+    var leaveHint: Boolean
+        get() = sp.getBoolean("leave_hint", true)
+        set(v) = sp.edit().putBoolean("leave_hint", v).apply()
+
     /** Wann zuletzt nach Updates gesucht wurde. */
     var lastUpdateCheck: Long
         get() = sp.getLong("last_update_check", 0)

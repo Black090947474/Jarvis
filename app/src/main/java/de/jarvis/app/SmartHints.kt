@@ -11,6 +11,7 @@ import de.jarvis.app.tools.CalendarTool
 import de.jarvis.app.tools.Place
 import de.jarvis.app.tools.Reminder
 import de.jarvis.app.tools.SchoolTool
+import de.jarvis.app.tools.WeatherTool
 
 /**
  * Smart Context: verbindet Kalender, Aufgaben und Lernstoff und schlägt Sinnvolles vor.
@@ -86,6 +87,25 @@ object SmartHints {
         return sb.toString()
     }
 
+    /** Beim Verlassen von Zuhause: Regen? Schule heute? Was muss mit? */
+    fun leftHome(ctx: Context) {
+        val p = Prefs(ctx)
+        if (!p.leaveHint) return
+        val h = java.time.LocalTime.now().hour
+        if (h < 6 || h > 21) return
+        val parts = mutableListOf<String>()
+        try {
+            val w = WeatherTool.fetch(ctx)
+            if (Regex("regen|schauer|gewitter|niesel|schnee", RegexOption.IGNORE_CASE).containsMatchIn(w)) parts += "☂ Heute soll es regnen – Schirm oder Jacke mitnehmen."
+        } catch (_: Exception) {}
+        if (h < 12) SchoolTool.summary(ctx, java.time.LocalDate.now().dayOfWeek)?.let { parts += "🎒 Schule heute: $it" }
+        val (_, end) = TimeLogic.range("heute")
+        val due = AgendaStore(ctx).tasks().filter { !it.done && it.due != null && it.due < end }
+        if (due.isNotEmpty()) parts += "✓ Heute fällig: " + due.take(3).joinToString(", ") { it.title }
+        if (parts.isEmpty()) return
+        Notifier.post(ctx, Notifier.CH_TASKS, 63_100, "Bevor du gehst …", parts.joinToString("\n"))
+    }
+
     fun arrivedHome(ctx: Context) {
         val p = Prefs(ctx)
         if (p.greetOnArrive) {
@@ -109,6 +129,8 @@ object SmartHints {
         val p = Prefs(ctx)
         val r = Reminder(899_999, "home", null, null, place = Place("Zuhause", p.homeLat, p.homeLon, 150f, true))
         if ((enabled(p) || p.greetOnArrive) && p.homeSet) Scheduler.addGeofence(ctx, r) else Scheduler.cancel(ctx, r)
+        val leave = Reminder(899_998, "leave", null, null, place = Place("Zuhause", p.homeLat, p.homeLon, 200f, false))
+        if (p.leaveHint && p.homeSet) Scheduler.addGeofence(ctx, leave) else Scheduler.cancel(ctx, leave)
     }
 
     @Suppress("unused") private val keep = IntentFilter::class

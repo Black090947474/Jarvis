@@ -86,6 +86,14 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 25 – das große Update
+- **Schwebender Jarvis:** leuchtende Kugel über allen Apps (Tools → „Schwebender Jarvis“). Antippen = reden (Jarvis merkt sich dabei den Bildschirm für „Was steht hier?“), lang drücken = Chat, ziehen = verschieben.
+- **Kamera „Was ist das?“** (Tools → „Was ist das?“): Kamera draufhalten, Knopf tippen – Jarvis erkennt Pflanzen, Tiere, Autos, Schilder, erklärt Matheaufgaben Schritt für Schritt, übersetzt Texte, schätzt Kalorien. Passt ein Hologramm, kannst du es antippen.
+- **„Jarvis, wo bist du?“:** Handy klingelt laut (auch auf lautlos), blinkt mit der Taschenlampe und vibriert, bis du tippst.
+- **Beim Rausgehen:** Verlässt du dein Zuhause, erinnert Jarvis an Schirm (bei Regen), die Schulfächer von heute und Fälliges. Abschaltbar unter Personalisieren.
+- **Spiele:** „Wer bin ich?“, Rätsel, Abenteuer (du entscheidest die Geschichte).
+- **Klassenarbeit-Coach:** Fach, Datum und Thema sagen – Jarvis plant tägliche Lerneinheiten, Erinnerungen, Lernkarten und eine Probe-Arbeit am Vortag.
+
 ### Neu in Version 24.1 – Schlüssel automatisch erkennen
 Bei „KI-Anbieter“ → Anbieter wählen → „Schlüssel holen“: Seite öffnet sich, anmelden, Schlüssel erstellen, **kopieren**, zurück zu Jarvis – Jarvis erkennt den Schlüssel in der Zwischenablage, trägt ihn nach deinem „Eintragen“ ein und testet ihn sofort. Funktioniert auch für Groq, NVIDIA, Gemini und Claude.
 

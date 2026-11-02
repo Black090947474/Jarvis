@@ -287,7 +287,10 @@ class JarvisReceiver : BroadcastReceiver() {
     }
 
     private fun handle(ctx: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) ProShell.keepAccessibility(ctx)
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            ProShell.keepAccessibility(ctx)
+            if (Prefs(ctx).bubble) BubbleService.start(ctx)
+        }
         val store = AgendaStore(ctx)
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED, "android.intent.action.QUICKBOOT_POWERON" ->
@@ -324,6 +327,7 @@ class JarvisReceiver : BroadcastReceiver() {
                     val id = g.requestId.removePrefix("rem_").toIntOrNull() ?: continue
                     if (id >= 900_000) { Automations.runById(ctx, id - 900_000); continue }
                     if (id == 899_999) { SmartHints.arrivedHome(ctx); continue }
+                    if (id == 899_998) { SmartHints.leftHome(ctx); continue }
                     val r = store.reminder(id) ?: continue
                     if (!r.active) continue
                     showReminder(ctx, r)
