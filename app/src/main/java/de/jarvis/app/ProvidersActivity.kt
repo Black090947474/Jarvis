@@ -41,6 +41,45 @@ class ProvidersActivity : Activity() {
         build()
     }
 
+    /** Für welchen Anbieter du gerade „Schlüssel holen“ getippt hast (dann erkennen wir auch Schlüssel ohne typischen Anfang). */
+    private var waitingFor: String? = null
+    private var lastOffered = ""
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) return
+        val clip = KeySniffer.clipboard(this) ?: return
+        val hit = KeySniffer.detect(clip, waitingFor) ?: return
+        if (hit.key == lastOffered || KeySniffer.known(prefs, hit)) return
+        lastOffered = hit.key
+        AlertDialog.Builder(this).setTitle("Schlüssel erkannt 🔑")
+            .setMessage("In der Zwischenablage liegt ein Schlüssel für ${hit.name} (${hit.key.take(8)}…). Eintragen und testen?")
+            .setPositiveButton("Eintragen") { _, _ -> adopt(hit) }
+            .setNegativeButton("Nein", null).show()
+    }
+
+    private fun adopt(h: KeySniffer.Hit) {
+        waitingFor = null
+        when (h.target) {
+            "groq" -> prefs.groqKey = h.key
+            "nvidia" -> prefs.nvidiaKey = h.key
+            "gemini" -> prefs.geminiKey = h.key
+            "claude" -> prefs.anthropicKey = h.key
+            "mistral" -> prefs.mistralKey = h.key
+            else -> {
+                val pr = ProviderCatalog.preset(h.target) ?: return
+                if (pr.needsAccount) { edit(-1, pr, h.key); return }   // Konto-ID muss noch rein
+                val l = prefs.extraList().toMutableList()
+                val existing = l.indexOfFirst { it.optString("id") == pr.id }
+                val o = JSONObject().put("id", pr.id).put("name", pr.name).put("url", pr.url).put("key", h.key)
+                    .put("model", pr.models.joinToString(", ")).put("on", true)
+                if (existing >= 0) l[existing] = o else l += o
+                save(l); build(); test(if (existing >= 0) existing else l.size - 1); return
+            }
+        }
+        toast("${h.name}-Schlüssel eingetragen."); build()
+    }
+
     private fun toast(t: String) = Toast.makeText(this, t, Toast.LENGTH_LONG).show()
     private fun save(list: List<JSONObject>) { prefs.extraProviders = JSONArray(list).toString() }
 
@@ -83,6 +122,12 @@ class ProvidersActivity : Activity() {
             })
         }
         col.addView(ui.button("Anbieter hinzufügen") { pick() })
+        val missingBuiltin = listOf(Triple("Groq", prefs.groqKey, "https://console.groq.com/keys"), Triple("NVIDIA", prefs.nvidiaKey, "https://build.nvidia.com/settings/api-keys"))
+            .filter { it.second.isBlank() }
+        for ((n, _, url) in missingBuiltin) col.addView(ui.button("$n-Schlüssel holen (kostenlos)", false) {
+            toast("Schlüssel erstellen und kopieren – zurück in Jarvis trage ich ihn automatisch ein.")
+            try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (_: Exception) {}
+        })
         if (list.isNotEmpty()) col.addView(ui.button("Alle testen", false) { list.indices.forEach { test(it) } })
         col.addView(ui.text("Tipp: Erst Schlüssel beim Anbieter holen (Knopf „Schlüssel holen“), kopieren, hier einfügen, dann „Testen“. " +
             "Die Schlüssel bleiben nur auf diesem Handy und kommen nicht in die Sicherung.", 12f, MUTED).apply { setPadding(0, ui.px(14), 0, 0) })
@@ -92,11 +137,17 @@ class ProvidersActivity : Activity() {
         val have = prefs.extraList().map { it.optString("id") }.toSet()
         val presets = ProviderCatalog.PRESETS.filter { it.id == "custom" || it.id !in have }
         AlertDialog.Builder(this).setTitle("Welcher Anbieter?")
-            .setItems(presets.map { it.name + "\n" + it.note }.toTypedArray()) { _, w -> edit(-1, presets[w]) }.show()
+            .setItems(presets.map { it.name + "\n" + it.note }.toTypedArray()) { _, w ->
+                val pr = presets[w]
+                if (pr.signup.isBlank()) edit(-1, pr) else AlertDialog.Builder(this).setTitle(pr.name)
+                    .setMessage("Hast du schon einen Schlüssel?\n\nWenn nicht: „Schlüssel holen“ öffnet die richtige Seite. Dort anmelden, Schlüssel erstellen, kopieren – zurück in Jarvis erkenne ich ihn automatisch.")
+                    .setPositiveButton("Schlüssel holen") { _, _ -> openSignup(pr) }
+                    .setNeutralButton("Habe ich schon") { _, _ -> edit(-1, pr) }.show()
+            }.show()
     }
 
     /** Anlegen (index = -1, mit Vorlage) oder bearbeiten. */
-    private fun edit(index: Int, preset: ProviderCatalog.Preset?) {
+    private fun edit(index: Int, preset: ProviderCatalog.Preset?, prefill: String? = null) {
         val cur = if (index >= 0) prefs.extraList()[index] else null
         val pr = preset ?: ProviderCatalog.preset(cur?.optString("id") ?: "custom") ?: ProviderCatalog.PRESETS.last()
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(20), ui.px(8), ui.px(20), 0) }
@@ -105,7 +156,7 @@ class ProvidersActivity : Activity() {
             if (secret) inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
         }.also { box.addView(it) }
         val name = field("Name", cur?.optString("name") ?: pr.name)
-        val key = field(if (pr.keyOptional) "API-Schlüssel (optional)" else "API-Schlüssel", cur?.optString("key").orEmpty(), true)
+        val key = field(if (pr.keyOptional) "API-Schlüssel (optional)" else "API-Schlüssel", prefill ?: cur?.optString("key").orEmpty(), true)
         val acc = if (pr.needsAccount) field("Konto-ID (Account ID)", cur?.optString("account").orEmpty()) else null
         val url = if (pr.id == "custom") field("Adresse …/v1/chat/completions", cur?.optString("url").orEmpty()) else null
         val model = field("Modell(e), mit Komma getrennt", cur?.optString("model") ?: pr.models.joinToString(", "))
@@ -122,8 +173,14 @@ class ProvidersActivity : Activity() {
                 save(l); build()
                 test(if (index >= 0) index else l.size - 1)
             }.setNegativeButton("Abbrechen", null)
-        if (pr.signup.isNotBlank()) d.setNeutralButton("Schlüssel holen") { _, _ -> try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pr.signup))) } catch (_: Exception) {} }
+        if (pr.signup.isNotBlank()) d.setNeutralButton("Schlüssel holen") { _, _ -> openSignup(pr) }
         d.show()
+    }
+
+    private fun openSignup(pr: ProviderCatalog.Preset) {
+        waitingFor = pr.id
+        toast("Anmelden, Schlüssel erstellen und auf „Kopieren“ tippen – dann zurück zu Jarvis. Ich trage ihn ein.")
+        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pr.signup))) } catch (_: Exception) {}
     }
 
     /** Kurzer Probelauf: eine Mini-Frage ohne Werkzeuge. */

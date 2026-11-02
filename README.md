@@ -86,6 +86,9 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 24.1 – Schlüssel automatisch erkennen
+Bei „KI-Anbieter“ → Anbieter wählen → „Schlüssel holen“: Seite öffnet sich, anmelden, Schlüssel erstellen, **kopieren**, zurück zu Jarvis – Jarvis erkennt den Schlüssel in der Zwischenablage, trägt ihn nach deinem „Eintragen“ ein und testet ihn sofort. Funktioniert auch für Groq, NVIDIA, Gemini und Claude.
+
 ### Neu in Version 24 – Viele KI-Anbieter gleichzeitig
 Tools → **KI-Anbieter** (oder ⚙ → „Weitere KI-Anbieter“): beliebig viele zusätzliche Anbieter eintragen – Vorlagen für Google Gemini, OpenRouter, Cloudflare Workers AI, Cohere, Hugging Face, Z.ai, SambaNova, Cerebras, Pollinations und „Eigener Anbieter“ (jede OpenAI-kompatible Adresse). Jeweils „Schlüssel holen“ → einfügen → „Testen“. Ist ein Gratis-Limit voll, nimmt Jarvis sofort den nächsten. Pro Anbieter ein Konto.
 
