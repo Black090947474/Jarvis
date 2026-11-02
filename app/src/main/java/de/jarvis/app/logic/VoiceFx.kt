@@ -167,4 +167,20 @@ object VoiceFx {
     }
 
     @Suppress("unused") private fun db(v: Float) = exp(v / 8.686f)
+
+    /** Text in Sprech-Häppchen teilen: erster Teil kurz (startet schnell), Rest satzweise, Mini-Sätze zusammengefasst. */
+    fun sentences(text: String): List<String> {
+        val parts = text.trim().split(Regex("(?<=[.!?…])\\s+")).map { it.trim() }.filter { it.isNotEmpty() }
+        val out = mutableListOf<String>()
+        for (p in parts) {
+            if (out.isNotEmpty() && out.size > 1 && out.last().length < 40) out[out.size - 1] = out.last() + " " + p
+            else out += p
+        }
+        // Sehr langen ersten Satz am ersten Komma teilen, damit Jarvis schneller loslegt
+        if (out.isNotEmpty() && out[0].length > 110) {
+            val c = out[0].indexOf(", ", 25)
+            if (c in 25..100) { val first = out[0]; out[0] = first.substring(0, c + 1); out.add(1, first.substring(c + 2)) }
+        }
+        return out
+    }
 }

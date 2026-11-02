@@ -170,8 +170,10 @@ class BrainRouter(brains: List<Brain>) {
 object Brains {
     fun build(p: Prefs, tools: PhoneTools, mem: Memory, chat: Boolean): BrainRouter {
         val plan = mutableListOf<Pair<Provider, String>>()
+        // Beim Sprechen zählt Tempo: Groq antwortet meist in unter 1 Sekunde → zuerst (falls Schlüssel da)
+        if (!chat && p.groqKey.isNotBlank()) plan += Provider.GROQ to p.groqKey
         if (p.nvidiaKey.isNotBlank()) plan += Provider.NVIDIA to p.nvidiaKey
-        if (p.groqKey.isNotBlank()) plan += Provider.GROQ to p.groqKey
+        if (chat && p.groqKey.isNotBlank()) plan += Provider.GROQ to p.groqKey
         if (p.mistralKey.isNotBlank()) plan += Provider.MISTRAL to p.mistralKey
         val later = p.geminiKey.isNotBlank() || p.anthropicKey.isNotBlank()
         val list = mutableListOf<Brain>()

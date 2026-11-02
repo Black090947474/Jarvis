@@ -86,6 +86,11 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 23.1 – Jarvis antwortet schneller
+- Spricht **satzweise**: Der erste Satz startet, während der Rest noch berechnet wird (vor allem mit Jarvis-Klang deutlich schneller).
+- Beim Sprechen nimmt er zuerst **Groq** (falls Schlüssel eingetragen, meist unter 1 Sekunde), sonst NVIDIA mit schnellen Modellen; die großen „Denker“-Modelle nur noch im Chat.
+- Hört schneller auf zuzuhören, wenn du fertig bist (kürzere Pause).
+
 ### Neu in Version 23 – Updates ohne Löschen
 - Jarvis hat jetzt einen **festen Schlüssel**: Neue Versionen installieren sich einfach über die alte, deine Daten bleiben. (Einmalig, beim Wechsel auf Version 23, muss die alte App noch ein letztes Mal gelöscht werden.)
 - **Selbst-Update:** Jarvis schaut alle paar Stunden nach einer neuen Version und fragt dich. Oder: Tools → „Update“ bzw. ⚙ Einstellungen → „Nach Updates suchen“. Beim ersten Mal „Unbekannte Apps installieren“ für Jarvis erlauben.

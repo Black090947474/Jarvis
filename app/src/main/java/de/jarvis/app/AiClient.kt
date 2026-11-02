@@ -77,7 +77,8 @@ class AiClient(
 
     override fun ask(userText: String, onStep: (String) -> Unit, image: String?): String {
         askStart = System.currentTimeMillis()
-        complex = userText.length > 160 || ModelStatus.COMPLEX.containsMatchIn(userText)
+        // Sprachmodus: schnelle Modelle; die großen „Denker“ nur im Chat oder bei sehr langen Aufträgen
+        complex = if (chat) userText.length > 160 || ModelStatus.COMPLEX.containsMatchIn(userText) else userText.length > 260
         lastQuery = userText
         tools.noteQuery(userText)
         step = onStep
@@ -255,7 +256,7 @@ class AiClient(
             .put("messages", all)
             .put("tools", toolList(model))
             .put("tool_choice", "auto")
-            .put(provider.maxTokensKey, if (chat) 2000 else 1200)
+            .put(provider.maxTokensKey, if (chat) 2000 else 600)
             .apply { if (model.startsWith("openai/gpt-oss")) put("reasoning_effort", "low") }
 
         val conn = (URL(provider.url).openConnection() as HttpURLConnection).apply {

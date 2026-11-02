@@ -51,10 +51,10 @@ class Speaker(
             }
             override fun onDone(id: String?) {
                 if (id != null && synthIds.contains(id)) {
-                    // Jarvis-Klang im Hintergrund berechnen, dann abspielen
+                    // Satz fertig gesprochen (als Datei) → Jarvis-Klang im Hintergrund drüberlegen, dann in die Abspiel-Schlange
                     thread {
-                        val ok = applyFx()
-                        main.post { if (synthIds.remove(id)) { if (ok) playFile(id) else speakDirect(pendingText.remove(id) ?: "", id) } }
+                        val f = fxChunk(id)
+                        main.post { if (synthIds.remove(id)) chunkReady(id, f) }
                     }
                 } else main.post { if (langPending) { langPending = false; try { tts.language = Locale.GERMANY; applySettings() } catch (_: Exception) {} }; onDone(id) }
             }
@@ -62,7 +62,7 @@ class Speaker(
             override fun onError(id: String?) {
                 main.post {
                     // Wenn die Datei-Variante scheitert, normal (ohne Hall) sprechen
-                    if (id != null && synthIds.remove(id)) speakDirect(pendingText[id] ?: "", id) else onDone(id)
+                    if (id != null && synthIds.remove(id)) chunkReady(id, null) else onDone(id)
                 }
             }
         })
@@ -109,17 +109,74 @@ class Speaker(
 
     private val pendingText = HashMap<String, String>()
 
+    // ---------- Satzweise sprechen: der erste Satz startet, während die nächsten noch berechnet werden ----------
+    private var gen = 0
+    private var chunkTotal = 0
+    private var nextPlay = 0
+    private var playing = false
+    private var curId = ""
+    private val readyFiles = HashMap<Int, File?>()
+    private var startedSent = false
+
     fun speak(text: String, id: String) {
         stop()
         if (!ready) { main.post { onDone(id) }; return }
         tts.setPitch(prefs.voicePitch * preset().pitch)
         if (preset() == VoiceFx.Preset.AUS) { speakDirect(text, id); return }
-        val sid = "$id#${++counter}"
-        synthIds += sid
-        pendingText[sid] = text
-        val file = File(ctx.cacheDir, "jarvis_voice.wav")
-        val r = tts.synthesizeToFile(text, null, file, sid)
-        if (r != TextToSpeech.SUCCESS) { synthIds -= sid; speakDirect(text, id) }
+        val chunks = de.jarvis.app.logic.VoiceFx.sentences(text)
+        if (chunks.isEmpty()) { main.post { onDone(id) }; return }
+        val g = ++gen
+        chunkTotal = chunks.size; nextPlay = 0; playing = false; curId = id; readyFiles.clear(); startedSent = false
+        chunks.forEachIndexed { i, c ->
+            val sid = "$id#$g#$i"
+            synthIds += sid
+            pendingText[sid] = c
+            val r = tts.synthesizeToFile(c, null, File(ctx.cacheDir, "jv_${g}_$i.wav"), sid)
+            if (r != TextToSpeech.SUCCESS) { synthIds -= sid; if (i == 0) { stop(); speakDirect(text, id); return } else readyFiles[i] = null }
+        }
+    }
+
+    /** Liest die Satz-Datei, legt den Jarvis-Klang darüber. Rückgabe: abspielbare Datei (oder roh, wenn der Klang scheitert). */
+    private fun fxChunk(sid: String): File? {
+        val p = sid.split('#'); if (p.size < 3) return null
+        val raw = File(ctx.cacheDir, "jv_${p[1]}_${p[2]}.wav")
+        if (!raw.exists()) return null
+        return try {
+            val wav = VoiceFx.readWav(raw.readBytes()) ?: return raw
+            val out = VoiceFx.process(wav.first, wav.second, preset(), strengthOverride ?: prefs.voiceFxStrength)
+            File(ctx.cacheDir, "jvfx_${p[1]}_${p[2]}.wav").also { it.writeBytes(VoiceFx.writeWav(out, wav.second)) }
+        } catch (_: Throwable) { raw }
+    }
+
+    private fun chunkReady(sid: String, f: File?) {
+        val p = sid.split('#'); if (p.size < 3) return
+        if (p[1].toIntOrNull() != gen) return
+        readyFiles[p[2].toInt()] = f
+        pump()
+    }
+
+    private fun pump() {
+        if (playing) return
+        while (nextPlay < chunkTotal && readyFiles.containsKey(nextPlay) && readyFiles[nextPlay] == null) nextPlay++
+        if (nextPlay >= chunkTotal) { if (chunkTotal > 0) { chunkTotal = 0; onDone(curId) }; return }
+        val f = readyFiles[nextPlay] ?: return
+        val g = gen
+        try {
+            val mp = MediaPlayer()
+            player = mp
+            mp.setAudioAttributes(AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            mp.setDataSource(f.absolutePath)
+            mp.prepare()
+            playing = true
+            mp.setOnCompletionListener { releasePlayer(); f.delete(); if (g == gen) { playing = false; nextPlay++; pump() } }
+            mp.setOnErrorListener { _, _, _ -> releasePlayer(); if (g == gen) { playing = false; nextPlay++; pump() }; true }
+            mp.start()
+            if (!startedSent) { startedSent = true; onStart() }
+        } catch (_: Exception) {
+            releasePlayer(); playing = false; nextPlay++; pump()
+        }
     }
 
     private var langPending = false
@@ -194,6 +251,7 @@ class Speaker(
     }
 
     fun stop() {
+        gen++; chunkTotal = 0; playing = false; readyFiles.clear()
         try { tts.stop() } catch (_: Exception) {}
         synthIds.clear()
         try { player?.stop() } catch (_: Exception) {}

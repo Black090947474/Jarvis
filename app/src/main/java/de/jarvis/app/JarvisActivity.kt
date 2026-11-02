@@ -556,7 +556,7 @@ class JarvisActivity : Activity() {
         core.mode = CoreView.Mode.LISTENING
         youText.text = "…"
         thread {
-            val pcm = try { Whisper.record({ lvl -> main.post { core.level = lvl } }, cancelled) }
+            val pcm = try { Whisper.record({ lvl -> main.post { core.level = lvl } }, cancelled, silenceMs = 750) }
                       catch (e: Exception) { main.post { if (!cancelled()) { listening = false; whisperFailed = true; listen() } }; return@thread }
             if (cancelled()) return@thread
             if (pcm == null) { main.post { if (!cancelled()) { listening = false; onNothingHeard() } }; return@thread }
