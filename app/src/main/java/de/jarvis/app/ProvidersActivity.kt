@@ -50,7 +50,7 @@ class ProvidersActivity : Activity() {
         Entry("nvidia", "NVIDIA", "★ EMPFOHLEN", "Viele starke Modelle, ca. 40 Anfragen pro Minute. Kostenlos.",
             "https://build.nvidia.com/settings/api-keys", true, "https://integrate.api.nvidia.com/v1/chat/completions", "meta/llama-3.3-70b-instruct"),
         Entry("gemini", "Google Gemini", "★ EMPFOHLEN", "Großes Tageslimit, kann auch Bilder. Anmeldung mit deinem Google-Konto.",
-            "https://aistudio.google.com/apikey", true, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-2.0-flash"),
+            "https://aistudio.google.com/apikey", true, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-flash-latest, gemini-3.8-flash, gemini-3.6-flash"),
         Entry("openrouter", "OpenRouter", "", "Viele Gratis-Modelle, ca. 50 Anfragen pro Tag.", "https://openrouter.ai/keys", false),
         Entry("mistral", "Mistral", "", "Kostenloser „Experiment“-Tarif (Telefonnummer nötig).", "https://console.mistral.ai/api-keys",
             true, "https://api.mistral.ai/v1/chat/completions", "mistral-small-latest"),
@@ -265,12 +265,23 @@ class ProvidersActivity : Activity() {
         val e = entries.firstOrNull { it.id == id }
         val x = prefs.extraList().firstOrNull { it.optString("id") == id }
         val url = x?.optString("url") ?: e?.testUrl.orEmpty()
-        val model = (x?.optString("model") ?: e?.testModel).orEmpty().substringBefore(',').trim()
+        val models = (x?.optString("model") ?: e?.testModel).orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        val model = models.firstOrNull().orEmpty()
         val key = keyOf(id).takeIf { it != "–" }.orEmpty()
         if (url.isBlank() || model.isBlank()) return
         status[id] = "… teste"; build()
         thread {
-            val res = try {
+            var res = "✗ Modell nicht gefunden (schick mir die Meldung)"
+            for (m in models) {
+                res = probe(url, key, m)
+                if (!res.contains("Modell nicht gefunden")) break
+            }
+            runOnUiThread { status[id] = res; if (!isFinishing) build() }
+        }
+    }
+
+    private fun probe(url: String, key: String, model: String): String {
+        return try {
                 val c = (URL(url).openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"; doOutput = true; connectTimeout = 10000; readTimeout = 25000
                     setRequestProperty("content-type", "application/json")
@@ -290,7 +301,5 @@ class ProvidersActivity : Activity() {
                     else -> "✗ Fehler $code: " + txt.take(90)
                 }
             } catch (ex: Exception) { "✗ Nicht erreichbar (Internet?)" }
-            runOnUiThread { status[id] = res; if (!isFinishing) build() }
-        }
     }
 }

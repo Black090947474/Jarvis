@@ -20,7 +20,8 @@ class GeminiClient(
 ) : Brain {
 
     /** Modelle, die der Reihe nach probiert werden, falls eines nicht existiert oder am Limit ist. */
-    private val models = (listOf(model) + FALLBACK_MODELS).filter { it.isNotBlank() }.distinct().toMutableList()
+    private val allModels = (listOf(model) + FALLBACK_MODELS).filter { it.isNotBlank() }.distinct()
+    private val models = allModels.toMutableList()
     private val contents = JSONArray()   // Verlauf im Gemini-Format
     private var googleSearch = true
 
@@ -111,6 +112,8 @@ class GeminiClient(
     /** Probiert Modelle der Reihe nach; Google-Suche wird abgeschaltet, falls das Modell sie nicht mit Werkzeugen mag. */
     private fun request(): JSONObject {
         var lastErr: ApiException? = null
+        // Nach einer Limit-Pause wieder alle Modelle probieren (sonst bliebe Gemini bis zum Neustart aus)
+        if (models.isEmpty()) models.addAll(allModels)
         while (models.isNotEmpty()) {
             val model = models.first()
             try {
@@ -187,7 +190,7 @@ class GeminiClient(
 
     companion object {
         const val DEFAULT_MODEL = "gemini-flash-latest"
-        private val FALLBACK_MODELS = listOf("gemini-flash-latest", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3.5-flash-lite")
+        private val FALLBACK_MODELS = listOf("gemini-flash-latest", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.5-flash-lite")
         private const val MAX_ROUNDS = 8
         private const val MAX_CONTENTS = 30
     }

@@ -11,7 +11,7 @@ object ProviderCatalog {
 
     val PRESETS = listOf(
         Preset("gemini_oa", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-            listOf("gemini-2.5-flash", "gemini-2.0-flash"), "https://aistudio.google.com/apikey", "Kostenlos, ohne Karte, großes Tageslimit."),
+            listOf("gemini-flash-latest", "gemini-3.8-flash", "gemini-3.5-flash-lite"), "https://aistudio.google.com/apikey", "Kostenlos, ohne Karte, großes Tageslimit."),
         Preset("openrouter", "OpenRouter", "https://openrouter.ai/api/v1/chat/completions",
             listOf("openrouter/free", "meta-llama/llama-3.3-70b-instruct:free"), "https://openrouter.ai/keys", "Kostenlose Modelle (Endung :free), ca. 50 Anfragen/Tag."),
         Preset("cloudflare", "Cloudflare Workers AI", "https://api.cloudflare.com/client/v4/accounts/{account}/ai/v1/chat/completions",
