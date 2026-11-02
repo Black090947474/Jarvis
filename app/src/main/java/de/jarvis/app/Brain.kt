@@ -174,6 +174,14 @@ object Brains {
         if (!chat && p.groqKey.isNotBlank()) plan += Provider.GROQ to p.groqKey
         if (p.nvidiaKey.isNotBlank()) plan += Provider.NVIDIA to p.nvidiaKey
         if (chat && p.groqKey.isNotBlank()) plan += Provider.GROQ to p.groqKey
+        // Zusätzliche Anbieter (je ein eigenes Gratis-Konto) – Jarvis wechselt automatisch, wenn eines am Limit ist
+        for (x in p.extraList()) {
+            if (!x.optBoolean("on", true)) continue
+            val url = x.optString("url"); if (url.isBlank() || url.contains("{account}")) continue
+            val models = x.optString("model").split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            if (models.isEmpty()) continue
+            plan += Provider(x.optString("name", "Anbieter"), url, models, emptyList(), "max_tokens") to x.optString("key").ifBlank { "none" }
+        }
         if (p.mistralKey.isNotBlank()) plan += Provider.MISTRAL to p.mistralKey
         val later = p.geminiKey.isNotBlank() || p.anthropicKey.isNotBlank()
         val list = mutableListOf<Brain>()

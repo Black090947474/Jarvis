@@ -20,8 +20,18 @@ class Prefs(context: Context) {
         get() = sp.getString("groq_key", "") ?: ""
         set(v) = sp.edit().putString("groq_key", v.filter { it.isLetterOrDigit() && it.code < 128 || it == '_' }).apply()
 
+    /** Zusätzliche KI-Anbieter (JSON-Liste: id, name, url, key, model, on). */
+    var extraProviders: String
+        get() = sp.getString("extra_providers", "[]") ?: "[]"
+        set(v) = sp.edit().putString("extra_providers", v).apply()
+
+    fun extraList(): List<org.json.JSONObject> = try {
+        val a = org.json.JSONArray(extraProviders); (0 until a.length()).map { a.getJSONObject(it) }
+    } catch (_: Exception) { emptyList() }
+
     /** Mindestens ein KI-Schlüssel eingetragen? */
-    val hasAnyKey get() = nvidiaKey.isNotBlank() || mistralKey.isNotBlank() || groqKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank()
+    val hasAnyKey get() = nvidiaKey.isNotBlank() || mistralKey.isNotBlank() || groqKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank() ||
+        extraList().any { it.optBoolean("on", true) }
 
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""

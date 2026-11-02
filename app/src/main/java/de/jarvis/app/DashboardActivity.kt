@@ -288,6 +288,7 @@ class DashboardActivity : Activity() {
         tile("flash", "Taschenlampe", "An / aus") { toggleTorch() }
         tile("pin", "Parkplatz", "Merken & finden") { parkingDialog() }
         tile("song", "Lied erkennen", "Was läuft gerade?") { runTool { de.jarvis.app.tools.MusicTool.run(ToolContext(this), JSONObject()) } }
+        tile("brain", "KI-Anbieter", "Mehr Anbieter = weniger Pausen") { startActivity(Intent(this, ProvidersActivity::class.java)) }
         tile("storage", "Update", "Neue Version installieren") { Updater.check(this, quiet = false) }
         tile("bolt", "Profi-Modus", "Systemschalter direkt (Shizuku)") { startActivity(Intent(this, ProActivity::class.java)) }
         tile("shield", "Alles freigeben", "Assistent für alle Rechte") { startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) }

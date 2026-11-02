@@ -265,7 +265,7 @@ class AiClient(
             readTimeout = if (vision) 45_000 else 28_000
             doOutput = true
             setRequestProperty("content-type", "application/json")
-            setRequestProperty("authorization", "Bearer $apiKey")
+            if (apiKey.isNotBlank() && apiKey != "none") setRequestProperty("authorization", "Bearer $apiKey")
         }
         try {
             conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }

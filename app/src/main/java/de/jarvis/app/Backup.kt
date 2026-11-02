@@ -13,7 +13,7 @@ import java.io.File
 /** Sicherung aller Jarvis-Daten in eine JSON-Datei (ohne API-Schlüssel) und Wiederherstellung. */
 object Backup {
     private val FILES = listOf("jarvis", "jarvis_agenda", "jarvis_extra", "jarvis_memory", "jarvis_convo")
-    private val SECRET = setOf("groq_key", "gemini_key", "anthropic_key", "mistral_key", "nvidia_key", "github_key", "action_pin", "remote_code")
+    private val SECRET = setOf("groq_key", "gemini_key", "anthropic_key", "mistral_key", "nvidia_key", "github_key", "action_pin", "remote_code", "extra_providers")
 
     fun export(ctx: Context): String = try {
         val root = JSONObject().put("app", "jarvis").put("version", 1).put("at", System.currentTimeMillis())

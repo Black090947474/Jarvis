@@ -76,6 +76,8 @@ class MainActivity : Activity() {
         claudeInput = input("Claude API-Key (optional, als Ersatz)", prefs.anthropicKey, secret = true)
         col.addView(claudeInput)
         col.addView(link("Optional, kostet Guthaben: console.anthropic.com", "https://console.anthropic.com/settings/keys"))
+        col.addView(button("Weitere KI-Anbieter (${prefs.extraList().count { it.optBoolean("on", true) }} zusätzlich) – weniger Pausen") {
+            save(); startActivity(Intent(this, ProvidersActivity::class.java)) })
         nameInput = input("Dein Name (optional)", prefs.userName)
         col.addView(nameInput)
         col.addView(button("Speichern") { save(); toast("Gespeichert") })
