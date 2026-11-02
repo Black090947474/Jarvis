@@ -130,7 +130,7 @@ class ChatActivity : Activity() {
     private fun buildUi() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(BG1, BG2))
+            background = if (Ui.light) GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(BG1, BG2)) else Ui(this@ChatActivity).aurora()
         }
 
         // Kopfzeile
@@ -305,13 +305,13 @@ class ChatActivity : Activity() {
         }
         val tv = TextView(this).apply {
             text = if (mine) m.text else markdown(m.text)
-            textSize = 15.5f; setTextColor(if (mine) Color.WHITE else FG); setLineSpacing(0f, 1.25f)
+            textSize = 15.5f; setTextColor(if (mine) Color.rgb(3, 16, 32) else FG); setLineSpacing(0f, 1.25f)
             setTextIsSelectable(true)
             setPadding(px(14), px(10), px(14), px(10))
             background = GradientDrawable().apply {
                 if (mine) {
                     cornerRadii = floatArrayOf(16 * dp, 16 * dp, 16 * dp, 16 * dp, 4 * dp, 4 * dp, 16 * dp, 16 * dp)
-                    colors = intArrayOf(Color.rgb(10, 168, 232), Color.rgb(47, 91, 255))
+                    colors = intArrayOf(Color.rgb(0, 229, 255), Color.rgb(61, 107, 255), Color.rgb(138, 92, 255))
                     orientation = GradientDrawable.Orientation.TL_BR
                 } else {
                     cornerRadii = floatArrayOf(4 * dp, 4 * dp, 16 * dp, 16 * dp, 16 * dp, 16 * dp, 16 * dp, 16 * dp)

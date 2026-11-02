@@ -61,7 +61,7 @@ class CalendarActivity : Activity() {
             startActivity(Intent(this, ChatActivity::class.java).setAction(Intent.ACTION_SEND).setType("text/plain")
                 .putExtra(Intent.EXTRA_TEXT, "Was steht am ${selected} an, und wann habe ich da Zeit?"))
         })
-        setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
+        setContentView(ScrollView(this).apply { background = ui.aurora(); addView(col) })
     }
 
     override fun onResume() { super.onResume(); render() }

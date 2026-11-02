@@ -53,7 +53,7 @@ class HoloView(context: Context) : GLSurfaceView(context) {
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         // Halbe Auflösung reicht für ein weiches Hologramm und spart Akku
-        if (w > 0 && h > 0) holder.setFixedSize((w * 0.55f).toInt(), (h * 0.55f).toInt())
+        if (w > 0 && h > 0) holder.setFixedSize((w * 0.65f).toInt(), (h * 0.65f).toInt())
     }
 
     private var downX = 0f; private var downY = 0f; private var lastX = 0f; private var moved = false
@@ -293,37 +293,67 @@ float sdf(vec3 p){
 vec3 objp(vec3 p){p.xz=rot(yaw)*p.xz;p.yz=rot(pitch)*p.yz;return p;}
 vec3 nrm(vec3 p){vec2 e=vec2(.002,0.);return normalize(vec3(sdf(p+e.xyy)-sdf(p-e.xyy),sdf(p+e.yxy)-sdf(p-e.yxy),sdf(p+e.yyx)-sdf(p-e.yyx)));}
 float hash(vec3 p){return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453);}
+vec3 pal(float y){ y=clamp(y*.45+.5,0.,1.); return mix(mix(vec3(.15,.55,1.),vec3(.1,.9,1.),smoothstep(0.,.55,y)),vec3(.62,.5,1.),smoothstep(.75,1.1,y)); }
+/* Oberflächenmuster: Breitenlinien + zufällige „Leiterbahnen“ mit wandernden Datenpulsen */
+float pattern(vec3 o,float k){
+  float lat=smoothstep(.975,1.,abs(sin(o.y*k)));
+  float cx=smoothstep(.97,1.,abs(sin(o.x*44.)))*step(.74,hash(floor(o*vec3(1.,9.,9.))));
+  float cz=smoothstep(.97,1.,abs(sin(o.z*44.)))*step(.74,hash(floor(o*vec3(9.,9.,1.))+3.));
+  return lat*.7+(cx+cz)*.55;
+}
 void main(){
   vec2 uv=(gl_FragCoord.xy-.5*res)/res.y;
-  vec3 ro=vec3(cam.x,cam.y,cam.z), rd=normalize(vec3(uv,-1.6));
+  // gelegentliches Bild-Zucken (Glitch) in schmalen Streifen
+  float row=floor(uv.y*70.), gt=floor(t*10.);
+  uv.x+=step(.988,hash(vec3(row,gt,1.)))*(hash(vec3(row,gt,2.))-.5)*.05;
+  vec3 ro=cam, rd=normalize(vec3(uv,-1.6));
   float tt=0.,d=1.; bool hit=false; float glow=0.;
-  for(int i=0;i<96;i++){vec3 p=ro+rd*tt;d=sdf(p);glow+=.012/(.02+abs(d)*12.);if(d<.0015){hit=true;break;}tt+=d*.85;if(tt>14.)break;}
-  vec3 cyan=vec3(.25,.85,1.), white=vec3(.85,.98,1.);
+  for(int i=0;i<90;i++){vec3 p=ro+rd*tt;d=sdf(p);glow+=.010/(.02+abs(d)*14.);if(d<.0015){hit=true;break;}tt+=d*.85;if(tt>14.)break;}
   float speak=step(2.5,mode)*level;
-  vec3 col=cyan*glow*(.09+speak*.08);
+  bool isRound=scene>3.5&&scene<5.5;
+  float k=scene<.5?70.:(isRound?18.:24.);
+  vec3 col=vec3(.1,.75,1.)*glow*(.08+speak*.08);
   if(hit){
     vec3 p=ro+rd*tt; vec3 n=nrm(p); vec3 o=objp(p);
-    float fr=pow(1.-max(dot(n,-rd),0.),2.2);
-    bool isRound=scene>3.5&&scene<5.5;
-    float k=scene<.5?75.:(isRound?18.:24.);
-    float lines=smoothstep(.965,1.,abs(sin(o.y*k)));
-    float vl=smoothstep(.95,1.,abs(sin(atan(o.z,o.x)*(isRound?9.:24.))))*(isRound?.7:.15);
-    float dots=step(.993,hash(floor(o*(scene<.5?160.:70.))))*(.4+fr)*(.6+.4*sin(t*3.+o.x*40.));
+    vec3 c=pal(o.y);
+    float fr=pow(1.-max(dot(n,-rd),0.),2.4);
+    float pat=pattern(o,k);
+    float pulse=exp(-pow(fract(o.y*.9-t*.45)-.5,2.)*90.);
+    float dots=step(.994,hash(floor(o*(scene<.5?170.:70.))))*(.5+.5*sin(t*4.+o.x*50.));
     float diff=max(dot(n,normalize(vec3(.4,.6,.7))),0.);
-    float spd=mode>1.5&&mode<2.5?1.6:.55;
-    float band=exp(-pow((o.y-(fract(t*spd*.25)*3.-1.5))*7.,2.));
-    col=cyan*(.06+.22*diff)+white*fr*(1.25+speak*.8)+cyan*lines*.65+cyan*vl*.4+white*dots*.8+white*band*.3;
-    col+=cyan*glow*.05;
+    float spd=mode>1.5&&mode<2.5?1.8:.5;
+    float band=exp(-pow((o.y-(fract(t*spd*.25)*3.-1.5))*8.,2.));
+    col=c*(.05+.16*diff)+vec3(.85,.97,1.)*fr*(1.15+speak*.9)+c*pat*(.55+pulse*1.2)+vec3(1.)*dots*.9+vec3(.8,.95,1.)*band*.32;
+    // Rückseite durchscheinen lassen (echtes Hologramm ist transparent)
+    vec3 q=p+rd*.02; float t2=0.;
+    for(int j=0;j<36;j++){float dd=-sdf(q+rd*t2); if(dd<.003)break; t2+=max(dd,.012);}
+    vec3 pb=q+rd*t2; vec3 ob=objp(pb);
+    col+=pal(ob.y)*pattern(ob,k)*.13+pal(ob.y)*.035;
+    // leichte Farbsäume am Rand (wie bei echter Projektion)
+    col+=vec3(.55,.25,1.)*pow(fr,3.)*.35;
   }
-  if(scene>.5){
-    // Projektor: Lichtkegel und leuchtender Ring unten
+  // Datenringe / Projektor
+  if(scene<.5){
+    for(int r=0;r<2;r++){float fr2=float(r); float cy=-.28+fr2*.33; float rx=.29+fr2*.06;
+      vec2 e=vec2(uv.x/rx,(uv.y-cy)/(.045+fr2*.01)); float el=length(e);
+      float ang=atan(e.y,e.x)+t*(fr2>.5?-.6:.8);
+      float dash=step(.45,fract(ang*3.1831*(4.+fr2*3.)));
+      float back=step(0.,e.y); // hintere Hälfte schwächer
+      col+=vec3(.2,.85,1.)*exp(-pow((el-1.)*60.,2.))*dash*(back>.5?.35:.9);}
+  } else {
     float by=-.43; float y=uv.y-by;
-    if(y>0.){float hw=.16+y*.55; col+=cyan*(1.-smoothstep(hw*.75,hw,abs(uv.x)))*(1.-smoothstep(0.,.95,y))*.10;}
+    if(y>0.){float hw=.16+y*.55; col+=vec3(.15,.75,1.)*(1.-smoothstep(hw*.75,hw,abs(uv.x)))*(1.-smoothstep(0.,.95,y))*.09;}
     float e=length(vec2(uv.x/.24,(uv.y-by)/.032));
-    col+=cyan*exp(-pow((e-1.)*9.,2.))*1.1+cyan*(1.-smoothstep(0.,.75,e))*.35;
+    col+=vec3(.2,.85,1.)*exp(-pow((e-1.)*9.,2.))*1.1+vec3(.2,.85,1.)*(1.-smoothstep(0.,.75,e))*.3;
+    float e2=length(vec2(uv.x/.32,(uv.y-by)/.045)); float a2=atan(uv.y-by,uv.x)+t*.7;
+    col+=vec3(.5,.45,1.)*exp(-pow((e2-1.)*40.,2.))*step(.5,fract(a2*2.5))*.6;
   }
-  col*=.85+.15*sin(gl_FragCoord.y*1.6);
-  col*=fade*(.94+.06*sin(t*31.));
+  // aufsteigende Funken
+  vec2 sp=uv*vec2(26.,14.)+vec2(0.,-t*1.2); vec2 cell=floor(sp); vec2 f=fract(sp)-.5;
+  float h=hash(vec3(cell,7.)); float spark=step(.93,h)*smoothstep(.12,0.,length(f+vec2(h-.5,0.)*.6));
+  col+=vec3(.6,.95,1.)*spark*smoothstep(.75,.0,abs(uv.x))*.8;
+  col*=.86+.14*sin(gl_FragCoord.y*1.7);
+  col*=fade*(.95+.05*sin(t*29.));
   col=clamp(col,0.,1.);
   gl_FragColor=vec4(col,max(col.r,max(col.g,col.b)));
 }

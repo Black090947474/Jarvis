@@ -27,26 +27,32 @@ class Ui(private val a: Activity) {
         if (bold) typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
     }
 
-    fun section(t: String) = text(t.uppercase(), 10.5f, if (light) MUTED else RED, false).apply {
-        letterSpacing = 0.22f; typeface = Typeface.MONOSPACE
+    fun section(t: String) = text(t, 16f, FG, true).apply {
+        letterSpacing = 0f
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(22); bottomMargin = px(4) }
     }
 
-    /** Glas-Kachel im HUD-Stil: Verlauf, feiner Rand und leuchtende Kante oben links. */
-    fun glass(radius: Int = 16): android.graphics.drawable.Drawable {
-        val base = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(CARD2, CARD, Color.argb(255, Color.red(CARD) * 2 / 3, Color.green(CARD) * 2 / 3, Color.blue(CARD) * 2 / 3))).apply {
-            cornerRadius = radius * dp; setStroke(px(1), LINE) }
-        if (light) return base
-        val edge = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(RED, Color.argb(0, Color.red(RED), Color.green(RED), Color.blue(RED))))
-        return android.graphics.drawable.LayerDrawable(arrayOf(base, edge)).apply {
-            setLayerInset(1, px(radius), 0, px(120), 0); setLayerHeight(1, px(1)); setLayerGravity(1, Gravity.TOP or Gravity.FILL_HORIZONTAL)
-            setLayerInsetLeft(1, px(radius)); setLayerInsetRight(1, px(110))
-        }
+    /** Glas-Kachel: weicher Verlauf, feiner heller Rand, große Rundung (moderner Look). */
+    fun glass(radius: Int = 24): android.graphics.drawable.Drawable =
+        if (light) GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.WHITE, CARD2)).apply { cornerRadius = radius * dp; setStroke(px(1), LINE) }
+        else GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.argb(235, Color.red(CARD2), Color.green(CARD2), Color.blue(CARD2)),
+            Color.argb(215, Color.red(CARD), Color.green(CARD), Color.blue(CARD)))).apply {
+            cornerRadius = radius * dp; setStroke(px(1), Color.argb(26, 255, 255, 255)) }
+
+    /** Hintergrund mit sanftem „Polarlicht“ (Cyan oben links, Blau rechts, Violett unten). */
+    fun aurora(): android.graphics.drawable.Drawable {
+        if (light) return android.graphics.drawable.ColorDrawable(BG)
+        val w = a.resources.displayMetrics.widthPixels.toFloat()
+        fun glow(c: Int, alpha: Int, cx: Float, cy: Float, r: Float) = GradientDrawable().apply {
+            gradientType = GradientDrawable.RADIAL_GRADIENT; colors = intArrayOf(Color.argb(alpha, Color.red(c), Color.green(c), Color.blue(c)), Color.argb(0, Color.red(c), Color.green(c), Color.blue(c)))
+            setGradientCenter(cx, cy); gradientRadius = r }
+        return android.graphics.drawable.LayerDrawable(arrayOf(android.graphics.drawable.ColorDrawable(BG),
+            glow(RED, 46, 0.1f, 0.03f, w * 0.85f), glow(ACCENT2, 50, 1f, 0.22f, w * 0.8f), glow(ACCENT3, 38, 0.5f, 1f, w * 0.95f)))
     }
 
     fun card(vertical: Boolean = true) = LinearLayout(a).apply {
         orientation = if (vertical) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-        background = glass()
+        background = glass(22)
         setPadding(px(16), px(14), px(16), px(14))
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(10) }
     }
@@ -93,20 +99,22 @@ class Ui(private val a: Activity) {
             w.decorView.systemUiVisibility = w.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         }
 
-        val BG get() = if (light) Color.rgb(244, 245, 251) else if (black) Color.rgb(0, 0, 0) else if (blue) Color.rgb(2, 7, 14) else Color.rgb(10, 5, 16)
-        val CARD get() = if (light) Color.rgb(255, 255, 255) else if (black) Color.rgb(14, 14, 18) else if (blue) Color.rgb(7, 22, 38) else Color.rgb(22, 11, 31)
-        val CARD2 get() = if (light) Color.rgb(236, 236, 248) else if (black) Color.rgb(22, 22, 28) else if (blue) Color.rgb(14, 40, 64) else Color.rgb(30, 15, 42)
-        val LINE get() = if (light) Color.rgb(214, 214, 230) else if (black) Color.rgb(44, 44, 54) else if (blue) Color.rgb(24, 62, 92) else Color.rgb(58, 28, 78)
+        val BG get() = if (light) Color.rgb(244, 245, 251) else if (black) Color.rgb(0, 0, 0) else if (blue) Color.rgb(3, 8, 20) else Color.rgb(10, 5, 16)
+        val CARD get() = if (light) Color.rgb(255, 255, 255) else if (black) Color.rgb(14, 14, 18) else if (blue) Color.rgb(13, 21, 38) else Color.rgb(22, 11, 31)
+        val CARD2 get() = if (light) Color.rgb(236, 236, 248) else if (black) Color.rgb(22, 22, 28) else if (blue) Color.rgb(22, 32, 54) else Color.rgb(30, 15, 42)
+        val LINE get() = if (light) Color.rgb(214, 214, 230) else if (black) Color.rgb(44, 44, 54) else if (blue) Color.rgb(36, 48, 74) else Color.rgb(58, 28, 78)
         /** Akzentfarbe (heißt aus historischen Gründen RED). */
         val RED get() = when (accent) {
             "CYAN" -> Color.rgb(0, 210, 255); "GRUEN" -> Color.rgb(40, 220, 140); "ROT" -> Color.rgb(255, 60, 80); "GOLD" -> Color.rgb(255, 190, 60)
-            else -> if (light) Color.rgb(118, 70, 255) else if (blue) Color.rgb(0, 224, 255) else Color.rgb(214, 64, 255)
+            else -> if (light) Color.rgb(118, 70, 255) else if (blue) Color.rgb(0, 229, 255) else Color.rgb(214, 64, 255)
         }
         val ACCENT2 get() = when (accent) {
             "CYAN" -> Color.rgb(120, 240, 255); "GRUEN" -> Color.rgb(150, 255, 200); "ROT" -> Color.rgb(255, 140, 90); "GOLD" -> Color.rgb(255, 230, 140)
-            else -> if (light) Color.rgb(214, 64, 255) else if (blue) Color.rgb(47, 123, 255) else Color.rgb(255, 72, 176)
+            else -> if (light) Color.rgb(214, 64, 255) else if (blue) Color.rgb(61, 107, 255) else Color.rgb(255, 72, 176)
         }
-        val MUTED get() = if (light) Color.rgb(110, 112, 132) else if (blue) Color.rgb(100, 140, 170) else Color.rgb(150, 128, 166)
+        /** Dritte Verlaufsfarbe (Violett) für den modernen Look. */
+        val ACCENT3 get() = if (light) Color.rgb(255, 72, 176) else Color.rgb(138, 92, 255)
+        val MUTED get() = if (light) Color.rgb(110, 112, 132) else if (blue) Color.rgb(127, 147, 173) else Color.rgb(150, 128, 166)
         val SOFT get() = if (light) Color.rgb(60, 64, 84) else Color.rgb(205, 214, 226)
         val GREEN = Color.rgb(50, 220, 130)
         val AMBER = Color.rgb(255, 184, 60)

@@ -27,7 +27,7 @@ class ProActivity : Activity() {
         Ui.load(Prefs(this)); ui = Ui(this)
         window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
         col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(18), ui.px(22), ui.px(18), ui.px(40)) }
-        setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
+        setContentView(ScrollView(this).apply { background = ui.aurora(); addView(col) })
     }
 
     override fun onResume() { super.onResume(); build() }

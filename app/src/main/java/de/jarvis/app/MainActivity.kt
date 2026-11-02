@@ -130,7 +130,7 @@ class MainActivity : Activity() {
             "Tipp: Nach einem Neustart des Handys einmal diese App öffnen – Android erlaubt " +
             "aus Datenschutzgründen nicht, dass das Mikrofon von selbst wieder angeht.", 13f, MUTED))
 
-        setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
+        setContentView(ScrollView(this).apply { background = Ui(this@MainActivity).aurora(); addView(col) })
     }
 
     // ---------- Zweites Handy ----------

@@ -86,6 +86,13 @@ Für jede Funktion siehst du: Status (✓ erlaubt / ○ fehlt), wofür Jarvis si
 - **Hinweise**: Proaktive Hinweise sind standardmäßig **aus**. Eingeschaltet meldet Jarvis bevorstehende Termine (mit Wegzeit-Puffer), Kalender-Konflikte und morgens einen Tagesüberblick. Uhrzeit, Vorlauf und Puffer stellst du dort ein; jede Art ist auch eine eigene Benachrichtigungs-Kategorie in Android.
 - **Zuhause = aktueller Ort** speichert dein Zuhause für ortsbasierte Erinnerungen.
 
+### Neu in Version 27 – Großes Design-Update & besseres Hologramm
+- **Neuer Look:** sanftes „Polarlicht“ im Hintergrund (Cyan, Blau, Violett), runde Glas-Kacheln, große Begrüßung mit Farbverlauf.
+- **Startseite als Kachel-Raster:** „Frag Jarvis“-Karte mit leuchtender Kugel und Schnellknöpfen (Briefing, Scan, Schreiben), große Wetterkachel, „Als Nächstes“, Akku-Ring, Nachrichten, „Für dich“-Vorschläge.
+- **Schwebende Leiste unten** mit großem **Mikrofon-Knopf in der Mitte**.
+- **Chat:** Blasen mit Farbverlauf, Polarlicht-Hintergrund.
+- **Hologramm 2.0:** durchsichtig (man sieht die Rückseite durchschimmern), leuchtende Leiterbahnen mit wandernden Datenpulsen, Farbverlauf von Cyan zu Violett, kreisende Datenringe um den Kopf, aufsteigende Funken, kurzes „Glitch“-Flackern, höhere Auflösung.
+
 ### Neu in Version 26 – Nachrichten in allen Apps + Design
 - **Nachrichten über Snapchat, Instagram, WhatsApp, Telegram, Discord, Signal, Messenger, TikTok:** „Jarvis, schreib Lena auf Snapchat: Bin gleich da.“ Jarvis fragt einmal nach („An Lena auf Snapchat: … senden?“), nach deinem Ja öffnet er die App, sucht die Person, öffnet den Chat, schreibt und sendet. Braucht die Bildschirmsteuerung (Profi-Modus → Auto-Einrichtung). Der Name muss so heißen wie in der App.
 - **Tools-Seite neu:** Suchfeld, Kategorien (Highlights, Kommunikation, Alltag, Schule & Lernen, Spaß, Jarvis & System), Glas-Kacheln mit Symbol-Hintergrund.

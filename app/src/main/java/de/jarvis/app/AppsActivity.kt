@@ -44,7 +44,7 @@ class AppsActivity : Activity() {
         col.addView(search, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(12) })
         grid = GridLayout(this).apply { columnCount = 4 }
         col.addView(grid, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(12) })
-        setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(col) })
+        setContentView(ScrollView(this).apply { background = ui.aurora(); addView(col) })
         thread {
             val pm = packageManager
             val list = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
