@@ -54,7 +54,7 @@ object Notifier {
         channels(ctx)
         val tap = open ?: PendingIntent.getActivity(ctx, 0, Intent(ctx, DashboardActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val n = Notification.Builder(ctx, channel)
-            .setSmallIcon(R.drawable.ic_jarvis)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle(title).setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setAutoCancel(true).setContentIntent(tap)

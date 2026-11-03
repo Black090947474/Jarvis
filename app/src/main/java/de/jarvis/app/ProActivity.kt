@@ -34,6 +34,77 @@ class ProActivity : Activity() {
 
     private fun toast(t: String) = Toast.makeText(this, t, Toast.LENGTH_LONG).show()
 
+    private fun dialog(title: String, msg: String) = runOnUiThread {
+        android.app.AlertDialog.Builder(this).setTitle(title).setMessage(msg).setPositiveButton("OK", null).show() }
+
+    private fun runCmd(action: String, on: Boolean? = null, value: String? = null) = thread {
+        val (cmd, err) = de.jarvis.app.logic.ProCommands.build(action, on, value, android.os.Build.VERSION.SDK_INT)
+        val r = cmd?.shell?.map { ProShell.run(it) }?.lastOrNull()
+        runOnUiThread { toast(if (cmd == null) err ?: "Fehler" else if (r?.first == 0) cmd.done else "Abgelehnt: ${r?.second?.take(100)}") }
+    }
+
+    /** Profi-Werkzeuge: Tempo, Speicher, Akku, Werbeblocker, Apps einfrieren, Rechte, Fehlerbericht. */
+    private fun tools() {
+        col.addView(ui.section("⚡ Tempo & Speicher"))
+        col.addView(ui.button("Handy schneller machen (Animationen ×2)") { runCmd("animations", value = "schnell") })
+        col.addView(ui.button("Animationen wieder normal", false) { runCmd("animations", value = "normal") })
+        col.addView(ui.button("Cache aller Apps leeren", false) { runCmd("clear_cache") })
+        col.addView(ui.button("Hintergrund-Apps beenden (RAM frei)", false) { runCmd("kill_background") })
+
+        col.addView(ui.section("🔋 Akku"))
+        col.addView(ui.button("Akkufresser anzeigen", false) { toast("Lese Akku-Statistik …"); thread { dialog("🔋 Akkufresser", ProTools.batteryHogs(this)) } })
+
+        col.addView(ui.section("🛡 Werbung & Rechte"))
+        col.addView(ui.button("Werbeblocker an", false) { runCmd("adblock", true) })
+        col.addView(ui.button("Werbeblocker aus", false) { runCmd("adblock", false) })
+        col.addView(ui.button("Wer darf was? (Mikrofon, Kamera, Standort …)", false) {
+            val keys = de.jarvis.app.logic.ProCommands.PERMS.keys.toTypedArray()
+            android.app.AlertDialog.Builder(this).setTitle("Welche Berechtigung?").setItems(keys.map { it.replaceFirstChar { c -> c.uppercase() } }.toTypedArray()) { _, i ->
+                thread { dialog("Dürfen: ${keys[i]}", ProTools.whoHas(this, keys[i]) + "\n\nWegnehmen: „Jarvis, nimm <App> das ${keys[i].replaceFirstChar { c -> c.uppercase() }} weg“.") }
+            }.show()
+        })
+
+        col.addView(ui.section("🧊 Apps einfrieren"))
+        col.addView(ui.text("Eingefrorene Apps verschwinden, bis du sie wieder auftaust – es wird nichts gelöscht.", 12f, MUTED))
+        col.addView(ui.button("Vorinstallierte Extras einfrieren …", false) { thread {
+            val list = ProTools.bloatPresent(this)
+            runOnUiThread {
+                if (list.isEmpty()) { toast("Nichts gefunden – schon alles aufgeräumt."); return@runOnUiThread }
+                val checked = BooleanArray(list.size)
+                android.app.AlertDialog.Builder(this).setTitle("Was soll weg?")
+                    .setMultiChoiceItems(list.map { it.second }.toTypedArray(), checked) { _, i, v -> checked[i] = v }
+                    .setPositiveButton("Einfrieren") { _, _ -> thread {
+                        val chosen = list.filterIndexed { i, _ -> checked[i] }
+                        val ok = chosen.count { (pkg, _) -> ProShell.run("pm disable-user --user 0 $pkg").first == 0 }
+                        runOnUiThread { toast("$ok von ${chosen.size} eingefroren."); build() } } }
+                    .setNegativeButton("Abbrechen", null).show()
+            } } })
+        col.addView(ui.button("Eingefrorene Apps auftauen …", false) { thread {
+            val list = ProTools.frozen(this)
+            runOnUiThread {
+                if (list.isEmpty()) { toast("Keine eingefrorenen Apps."); return@runOnUiThread }
+                val names = list.map { ProTools.label(this, it) }.toTypedArray()
+                android.app.AlertDialog.Builder(this).setTitle("Welche App auftauen?").setItems(names) { _, i -> runCmd("unfreeze", value = list[i]) }.show()
+            } } })
+
+        col.addView(ui.section("🖥 Anzeige"))
+        col.addView(ui.row().apply {
+            addView(ui.weighted(ui.button("Schrift größer", false) { runCmd("font_size", value = "größer") }))
+            addView(ui.weighted(ui.button("normal", false) { runCmd("font_size", value = "normal") }))
+        })
+        col.addView(ui.row().apply {
+            addView(ui.weighted(ui.button("Anzeige größer", false) { runCmd("display_size", value = "größer") }))
+            addView(ui.weighted(ui.button("normal", false) { runCmd("display_size", value = "normal") }))
+        })
+
+        col.addView(ui.section("🐞 Fehlerbericht"))
+        col.addView(ui.button("Fehlerbericht erstellen & teilen", false) { thread {
+            val r = ProTools.errorReport(this)
+            runOnUiThread { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_SUBJECT, "Jarvis Fehlerbericht").putExtra(Intent.EXTRA_TEXT, r), "Fehlerbericht teilen")) } } })
+        col.addView(ui.text("Updates installiert Jarvis im Profi-Modus jetzt ganz ohne Tippen.", 12f, GREEN).apply { setPadding(0, ui.px(12), 0, 0) })
+    }
+
     private fun build() {
         col.removeAllViews()
         col.addView(ui.row().apply {
@@ -66,6 +137,7 @@ class ProActivity : Activity() {
             test("Dunkelmodus an", "dark_mode", true)
             test("Dunkelmodus aus", "dark_mode", false)
             test("Screenshot machen", "screenshot", null)
+            tools()
             return
         }
 

@@ -44,6 +44,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
@@ -80,8 +81,8 @@
     <application
         android:name=".JarvisApp"
         android:allowBackup="false"
-        android:icon="@drawable/ic_jarvis"
-        android:roundIcon="@drawable/ic_jarvis"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="Jarvis"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
@@ -150,20 +151,6 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
-
-        <!-- Eigenes App-Symbol "Jarvis Chat" auf dem Startbildschirm -->
-        <activity-alias
-            android:name=".ChatLauncher"
-            android:targetActivity=".ChatActivity"
-            android:exported="true"
-            android:label="Jarvis Chat"
-            android:icon="@drawable/ic_jarvis_chat"
-            android:roundIcon="@drawable/ic_jarvis_chat">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
 
         <activity
             android:name=".StationActivity"

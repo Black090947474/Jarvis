@@ -128,7 +128,7 @@ class WakeWordService : Service() {
         val pi = PendingIntent.getActivity(this, 1, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n = Notification.Builder(this, CH_WAKE)
-            .setSmallIcon(R.drawable.ic_jarvis)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("Jarvis")
             .setContentText("Ich höre zu – tippen zum Öffnen")
             .setCategory(Notification.CATEGORY_CALL)
@@ -158,7 +158,7 @@ class WakeWordService : Service() {
         val stop = PendingIntent.getService(this, 2,
             Intent(this, WakeWordService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
         return Notification.Builder(this, CH_STATUS)
-            .setSmallIcon(R.drawable.ic_jarvis)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("Jarvis ist bereit")
             .setContentText(text)
             .setOngoing(true)

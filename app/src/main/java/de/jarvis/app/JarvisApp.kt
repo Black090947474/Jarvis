@@ -43,7 +43,7 @@ class JarvisApp : Application() {
             e.stackTrace.filter { it.className.startsWith("de.jarvis") }.take(4)
                 .joinToString("\n") { "${it.fileName}:${it.lineNumber} ${it.methodName}" }
         nm.notify(99, Notification.Builder(this, CH)
-            .setSmallIcon(R.drawable.ic_jarvis)
+            .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle("Jarvis ist abgestürzt – Screenshot an Claude schicken")
             .setContentText(short.lineSequence().first())
             .setStyle(Notification.BigTextStyle().bigText(short))

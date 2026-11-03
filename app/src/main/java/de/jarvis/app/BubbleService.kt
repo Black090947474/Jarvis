@@ -39,7 +39,7 @@ class BubbleService : Service() {
         val nm = getSystemService(NotificationManager::class.java)!!
         nm.createNotificationChannel(NotificationChannel(CH, "Schwebender Jarvis", NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(false) })
         val stop = PendingIntent.getService(this, 1, Intent(this, BubbleService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
-        val n = Notification.Builder(this, CH).setSmallIcon(R.drawable.ic_jarvis).setContentTitle("Schwebender Jarvis ist an")
+        val n = Notification.Builder(this, CH).setSmallIcon(R.drawable.ic_notify).setContentTitle("Schwebender Jarvis ist an")
             .setContentText("Kugel antippen = reden · ziehen = verschieben")
             .addAction(Notification.Action.Builder(null, "Ausblenden", stop).build()).setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(NOTIF, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)

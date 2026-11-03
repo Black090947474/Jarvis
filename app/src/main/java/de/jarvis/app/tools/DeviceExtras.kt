@@ -63,23 +63,45 @@ object SystemControlTool : JarvisTool {
     override val permissions = emptyList<String>()
 
     override val definition: JSONObject = JSONObject("""
-{"name":"system_control","description":"Profi-Modus: schaltet Systemfunktionen direkt (ohne Einstellungen zu öffnen). action: airplane, mobile_data, wifi, bluetooth, nfc, location, dark_mode, battery_saver, dnd (Nicht stören) mit on=true/false; screen_timeout (value = Sekunden); force_stop / uninstall (value = Paketname, vorher apps bzw. open_app nutzen um ihn zu finden); screenshot; screen_record (value = Sekunden); reboot. force_stop/uninstall/reboot brauchen confirmed=true nach Ja des Nutzers.",
+{"name":"system_control","description":"Profi-Modus: Systemfunktionen direkt. Schalter mit on=true/false: airplane, mobile_data, wifi, bluetooth, nfc, location, dark_mode, battery_saver, dnd, adblock (Werbeblocker fürs ganze Handy), auto_rotate. screen_timeout (value = Sekunden). animations (value schnell|aus|normal – 'mach das Handy schneller' = schnell). clear_cache (Cache aller Apps leeren), kill_background (Hintergrund-Apps beenden / RAM frei). lock_screen (Bildschirm sperren). font_size / display_size (value größer|sehr groß|kleiner|normal). App-Aktionen mit app = App-Name oder Paketname: force_stop, uninstall, freeze (einfrieren, umkehrbar), unfreeze, restrict_background (on=true bremsen, false wieder normal), permission (permission = mikrofon|kamera|standort|kontakte|fotos|benachrichtigungen|kalender|sms|telefon|nahe geräte; on=true erlauben, false wegnehmen). Auslesen: battery_hogs (größte Akkufresser), who_has (permission = …: welche Apps das dürfen), frozen_list (eingefrorene Apps), error_report (Fehlerbericht). screenshot, screen_record (value = Sekunden), reboot. force_stop/uninstall/freeze/reboot und permission mit on=true brauchen confirmed=true nach Ja des Nutzers.",
  "input_schema":{"type":"object","properties":{
-  "action":{"type":"string","enum":["airplane","mobile_data","wifi","bluetooth","nfc","location","dark_mode","battery_saver","dnd","screen_timeout","force_stop","uninstall","screenshot","screen_record","reboot"]},
-  "on":{"type":"boolean"},"value":{"type":"string"},"confirmed":{"type":"boolean"}},"required":["action"]}}
+  "action":{"type":"string","enum":["airplane","mobile_data","wifi","bluetooth","nfc","location","dark_mode","battery_saver","dnd","adblock","auto_rotate","screen_timeout","animations","clear_cache","kill_background","lock_screen","font_size","display_size","force_stop","uninstall","freeze","unfreeze","restrict_background","permission","battery_hogs","who_has","frozen_list","error_report","screenshot","screen_record","reboot"]},
+  "on":{"type":"boolean"},"value":{"type":"string"},"app":{"type":"string"},"permission":{"type":"string"},"confirmed":{"type":"boolean"}},"required":["action"]}}
 """.trimIndent())
 
+    private val APP_ACTIONS = setOf("force_stop", "uninstall", "freeze", "unfreeze", "restrict_background", "permission")
+
     override fun run(t: ToolContext, a: JSONObject): String {
+        val ctx = t.ctx
+        val action = a.optString("action")
+        if (action == "who_has") {
+            val key = de.jarvis.app.logic.ProCommands.permKey(a.optString("permission").ifBlank { a.optString("value") }) ?: return Res.error("Welche Berechtigung?")
+            return Res.ok(de.jarvis.app.ProTools.whoHas(ctx, key))
+        }
+        if (action == "error_report") return Res.ok(de.jarvis.app.ProTools.errorReport(ctx).take(3000))
         if (!de.jarvis.app.ProShell.ready) return Res.noPermission("Systemschalter",
             "Dafür muss der Profi-Modus aktiv sein: Jarvis → Tools → „Profi-Modus“ (Shizuku starten und Jarvis erlauben).")
+        if (action == "battery_hogs") return Res.ok(de.jarvis.app.ProTools.batteryHogs(ctx))
+        if (action == "frozen_list") {
+            val f = de.jarvis.app.ProTools.frozen(ctx)
+            return Res.ok(if (f.isEmpty()) "Keine eingefrorenen Apps." else "Eingefroren: " + f.joinToString(", ") { de.jarvis.app.ProTools.label(ctx, it) })
+        }
         val on = if (a.has("on")) a.optBoolean("on") else null
-        val (cmd, err) = de.jarvis.app.logic.ProCommands.build(a.optString("action"), on, a.optString("value"), android.os.Build.VERSION.SDK_INT)
+        var value = a.optString("value")
+        if (action in APP_ACTIONS) {
+            val name = a.optString("app").ifBlank { value }
+            val pkg = de.jarvis.app.ProTools.resolve(ctx, name) ?: return Res.error("Die App „$name“ finde ich nicht.")
+            value = if (action == "permission") pkg + " " + a.optString("permission") else pkg
+        }
+        val (cmd, err) = de.jarvis.app.logic.ProCommands.build(action, on, value, android.os.Build.VERSION.SDK_INT)
         if (cmd == null) return Res.error(err ?: "Geht nicht.")
-        if (cmd.confirm != null && !a.optBoolean("confirmed")) return Res.confirm(cmd.confirm)
+        val label = if (action in APP_ACTIONS) de.jarvis.app.ProTools.label(ctx, value.substringBefore(' ')) else ""
+        fun named(s: String) = if (label.isNotBlank()) s.replace(value.substringBefore(' '), label) else s
+        if (cmd.confirm != null && !a.optBoolean("confirmed")) return Res.confirm(named(cmd.confirm))
         for (c in cmd.shell) {
             val (code, out) = de.jarvis.app.ProShell.run(c)
             if (code != 0 && !c.endsWith("&")) return Res.error("Das System hat abgelehnt: ${out.take(120).ifBlank { "Code $code" }}")
         }
-        return Res.ok(cmd.done)
+        return Res.ok(named(cmd.done))
     }
 }

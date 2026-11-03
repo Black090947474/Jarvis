@@ -54,6 +54,7 @@ object Updater {
                 when {
                     info == null -> if (!quiet) Toast.makeText(a, "Konnte nicht nach Updates suchen (Internet?).", Toast.LENGTH_LONG).show()
                     info.code <= mine -> if (!quiet) Toast.makeText(a, "Jarvis ist aktuell (${installedName(a)}).", Toast.LENGTH_LONG).show()
+                    ProShell.ready -> install(a, info)   // Profi-Modus: ganz ohne Nachfrage
                     else -> AlertDialog.Builder(a).setTitle("Update verfügbar: Jarvis ${info.name}")
                         .setMessage("Du hast ${installedName(a)}. Jetzt herunterladen und installieren? Deine Daten und Einstellungen bleiben erhalten.")
                         .setPositiveButton("Installieren") { _, _ -> install(a, info) }
@@ -64,7 +65,7 @@ object Updater {
     }
 
     fun install(a: Activity, info: Info) {
-        if (!a.packageManager.canRequestPackageInstalls()) {
+        if (!ProShell.ready && !a.packageManager.canRequestPackageInstalls()) {
             Toast.makeText(a, "Bitte „Unbekannte Apps installieren“ für Jarvis erlauben, dann nochmal auf Update tippen.", Toast.LENGTH_LONG).show()
             a.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${a.packageName}")))
             return
@@ -84,6 +85,15 @@ object Updater {
                     break
                 }
                 conn.inputStream.use { inp -> f.outputStream().use { inp.copyTo(it) } }
+                if (ProShell.ready) {
+                    a.runOnUiThread { Toast.makeText(a, "Installiere Jarvis ${info.name} im Hintergrund – Jarvis startet gleich neu.", Toast.LENGTH_LONG).show() }
+                    if (ProTools.silentInstall(a, f)) return@thread
+                    if (!a.packageManager.canRequestPackageInstalls()) {
+                        a.runOnUiThread { Toast.makeText(a, "Stilles Update ging nicht – bitte „Unbekannte Apps installieren“ erlauben.", Toast.LENGTH_LONG).show()
+                            a.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${a.packageName}"))) }
+                        return@thread
+                    }
+                }
                 val pi = a.packageManager.packageInstaller
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply { setAppPackageName(a.packageName) }
                 val id = pi.createSession(params)

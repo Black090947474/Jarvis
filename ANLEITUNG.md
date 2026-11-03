@@ -251,6 +251,12 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
 - 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
 
+## Profi-Werkzeuge (ab Version 30, braucht den Profi-Modus)
+Im Profi-Modus gibt es jetzt: Handy schneller (Animationen), Cache leeren, Hintergrund-Apps beenden, Akkufresser anzeigen und im Hintergrund bremsen,
+Werbeblocker fürs ganze Handy, „Wer darf mein Mikrofon/Standort …?“ und Rechte wegnehmen, vorinstallierte Extras einfrieren (umkehrbar),
+Schrift- und Anzeigegröße, Bildschirm sperren, automatisch drehen, Fehlerbericht zum Teilen – und Updates ganz ohne Tippen.
+Geschützte Apps (Family Link, Play-Dienste, Einstellungen, Telefon, Tastatur, Jarvis, Shizuku) fasst Jarvis nie an.
+
 ## Was Jarvis auf dem Handy kann
 | Sag zum Beispiel | Was passiert |
 |---|---|

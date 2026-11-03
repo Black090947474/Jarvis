@@ -93,6 +93,7 @@ object ToolRegistry {
             "kamera", "foto", "bild", "selfie", "screenshot", "bildschirm", "tipp", "scroll", "öffne", "app", "standort",
             "flugmodus", "mobile daten", "datenverbindung", "dunkelmodus", "dark mode", "energiespar", "stromspar", "nfc", "neustart", "neu starten",
             "deinstallier", "lösch die app", "beende", "schließ die app", "bildschirmaufnahme", "aufnehmen", "screenshot", "timeout", "wo bin", "navig", "fahr", "route", "nähe", "karte", "maps", "drehen", "nicht stören", "daten", "zurück", "sperr",
+            "cache", "speicher", "schneller", "langsam", "animation", "werbung", "werbeblock", "einfrier", "auftau", "akkufresser", "akku zieht", "verbraucht", "berechtigung", "darf", "rechte", "schrift", "anzeigegröße", "größer", "drehen", "rotation", "fehlerbericht", "absturz", "ram", "hintergrund", "brems",
             "like", "folg", "poste", "schick", "bildschirm", "was steht da", "was steht hier", "was ist das", "hier drauf", "geparkt", "park", "auto steht", "merk dir den ort", "wo steht"),
         "info" to listOf("wetter", "regen", "temperatur", "sonne", "grad", "kalt", "warm", "jacke", "schirm", "website",
             "webseite", "homepage", "zweite", "station", "anderen handy", "vergiss", "merk", "vokabel", "abfrag",
