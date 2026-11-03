@@ -74,7 +74,7 @@ object ToolRegistry {
     val all: List<JarvisTool> by lazy {
         listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool,
             WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool,
-            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool, LookScreenTool, CallControlTool, SystemControlTool, AppMessageTool)
+            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool, LookScreenTool, CallControlTool, SystemControlTool, AppMessageTool, ScreenTimeTool)
     }
 
     fun find(name: String): JarvisTool? = all.firstOrNull { it.name == name }
@@ -97,7 +97,7 @@ object ToolRegistry {
         "info" to listOf("wetter", "regen", "temperatur", "sonne", "grad", "kalt", "warm", "jacke", "schirm", "website",
             "webseite", "homepage", "zweite", "station", "anderen handy", "vergiss", "merk", "vokabel", "abfrag",
             "lern", "quiz", "teste mich", "karteikart", "übersetz", "auf englisch", "auf französisch", "auf spanisch", "dolmetsch",
-            "geschichte", "witz", "punkte", "spieleabend", "runde"),
+            "geschichte", "witz", "punkte", "spieleabend", "runde", "bildschirmzeit", "wie lange war ich", "am handy", "autopilot", "schlafmodus", "schulmodus", "limit"),
     )
 
     /** Welche Gruppen für diese Anfrage gebraucht werden ("core" immer). */

@@ -229,6 +229,8 @@
         <activity android:name=".ScanActivity" android:exported="false" android:screenOrientation="portrait" />
         <activity android:name=".FindActivity" android:exported="false" android:launchMode="singleTask" />
         <receiver android:name=".UpdateReceiver" android:exported="false" />
+        <receiver android:name=".AutoPilotReceiver" android:exported="false" />
+        <activity android:name=".AutoPilotActivity" android:exported="false" />
         <receiver
             android:name=".CallReceiver"
             android:exported="true">

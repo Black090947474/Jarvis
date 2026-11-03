@@ -166,6 +166,7 @@ object Scheduler {
         scheduleBriefing(ctx)
         scheduleAutomations(ctx)
         SmartHints.scheduleHome(ctx)
+        AutoPilot.scheduleAll(ctx)
     }
 
     /** Uhrzeit- und Orts-Automationen einplanen. */

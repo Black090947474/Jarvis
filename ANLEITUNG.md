@@ -229,6 +229,18 @@ Samsung beendet Hintergrund-Apps besonders gern:
 - Beenden: „Danke“, „Tschüss“ oder „Stopp“ sagen, kurz still sein oder die Zurück-Taste drücken.
 - Antippen des Bildschirms unterbricht Jarvis und er hört dir wieder zu.
 
+## Autopilot (ab Version 28)
+Werkzeuge → **Autopilot**: Hier schaltest du alles ein/aus, was Jarvis von selbst macht.
+- 🌙 **Schlafmodus** (Schlafenszeit einstellbar): Nicht stören, dunkler Bildschirm, Dunkelmodus (mit Profi-Modus). Morgens zurück.
+- ☀️ **Briefing beim ersten Entsperren** am Morgen.
+- ⏰ **Wecker nach Stundenplan** und 📋 **Abend-Check** um 20 Uhr (Termine, Packliste, Hausaufgaben, Akku).
+- 🏫 **Schulmodus**: im Unterricht nur Vibration (Stundenplan mit Uhrzeiten nötig, z. B. „08:00 Mathe“).
+- 🔋 **Akku-Wächter** unter 20 %, 🧹 **Aufräum-Hinweis** für alte Screenshots (Löschen nur nach Android-Bestätigung).
+- 🎂 **Geburtstage** mit vorbereitetem Gruß, 💡 **Fakt des Tages** mit Hologramm.
+- 💧 **Pausen-Erinnerung** nach 60 Min. Bildschirm, 📱 **Bildschirmzeit-Coach** mit Limits („Jarvis, TikTok höchstens 60 Minuten am Tag“).
+- 😴 **Gute-Nacht-Routine** und 📊 **Wochenrückblick** am Sonntag.
+Die Bildschirmzeit bleibt nur auf deinem Handy.
+
 ## Was Jarvis auf dem Handy kann
 | Sag zum Beispiel | Was passiert |
 |---|---|

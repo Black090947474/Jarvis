@@ -21,12 +21,20 @@ class JarvisAccessibility : AccessibilityService() {
 
     override fun onServiceConnected() { instance = this }
     private var lastPkg = ""
+    private var usagePkg = ""
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // „App wird geöffnet“-Automationen
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
-        if (pkg == lastPkg || pkg == packageName || pkg.startsWith("com.android.systemui")) return
+        if (pkg.startsWith("com.android.systemui")) return
+        // Bildschirmzeit-Coach: welche App ist gerade vorne (bleibt auf dem Handy)
+        if (pkg != usagePkg && !pkg.contains("inputmethod") && !pkg.contains("keyboard") && !pkg.contains("honeyboard")) {
+            usagePkg = pkg
+            val label = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (_: Exception) { pkg }
+            try { AutoPilot.appChanged(applicationContext, pkg, label) } catch (_: Exception) {}
+        }
+        if (pkg == lastPkg || pkg == packageName) return
         lastPkg = pkg
         val app = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (_: Exception) { return }
         Thread { try { Automations.fire(applicationContext, "app", org.json.JSONObject().put("app", app)) } catch (_: Exception) {} }.start()

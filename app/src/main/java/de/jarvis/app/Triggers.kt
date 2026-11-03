@@ -32,17 +32,22 @@ object Triggers {
                         if (lvl in 0 until lastLevel) {
                             val prev = lastLevel
                             Thread { Automations.fire(app, "battery", JSONObject().put("level", lvl).put("prev", prev))
+                                AutoPilot.batteryChanged(app, lvl, prev)
                                 if (lvl <= 15 && lastLevel > 15) SmartHints.batteryLow(app, lvl) }.start()
                         }
                         if (lvl >= 0) lastLevel = lvl
                     }
-                    Intent.ACTION_POWER_CONNECTED -> Thread { Automations.fire(app, "charging") }.start()
+                    Intent.ACTION_POWER_CONNECTED -> Thread { Automations.fire(app, "charging"); AutoPilot.charging(app) }.start()
+                    Intent.ACTION_SCREEN_ON -> AutoPilot.screenOn(app)
+                    Intent.ACTION_SCREEN_OFF -> AutoPilot.screenOff(app)
+                    Intent.ACTION_USER_PRESENT -> AutoPilot.userPresent(app)
                     Intent.ACTION_HEADSET_PLUG -> if (i.getIntExtra("state", 0) == 1 && !isInitialStickyBroadcast)
                         Thread { Automations.fire(app, "headphones", JSONObject().put("device", "Kabel")) }.start()
                 }
             }
         }
-        val f = IntentFilter().apply { addAction(Intent.ACTION_BATTERY_CHANGED); addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_HEADSET_PLUG) }
+        val f = IntentFilter().apply { addAction(Intent.ACTION_BATTERY_CHANGED); addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_HEADSET_PLUG)
+            addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_USER_PRESENT) }
         try { app.registerReceiver(receiver, f) } catch (_: Exception) {}
         val cm = app.getSystemService(ConnectivityManager::class.java) ?: return
         netCb = object : ConnectivityManager.NetworkCallback() {
