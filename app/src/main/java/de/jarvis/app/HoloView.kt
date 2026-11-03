@@ -53,7 +53,7 @@ class HoloView(context: Context) : GLSurfaceView(context) {
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         // Halbe Auflösung reicht für ein weiches Hologramm und spart Akku
-        if (w > 0 && h > 0) holder.setFixedSize((w * 0.65f).toInt(), (h * 0.65f).toInt())
+        if (w > 0 && h > 0) holder.setFixedSize((w * 0.8f).toInt(), (h * 0.8f).toInt())
     }
 
     private var downX = 0f; private var downY = 0f; private var lastX = 0f; private var moved = false
@@ -77,6 +77,7 @@ class HoloView(context: Context) : GLSurfaceView(context) {
         private var uCam = 0; private var uMode = 0; private var uLevel = 0; private var uFade = 0
         private var w = 1; private var h = 1
         private var lastFrame = 0L
+        private var mesh: HeadMesh? = null
 
         override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
             fun sh(type: Int, src: String) = GLES20.glCreateShader(type).also { GLES20.glShaderSource(it, src); GLES20.glCompileShader(it) }
@@ -92,6 +93,8 @@ class HoloView(context: Context) : GLSurfaceView(context) {
             uMode = GLES20.glGetUniformLocation(prog, "mode"); uLevel = GLES20.glGetUniformLocation(prog, "level")
             uFade = GLES20.glGetUniformLocation(prog, "fade")
             GLES20.glClearColor(0f, 0f, 0f, 0f)
+            // Echter 3D-Kopf (Scan) für Jarvis selbst
+            mesh = try { HeadMesh(context).also { it.create() } } catch (_: Throwable) { null }
         }
 
         override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) { w = width; h = height; GLES20.glViewport(0, 0, w, h) }
@@ -109,6 +112,14 @@ class HoloView(context: Context) : GLSurfaceView(context) {
             val head = s == HoloTopics.Scene.HEAD
             val yaw = if (head) 0.35f + kotlin.math.sin(t * 0.4f) * 0.22f + dragYaw else -0.5f + t * 0.35f + dragYaw
             val cam = CAMS[s.id]
+            val m = mesh
+            if (head && m != null) {
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+                val lvH = if (mode == 3) 0.45f + 0.4f * abs(kotlin.math.sin(t * 7.5f)) * (0.6f + 0.4f * kotlin.math.sin(t * 1.9f))
+                          else (levelSource?.invoke() ?: level)
+                m.draw(w, h, -0.45f + kotlin.math.sin(t * 0.35f) * 0.28f + dragYaw, t, lvH.coerceIn(0f, 1f), mode, fade)
+                return
+            }
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
             GLES20.glUseProgram(prog)
             val loc = GLES20.glGetAttribLocation(prog, "p")

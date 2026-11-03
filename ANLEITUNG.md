@@ -331,3 +331,6 @@ Ist das Handy gesperrt, kann Jarvis Wecker, Timer, Taschenlampe, Lautstärke und
 - Reagiert Jarvis zu oft oder zu selten, lässt sich die Schwelle im Code (`Prefs.kt`, `sensitivity`, Standard 0.5) anpassen.
 - Kosten: Mit Groq und Gemini im kostenlosen Tarif nichts. Nur wenn Claude einspringt, kostet eine Frage weniger als einen Cent (Websuche ca. einen Cent extra).
 - Deine Schlüssel liegen nur auf deinem Handy. Gib die App-Datei deshalb nicht an andere weiter, nachdem du sie eingerichtet hast.
+
+---
+3D-Kopf: „Infinite, 3D Head Scan“ von Lee Perry-Smith (Infinite-Realities), lizenziert unter CC BY 3.0, basierend auf einer Arbeit von www.triplegangers.com.
