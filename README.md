@@ -241,6 +241,16 @@ Werkzeuge → **Autopilot**: Hier schaltest du alles ein/aus, was Jarvis von sel
 - 😴 **Gute-Nacht-Routine** und 📊 **Wochenrückblick** am Sonntag.
 Die Bildschirmzeit bleibt nur auf deinem Handy.
 
+**Neu in Version 29:**
+- 🧠 **Gewohnheiten erkennen**: z. B. Kopfhörer rein → immer Spotify? Jarvis fragt, ob er das automatisch machen soll.
+- 🚌 **Bus & Bahn**: Start- und Ziel-Haltestelle eintragen → an Schultagen morgens die nächsten Verbindungen mit Verspätung. Oder: „Jarvis, wann fährt mein Bus?“
+- 📍 **Ankunft melden**: an gemerkten Orten fragt Jarvis, ob er z. B. Mama Bescheid geben soll (gesendet wird erst nach deinem Ja).
+- 🚗 **Parkplatz automatisch**, wenn sich das Auto-Bluetooth trennt (Auto-Gerät in den Einstellungen festlegen).
+- 📚 **Vokabeln nebenbei**: Karteikarten-Frage als Benachrichtigung, direkt dort antworten.
+- 📝 **Noten-Tracker**: „Jarvis, ich hab in Mathe eine 2- in der Klassenarbeit“ → „Wie ist mein Schnitt?“
+- 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
+- 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
+
 ## Was Jarvis auf dem Handy kann
 | Sag zum Beispiel | Was passiert |
 |---|---|

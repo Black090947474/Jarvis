@@ -42,7 +42,7 @@ object Triggers {
                     Intent.ACTION_SCREEN_OFF -> AutoPilot.screenOff(app)
                     Intent.ACTION_USER_PRESENT -> AutoPilot.userPresent(app)
                     Intent.ACTION_HEADSET_PLUG -> if (i.getIntExtra("state", 0) == 1 && !isInitialStickyBroadcast)
-                        Thread { Automations.fire(app, "headphones", JSONObject().put("device", "Kabel")) }.start()
+                        Thread { AutoPilot2.connected(app, "headphones"); Automations.fire(app, "headphones", JSONObject().put("device", "Kabel")) }.start()
                 }
             }
         }

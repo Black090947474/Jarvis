@@ -82,7 +82,13 @@ class AutoPilotActivity : Activity() {
                     addView(ui.text(f.info, 12.5f, SOFT).apply { setPadding(0, ui.px(3), ui.px(8), 0) })
                 }))
                 addView(Switch(this@AutoPilotActivity).apply { isChecked = AutoPilot.on(this@AutoPilotActivity, f.key)
-                    setOnCheckedChangeListener { _, on -> AutoPilot.set(this@AutoPilotActivity, f.key, on) } })
+                    setOnCheckedChangeListener { _, on ->
+                        AutoPilot.set(this@AutoPilotActivity, f.key, on)
+                        if (on && f.key == "sos" && checkSelfPermission(android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                            requestPermissions(arrayOf(android.Manifest.permission.SEND_SMS), 41)
+                        if (on && f.key == "arrival" && checkSelfPermission(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                            toast("Für „Ankunft melden“ braucht Jarvis Standort „Immer erlauben“ (Berechtigungen → Standort).")
+                    } })
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(8) })
         }
 
@@ -100,6 +106,22 @@ class AutoPilotActivity : Activity() {
         col.addView(ui.text("Limits pro App (Name=Minuten, mit Komma getrennt):", 13f, SOFT).apply { setPadding(0, ui.px(10), 0, ui.px(4)) })
         col.addView(field("limits", "", "TikTok=60, Instagram=45"))
 
+        col.addView(ui.section("Bus & Bahn"))
+        labeled("Start-Haltestelle", field("tr_from", "", "z. B. Hauptbahnhof"))
+        labeled("Ziel (Schule)", field("tr_to", "", "z. B. Schulzentrum"))
+
+        col.addView(ui.section("Ankunft melden"))
+        labeled("Orte (gemerkte Orte, Komma)", field("arr_places", "", "Schule, Oma, Zuhause"))
+        labeled("Wem schreiben?", field("arr_contact", "", "Mama"))
+        labeled("Mit welcher App?", field("arr_app", "", "WhatsApp"))
+        col.addView(ui.text("Orte merken: an dem Ort sagen „Jarvis, merk dir diesen Ort als Schule“.", 12f, MUTED).apply { setPadding(0, ui.px(4), 0, 0) })
+
+        col.addView(ui.section("Vokabeln & Notfall"))
+        labeled("Uhrzeit für die Vokabel", field("vocab_time", "16:30", "16:30"))
+        labeled("Notfall-Person (Name)", field("sos_name", "", "Mama"))
+        labeled("Notfall-Nummer", field("sos_number", "", "+49 …").apply { inputType = InputType.TYPE_CLASS_PHONE })
+        col.addView(ui.text("Die Notfall-SMS geht nur raus, wenn „Akku-Notfall-SMS“ oben an ist – höchstens einmal am Tag, und du bekommst Bescheid.", 12f, MUTED).apply { setPadding(0, ui.px(4), 0, 0) })
+
         col.addView(ui.section("Jetzt ausprobieren"))
         fun test(label: String, job: String) = col.addView(ui.button(label, false) {
             thread { AutoPilot.handle(applicationContext, job) }; toast("Schau in deine Benachrichtigungen.") })
@@ -107,6 +129,11 @@ class AutoPilotActivity : Activity() {
         test("Morgen-Hinweise (Geburtstage, Fakt)", AutoPilot.J_MORNING)
         test("Wochenrückblick jetzt zeigen", AutoPilot.J_WEEKLY)
         test("Bildschirmzeit-Zusammenfassung", AutoPilot.J_SCREEN)
+        test("Vokabel-Frage jetzt", AutoPilot2.J_VOCAB)
+        test("Wetter-Überraschungen prüfen", AutoPilot2.J_SKY)
+        col.addView(ui.button("Bus & Bahn jetzt abfragen", false) { save(); thread {
+            val r = AutoPilot2.transit(applicationContext)
+            runOnUiThread { android.app.AlertDialog.Builder(this).setTitle("🚌 Schulweg").setMessage(r).setPositiveButton("OK", null).show() } } })
         col.addView(ui.text("Schulmodus braucht Uhrzeiten im Stundenplan, z. B. „08:00 Mathe“ oder „08:00-09:30 Mathe“. " +
             "Sag dazu: „Jarvis, speichere meinen Stundenplan für Montag …“.", 12f, MUTED).apply { setPadding(0, ui.px(12), 0, 0) })
         if (!pro) col.addView(ui.text("Ohne Profi-Modus: Energiesparen und Dunkelmodus kann Android-Apps normal nicht schalten – dann bekommst du einen Hinweis.", 12f, AMBER).apply { setPadding(0, ui.px(6), 0, 0) })

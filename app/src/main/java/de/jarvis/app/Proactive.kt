@@ -327,6 +327,7 @@ class JarvisReceiver : BroadcastReceiver() {
                 for (g in ev.triggeringGeofences.orEmpty()) {
                     val id = g.requestId.removePrefix("rem_").toIntOrNull() ?: continue
                     if (id >= 900_000) { Automations.runById(ctx, id - 900_000); continue }
+                    if (AutoPilot2.isArrivalId(id)) { AutoPilot2.arrived(ctx, id); continue }
                     if (id == 899_999) { SmartHints.arrivedHome(ctx); continue }
                     if (id == 899_998) { SmartHints.leftHome(ctx); continue }
                     val r = store.reminder(id) ?: continue
@@ -345,6 +346,13 @@ class JarvisReceiver : BroadcastReceiver() {
                 Scheduler.scheduleAutomations(ctx)
             }
             "android.bluetooth.device.action.ACL_CONNECTED" -> Automations.onBluetooth(ctx, intent)
+            "android.bluetooth.device.action.ACL_DISCONNECTED" -> {
+                val dev: android.bluetooth.BluetoothDevice? = if (Build.VERSION.SDK_INT >= 33)
+                    intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE, android.bluetooth.BluetoothDevice::class.java)
+                    else @Suppress("DEPRECATION") intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE)
+                val name = try { dev?.name.orEmpty() } catch (_: SecurityException) { "" }
+                AutoPilot2.btDisconnected(ctx, name)
+            }
             Scheduler.ACTION_EVENT -> if (Prefs(ctx).proactive && Prefs(ctx).notifyEvents) Scheduler.eventAlert(ctx, intent)
             Scheduler.ACTION_BRIEFING -> Scheduler.briefing(ctx)
         }

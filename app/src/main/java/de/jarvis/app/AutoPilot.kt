@@ -44,7 +44,8 @@ object AutoPilot {
     const val J_SCREEN = "screen"; const val J_WEEKLY = "weekly"
 
     private val RC = mapOf(J_BED to 880_001, J_WAKE to 880_002, J_NIGHT to 880_003, J_EVENING to 880_004, J_MORNING to 880_005,
-        J_SCHOOL_ON to 880_006, J_SCHOOL_OFF to 880_007, J_SCREEN to 880_008, J_WEEKLY to 880_009)
+        J_SCHOOL_ON to 880_006, J_SCHOOL_OFF to 880_007, J_SCREEN to 880_008, J_WEEKLY to 880_009,
+        AutoPilot2.J_TRANSIT to 880_010, AutoPilot2.J_VOCAB to 880_011, AutoPilot2.J_SKY to 880_012)
 
     /** Alle Schalter mit Beschreibung (für die Autopilot-Zentrale). Standard: an, außer wo es ins Handy eingreift. */
     data class Feature(val key: String, val title: String, val info: String, val def: Boolean)
@@ -62,7 +63,7 @@ object AutoPilot {
         Feature("goodnight", "😴 Gute-Nacht-Routine", "30 Min. vor dem Schlafen: Bildschirm dimmen, Gute-Nacht-Geschichte oder Einschlafmusik anbieten.", true),
         Feature("fact", "💡 Fakt des Tages", "Jeden Morgen ein spannender Fakt – antippen und Jarvis erklärt ihn mit Hologramm.", true),
         Feature("weekly", "📊 Wochenrückblick (Sonntag 18 Uhr)", "Lernzeit, Bildschirmzeit, offene Aufgaben, Geburtstage nächste Woche.", true),
-    )
+    ) + AutoPilot2.FEATURES
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences("autopilot", Context.MODE_PRIVATE)
     fun on(ctx: Context, key: String) = sp(ctx).getBoolean(key, FEATURES.firstOrNull { it.key == key }?.def ?: false)
@@ -90,14 +91,14 @@ object AutoPilot {
         Intent(ctx, AutoPilotReceiver::class.java).setAction(ACTION).putExtra("job", job),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-    private fun nextAt(t: LocalTime, day: DayOfWeek? = null): Long {
+    fun nextAt(t: LocalTime, day: DayOfWeek? = null): Long {
         var d = LocalDateTime.of(LocalDate.now(), t)
         if (!d.isAfter(LocalDateTime.now().plusSeconds(30))) d = d.plusDays(1)
         if (day != null) while (d.dayOfWeek != day) d = d.plusDays(1)
         return d.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
 
-    private fun at(ctx: Context, job: String, whenMs: Long?) {
+    fun at(ctx: Context, job: String, whenMs: Long?) {
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
         val p = pi(ctx, job)
         if (whenMs == null) { am.cancel(p); return }
@@ -115,12 +116,13 @@ object AutoPilot {
             at(ctx, J_SCREEN, if (on(ctx, "screen_coach")) nextAt(LocalTime.of(21, 0)) else null)
             at(ctx, J_WEEKLY, if (on(ctx, "weekly") || on(ctx, "cleanup")) nextAt(LocalTime.of(18, 0), DayOfWeek.SUNDAY) else null)
             planSchool(ctx)
+            AutoPilot2.scheduleAll(ctx)
         } catch (_: Exception) {}
     }
 
     // ---------------------------------------------------------------- Ausführen
 
-    fun handle(ctx: Context, job: String) {
+    fun handle(ctx: Context, job: String, intent: Intent? = null) {
         try {
             when (job) {
                 J_BED -> { if (on(ctx, "sleep")) sleepOn(ctx) }
@@ -132,12 +134,15 @@ object AutoPilot {
                 J_SCHOOL_OFF -> if (on(ctx, "school")) schoolOff(ctx)
                 J_SCREEN -> if (on(ctx, "screen_coach")) screenSummary(ctx)
                 J_WEEKLY -> { if (on(ctx, "weekly")) weekly(ctx); if (on(ctx, "cleanup")) cleanup(ctx) }
+                else -> AutoPilot2.handle(ctx, job, intent)
             }
         } catch (_: Exception) {}
         scheduleAll(ctx)
     }
 
-    private fun post(ctx: Context, id: Int, title: String, text: String, actions: List<Notification.Action> = emptyList(), open: PendingIntent? = null) {
+    fun cancel(ctx: Context, id: Int) = nm(ctx).cancel(id)
+
+    fun post(ctx: Context, id: Int, title: String, text: String, actions: List<Notification.Action> = emptyList(), open: PendingIntent? = null) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
         nm.createNotificationChannel(android.app.NotificationChannel(CH, "Autopilot", NotificationManager.IMPORTANCE_DEFAULT))
         Notifier.post(ctx, CH, id, title, text, actions, open)
@@ -154,7 +159,7 @@ object AutoPilot {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-    private fun action(title: String, p: PendingIntent) = Notification.Action.Builder(null, title, p).build()
+    fun action(title: String, p: PendingIntent) = Notification.Action.Builder(null, title, p).build()
 
     // ---------- 1 Schlafmodus
 
@@ -335,6 +340,7 @@ object AutoPilot {
     // ---------- 5 Akku-Wächter
 
     fun batteryChanged(ctx: Context, level: Int, prev: Int) {
+        try { AutoPilot2.battery(ctx, level, prev) } catch (_: Exception) {}
         if (!on(ctx, "battery")) return
         if (level <= 20 && prev > 20 && !sp(ctx).getBoolean("bat_guard", false)) {
             val done = mutableListOf<String>()
@@ -450,6 +456,7 @@ object AutoPilot {
         appCtx = ctx.applicationContext
         flush(ctx)
         curPkg = pkg; curLabel = label; since = System.currentTimeMillis()
+        try { AutoPilot2.appOpened(ctx, pkg, label) } catch (_: Exception) {}
         if (screenOnSince == 0L) screenOn(ctx)
     }
 
@@ -551,7 +558,7 @@ class AutoPilotReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
         val job = intent.getStringExtra("job") ?: return
         val pr = goAsync()
-        Thread { try { AutoPilot.handle(ctx.applicationContext, job) } finally { pr.finish() } }.start()
+        Thread { try { AutoPilot.handle(ctx.applicationContext, job, intent) } finally { pr.finish() } }.start()
     }
 }
 
