@@ -103,33 +103,33 @@ void main(){
   vec3 n = normalize(vN);
   vec3 v = normalize(eye - vW);
   vec3 cyan = vec3(0.0, 0.9, 1.0), violet = vec3(0.54, 0.36, 1.0), blue = vec3(0.24, 0.42, 1.0);
-  vec3 base = vec3(0.043, 0.078, 0.15);
+  vec3 base = vec3(0.025, 0.045, 0.10);
   // Lichter (wie im Vorschaubild): Hauptlicht, zwei farbige Kantenlichter, Licht von oben
   vec3 L1 = normalize(vec3(-2.0, 2.0, 3.0)), L2 = normalize(vec3(3.0, 1.0, -2.5)), L3 = normalize(vec3(-3.0, 1.5, -2.0)), L4 = normalize(vec3(0.0, 4.0, 0.5));
-  vec3 col = base * 0.25;
-  col += base * max(dot(n, L1), 0.0) * vec3(0.62, 0.77, 1.0) * 1.6;
-  float sp1 = pow(max(dot(n, normalize(L1 + v)), 0.0), 38.0);
-  float sp2 = pow(max(dot(n, normalize(L2 + v)), 0.0), 18.0);
-  float sp3 = pow(max(dot(n, normalize(L3 + v)), 0.0), 18.0);
-  float sp4 = pow(max(dot(n, normalize(L4 + v)), 0.0), 26.0);
-  col += vec3(0.62, 0.77, 1.0) * sp1 * 0.55 + cyan * (sp2 * 0.9 + max(dot(n, L2), 0.0) * 0.12)
-       + violet * (sp3 * 0.8 + max(dot(n, L3), 0.0) * 0.10) + blue * sp4 * 0.45;
-  float fr = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+  vec3 col = base * 0.15;
+  col += base * max(dot(n, L1), 0.0) * vec3(0.62, 0.77, 1.0) * 1.1;
+  float sp1 = pow(max(dot(n, normalize(L1 + v)), 0.0), 60.0);
+  float sp2 = pow(max(dot(n, normalize(L2 + v)), 0.0), 45.0);
+  float sp3 = pow(max(dot(n, normalize(L3 + v)), 0.0), 45.0);
+  float sp4 = pow(max(dot(n, normalize(L4 + v)), 0.0), 50.0);
+  col += vec3(0.62, 0.77, 1.0) * sp1 * 0.8 + cyan * (sp2 * 1.1 + max(dot(n, L2), 0.0) * 0.04)
+       + violet * (sp3 * 0.9 + max(dot(n, L3), 0.0) * 0.04) + blue * sp4 * 0.5;
+  float fr = pow(1.0 - max(dot(n, v), 0.0), 4.0);
   // Netzlinien (Höhenlinien + Längslinien), am Rand stärker
   float l1 = smoothstep(0.93, 0.99, abs(fract(vP.y * 16.0) - 0.5) * 2.0);
   float l2 = smoothstep(0.94, 0.995, abs(fract(atan(vP.x, vP.z) * 10.0) - 0.5) * 2.0);
   float pulse = mode > 1.5 && mode < 2.5 ? 0.5 + 0.5 * sin(vP.y * 9.0 - t * 5.0) : 0.0;   // „Denken“: Lichtwellen
   float k = max(l1, l2 * 0.6) * (0.06 + 0.7 * fr + pulse * 0.5);
   float listen = mode > 0.5 && mode < 1.5 ? 0.35 + level : 0.0;
-  col += cyan * (k * 0.6 + fr * (0.35 + listen * 0.4));
+  col += cyan * (k * 0.75 + fr * (0.5 + listen * 0.5));
   // Leuchtende Augen (geschlossene Lider glühen von innen) + Punkt auf der Stirn
   float speak = mode > 2.5 ? level : 0.0;
   float e = exp(-length(vP - vec3(-0.19, 0.40, 0.50)) * 26.0) + exp(-length(vP - vec3(0.14, 0.40, 0.50)) * 26.0);
   col += mix(cyan, vec3(1.0), 0.45) * e * (0.35 + 1.6 * speak + 0.4 * listen);
   col += violet * exp(-length(vP - vec3(-0.024, 0.78, 0.62)) * 30.0) * (0.6 + 0.3 * sin(t * 2.0));
-  col = aces(col * 1.1);
+  col = aces(col * 1.25);
   // unten weich ausblenden
-  float a = smoothstep(-1.1, -0.55, vP.y) * fade;
+  float a = smoothstep(-1.0, -0.35, vP.y) * fade;
   gl_FragColor = vec4(col * a, a);
 }"""
     }
