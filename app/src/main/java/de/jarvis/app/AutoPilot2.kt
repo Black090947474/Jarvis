@@ -36,6 +36,7 @@ object AutoPilot2 {
         AutoPilot.Feature("parking", "🚗 Parkplatz automatisch", "Trennt sich das Auto-Bluetooth, merkt sich Jarvis den Standort als Parkplatz.", true),
         AutoPilot.Feature("vocab", "📚 Vokabeln nebenbei", "Nachmittags eine Karteikarten-Frage als Benachrichtigung – direkt dort antworten.", false),
         AutoPilot.Feature("sky", "🌨 Wetter-Überraschungen", "Hinweis bei Schnee oder Gewitter morgen und in Sternschnuppen-Nächten.", true),
+        AutoPilot.Feature("heat", "🌡 Hitze-Warnung", "Wird der Akku über 43 °C heiß, sagt Jarvis Bescheid.", true),
         AutoPilot.Feature("sos", "🆘 Akku-Notfall-SMS", "Nur wenn du es einschaltest: Bei 5 % Akku bekommt deine Notfall-Person eine SMS mit deinem Standort. Du wirst informiert.", false),
     )
 
@@ -304,6 +305,17 @@ object AutoPilot2 {
         if (msgs.isEmpty()) return
         AutoPilot.post(ctx, 88_210, "🌦 Wetter-Überraschung", msgs.joinToString("\n"),
             listOf(AutoPilot.action("Erklär mir das", AutoPilot.askIntent(ctx, 88_310, if (msgs.any { it.startsWith("🌠") }) "Wie entstehen Sternschnuppen?" else "Wie wird morgen das Wetter?"))))
+    }
+
+    // ---------- Hitze-Warnung
+
+    fun heat(ctx: Context, temp: Float) {
+        if (temp < 43f || !on(ctx, "heat")) return
+        val k = "heat_" + (System.currentTimeMillis() / (2 * 3_600_000L))
+        if (sp(ctx).getBoolean(k, false)) return
+        sp(ctx).edit().putBoolean(k, true).apply()
+        AutoPilot.post(ctx, 88_230, "🌡 Handy wird heiß: %.0f °C".format(temp),
+            "Nimm es aus der Sonne, pausiere Spiele oder Laden und nimm eine dicke Hülle kurz ab.")
     }
 
     // ---------- 20 Akku-Notfall

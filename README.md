@@ -251,6 +251,12 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
 - 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
 
+## Neu in Version 32
+- 🌍 **Live-Infos:** „Was gibt's Neues?“ (tagesschau), „Wie steht die Tesla-Aktie?“, „Bundesliga-Ergebnisse“ / „Tabelle“, „Wann geht die Sonne unter?“, „Welches Flugzeug fliegt da?“
+- 📱 **Handy-Check:** Temperatur, Internet-Speedtest, WLAN-Qualität, Speicherplatz, große Dateien, doppelte Bilder (Löschen nur nach Android-Bestätigung), Systeminfo. 🌡 Hitze-Warnung im Autopilot.
+- 🛡 **Sicherheitszentrale** (Werkzeuge → Sicherheit): Punkte-Check (Bildschirmsperre, Updates, fremde Bedienungshilfen, Apps mit vielen Rechten, Apps aus unbekannten Quellen …), Phishing-/Fake-Link-Prüfung, Passwort-Check (bleibt auf dem Handy), Geräte im WLAN (Profi-Modus), Bericht teilen.
+- 🚗 **Fahrzeug:** Auto/Motorrad/Crossbike anlegen, Kilometer, Tanken, Verbrauch, Kosten, TÜV- und Wartungs-Erinnerung, Wetter-Warnung beim Einsteigen, GPS-Tacho und Rundenzeit-Stoppuhr für Motocross.
+
 ## Jarvis ruft dich an (ab Version 30.2)
 - „Jarvis, ruf mich um 7 Uhr an und erinner mich an die Mathe-Arbeit“ → zur Uhrzeit erscheint ein Anruf-Bildschirm mit Klingelton (klingelt auch bei lautlos). Annehmen → Jarvis sagt dir, worum es geht. Auch: „In 5 Minuten“ oder ablehnen.
 - 📞 **Verschlafen-Schutz** (Autopilot): Warst du 15 Minuten nach dem Wecker noch nicht am Handy, ruft Jarvis an.

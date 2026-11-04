@@ -282,7 +282,7 @@ class DashboardActivity : Activity() {
     private class ToolTile(val icon: String, val name: String, val sub: String, val action: () -> Unit)
 
     private fun toolCategory(name: String): String = when (name) {
-        "Was ist das?", "Schwebender Jarvis", "Hologramme", "Handy finden", "Profi-Modus", "Autopilot" -> "⭐ Highlights"
+        "Was ist das?", "Schwebender Jarvis", "Hologramme", "Handy finden", "Profi-Modus", "Autopilot", "Sicherheit" -> "⭐ Highlights"
         "Chat", "Telefon", "Nachrichten", "E-Mails", "Übersetzer" -> "💬 Kommunikation"
         "Schule", "Lernen", "Packliste", "Fokus-Timer", "Klassenarbeit-Coach" -> "🎓 Schule & Lernen"
         "Quiz-Abend", "Geschichte", "Witz", "Wer bin ich?", "Rätsel", "Abenteuer" -> "🎮 Spaß"
@@ -324,6 +324,8 @@ class DashboardActivity : Activity() {
         tile("brain", "Rätsel", "Knobeln mit Jarvis") { voice("Gib mir ein kniffliges, aber lösbares Rätsel. Verrate die Lösung erst, wenn ich aufgebe.") }
         tile("sun", "Abenteuer", "Du entscheidest die Story") { voice("Starte ein kurzes Abenteuer, in dem ich der Held bin. Gib mir nach jedem Abschnitt zwei oder drei Möglichkeiten.") }
         tile("bolt", "Autopilot", "Was Jarvis von selbst macht") { startActivity(Intent(this, AutoPilotActivity::class.java)) }
+        tile("shield", "Sicherheit", "Check, Phishing, Passwort") { startActivity(Intent(this, SecurityActivity::class.java)) }
+        tile("pin", "Fahrzeug", "Auto, Motorrad, Tacho, Runden") { startActivity(Intent(this, VehicleActivity::class.java)) }
         tile("phone", "Handy finden", "Klingeln & Blinken") { FindActivity.start(this) }
         tile("brain", "KI-Schlüssel", "Mehr Anbieter = weniger Pausen") { startActivity(Intent(this, ProvidersActivity::class.java)) }
         tile("storage", "Update", "Neue Version installieren") { Updater.check(this, quiet = false) }

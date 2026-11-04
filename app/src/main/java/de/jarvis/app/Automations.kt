@@ -189,6 +189,7 @@ object Automations {
         // Auto-Modus: als Auto markiertes Gerät
         val car = Prefs(ctx).carDevice
         if (car.isNotBlank() && name.contains(car, true)) {
+            try { Vehicles.beforeDrive(ctx) } catch (_: Exception) {}
             try { ctx.startActivity(Intent(ctx, CarActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
         }
     }

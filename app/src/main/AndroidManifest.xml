@@ -219,6 +219,8 @@
         <receiver android:name=".UpdateReceiver" android:exported="false" />
         <receiver android:name=".AutoPilotReceiver" android:exported="false" />
         <receiver android:name=".JarvisCallReceiver" android:exported="false" />
+        <activity android:name=".SecurityActivity" android:exported="false" />
+        <activity android:name=".VehicleActivity" android:exported="false" android:screenOrientation="portrait" />
         <activity android:name=".CallActivity" android:exported="false" android:launchMode="singleTask"
             android:showWhenLocked="true" android:turnScreenOn="true" android:excludeFromRecents="true" android:screenOrientation="portrait" />
         <activity android:name=".AutoPilotActivity" android:exported="false" />

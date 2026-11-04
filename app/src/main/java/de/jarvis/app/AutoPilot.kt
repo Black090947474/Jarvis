@@ -113,7 +113,7 @@ object AutoPilot {
             at(ctx, J_WAKE, if (on(ctx, "sleep") || on(ctx, "morning_brief") || on(ctx, "goodnight")) nextAt(wake(ctx)) else null)
             at(ctx, J_NIGHT, if (on(ctx, "goodnight")) nextAt(bed.minusMinutes(30)) else null)
             at(ctx, J_EVENING, if (on(ctx, "evening") || on(ctx, "alarm_plan")) nextAt(LocalTime.of(20, 0)) else null)
-            at(ctx, J_MORNING, if (on(ctx, "birthdays") || on(ctx, "fact") || on(ctx, "school")) nextAt(wake(ctx).plusMinutes(10)) else null)
+            at(ctx, J_MORNING, if (on(ctx, "birthdays") || on(ctx, "fact") || on(ctx, "school") || Vehicles.all(ctx).isNotEmpty()) nextAt(wake(ctx).plusMinutes(10)) else null)
             at(ctx, J_SCREEN, if (on(ctx, "screen_coach")) nextAt(LocalTime.of(21, 0)) else null)
             at(ctx, J_WEEKLY, if (on(ctx, "weekly") || on(ctx, "cleanup")) nextAt(LocalTime.of(18, 0), DayOfWeek.SUNDAY) else null)
             val alarm = ctx.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime
@@ -415,6 +415,7 @@ object AutoPilot {
 
     private fun morning(ctx: Context) {
         planSchool(ctx)
+        try { Vehicles.dailyCheck(ctx) } catch (_: Exception) {}
         if (on(ctx, "birthdays") && once(ctx, "bday")) {
             BirthdayTool.upcoming(ctx, 0).forEachIndexed { i, b ->
                 if (i > 3) return@forEachIndexed

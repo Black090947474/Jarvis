@@ -36,6 +36,8 @@ object Triggers {
                                 if (lvl <= 15 && lastLevel > 15) SmartHints.batteryLow(app, lvl) }.start()
                         }
                         if (lvl >= 0) lastLevel = lvl
+                        val temp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+                        if (temp != Int.MIN_VALUE && temp >= 430) Thread { AutoPilot2.heat(app, temp / 10f) }.start()
                     }
                     Intent.ACTION_POWER_CONNECTED -> Thread { Automations.fire(app, "charging"); AutoPilot.charging(app) }.start()
                     Intent.ACTION_SCREEN_ON -> AutoPilot.screenOn(app)
