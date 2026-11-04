@@ -251,6 +251,10 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
 - 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
 
+## AirPods (ab Version 32.1)
+Verbindest du AirPods oder Beats, öffnet Jarvis ein Menü wie beim iPhone: Akkustand links/rechts/Case (auch „im Ohr“ und Laden), Musik, Lautstärke, Spotify, Bluetooth.
+Geräuschunterdrückung/Transparenz: Stiel gedrückt halten. Per App geht das auf Samsung erst ab Android 17 / One UI 9 ohne Root (App „LibrePods“) – ist sie installiert, öffnet Jarvis sie direkt.
+
 ## Neu in Version 32
 - 🌍 **Live-Infos:** „Was gibt's Neues?“ (tagesschau), „Wie steht die Tesla-Aktie?“, „Bundesliga-Ergebnisse“ / „Tabelle“, „Wann geht die Sonne unter?“, „Welches Flugzeug fliegt da?“
 - 📱 **Handy-Check:** Temperatur, Internet-Speedtest, WLAN-Qualität, Speicherplatz, große Dateien, doppelte Bilder (Löschen nur nach Android-Bestätigung), Systeminfo. 🌡 Hitze-Warnung im Autopilot.

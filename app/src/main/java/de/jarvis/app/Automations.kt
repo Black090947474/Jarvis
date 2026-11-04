@@ -184,6 +184,7 @@ object Automations {
         val name = try { dev?.name.orEmpty() } catch (_: SecurityException) { "" }
         val audio = try { dev?.bluetoothClass?.majorDeviceClass == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO } catch (_: SecurityException) { false }
         try { AutoPilot2.connected(ctx, if (audio) "headphones" else "bluetooth") } catch (_: Exception) {}
+        try { AirPods.connected(ctx, name) } catch (_: Exception) {}
         fire(ctx, "bluetooth", JSONObject().put("device", name))
         if (audio) fire(ctx, "headphones", JSONObject().put("device", name))
         // Auto-Modus: als Auto markiertes Gerät
