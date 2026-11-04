@@ -74,7 +74,7 @@ object ToolRegistry {
     val all: List<JarvisTool> by lazy {
         listOf(AgendaTool, CalendarTool, ReminderTool, TaskTool, CallLogTool, EmailTool, WeatherTool, NearbyTool, BrightnessTool,
             WebTool, BriefingTool, SchoolTool, ShoppingTool, NotesTool, QuizTool, RoutineTool, BirthdayTool, PlacesTool, MusicTool,
-            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool, LookScreenTool, CallControlTool, SystemControlTool, AppMessageTool, ScreenTimeTool, GradesTool, TransitTool, CallMeTool, LiveTool, PhoneCheckTool, SecurityTool, de.jarvis.app.VehicleTool, HistoryTool, JarvisSettingsTool)
+            AutomationTool, FilesTool, RouteTool, NotifyHubTool, EmergencyTool, MoneyTool, PartyQuizTool, FocusTool, PhotosTool, LookScreenTool, CallControlTool, SystemControlTool, AppMessageTool, ScreenTimeTool, GradesTool, TransitTool, CallMeTool, LiveTool, PhoneCheckTool, SecurityTool, de.jarvis.app.VehicleTool, HistoryTool, JarvisSettingsTool, de.jarvis.app.TradingTool)
     }
 
     fun find(name: String): JarvisTool? = all.firstOrNull { it.name == name }
@@ -98,7 +98,8 @@ object ToolRegistry {
         "info" to listOf("wetter", "regen", "temperatur", "sonne", "grad", "kalt", "warm", "jacke", "schirm", "website",
             "webseite", "homepage", "zweite", "station", "anderen handy", "vergiss", "merk", "vokabel", "abfrag",
             "lern", "quiz", "teste mich", "karteikart", "übersetz", "auf englisch", "auf französisch", "auf spanisch", "dolmetsch",
-            "geschichte", "witz", "punkte", "spieleabend", "runde", "motorrad", "tanken", "getankt", "tüv", "kilometerstand", "rundenzeit", "runden", "tacho", "wartung", "ölwechsel", "crossbike", "motocross", "mein auto",
+            "geschichte", "witz", "punkte", "spieleabend", "runde", "trade", "trading", "depot", "investier", "signal", "steigen", "portfolio", "demo-konto", "demokonto", "bot", "chart", "tradingview",
+            "motorrad", "tanken", "getankt", "tüv", "kilometerstand", "rundenzeit", "runden", "tacho", "wartung", "ölwechsel", "crossbike", "motocross", "mein auto",
             "sicher", "sicherheit", "phishing", "betrug", "fake", "passwort", "gehackt", "virus", "geräte im wlan",
             "nachrichten heute", "news", "schlagzeile", "aktie", "kurs", "börse", "dax", "bitcoin", "bundesliga", "fußball", "tabelle", "spieltag", "sonnenaufgang", "sonnenuntergang", "flugzeug", "temperatur", "heiß", "speedtest", "internet", "geschwindigkeit", "wlan", "speicher", "große dateien", "doppelte", "systeminfo",
             "bildschirmzeit", "wie lange war ich", "noten", "note ", "durchschnitt", "zeugnis", "bus", "bahn", "zug", "verspätung", "abfahrt", "am handy", "autopilot", "schlafmodus", "schulmodus", "limit"),

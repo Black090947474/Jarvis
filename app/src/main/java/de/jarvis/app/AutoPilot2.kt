@@ -36,6 +36,7 @@ object AutoPilot2 {
         AutoPilot.Feature("parking", "🚗 Parkplatz automatisch", "Trennt sich das Auto-Bluetooth, merkt sich Jarvis den Standort als Parkplatz.", true),
         AutoPilot.Feature("vocab", "📚 Vokabeln nebenbei", "Nachmittags eine Karteikarten-Frage als Benachrichtigung – direkt dort antworten.", false),
         AutoPilot.Feature("sky", "🌨 Wetter-Überraschungen", "Hinweis bei Schnee oder Gewitter morgen und in Sternschnuppen-Nächten.", true),
+        AutoPilot.Feature("trade_bot", "🤖 Demo-Trading-Bot", "Werktags 17:45 handelt der Bot im Jarvis-Demo-Depot (nur Spielgeld) nach einfachen Signalen und meldet, was er gemacht hat.", false),
         AutoPilot.Feature("airpods", "🎧 AirPods-Menü", "Beim Verbinden von AirPods/Beats: Menü mit Akkustand (links, rechts, Case), Musik und Geräuschkontrolle.", true),
         AutoPilot.Feature("heat", "🌡 Hitze-Warnung", "Wird der Akku über 43 °C heiß, sagt Jarvis Bescheid.", true),
         AutoPilot.Feature("sos", "🆘 Akku-Notfall-SMS", "Nur wenn du es einschaltest: Bei 5 % Akku bekommt deine Notfall-Person eine SMS mit deinem Standort. Du wirst informiert.", false),

@@ -251,6 +251,13 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
 - 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
 
+## Demo-Trading (ab Version 34)
+Werkzeuge → **Demo-Trading**: Jarvis-Depot mit 10.000 € **Spielgeld** und echten Kursen (Yahoo Finance, Binance). Nie echtes Geld.
+- „Jarvis, schau, welche Aktien gerade steigen könnten“ → Signale (Trend, RSI, Schwung) für ~25 Werte (Apple, NVIDIA, SAP, Rheinmetall, Bitcoin …).
+- „Kauf für 500 € Apple“, „Verkauf Tesla“, „Wie steht mein Depot?“, „Zeig den Chart“ (öffnet TradingView).
+- 🤖 Automatischer Demo-Bot (aus/an): werktags 17:45, Stop-Loss, Verlustgrenze -8 %, Gewinnmitnahme +15 %.
+- Signale sind Statistik, keine Vorhersage und keine Anlageberatung. TradingView bietet keine Schnittstelle für Demo-Trades, deshalb hat Jarvis sein eigenes Demo-Depot.
+
 ## Ohne API-Schlüssel (ab Version 33)
 - Jarvis funktioniert jetzt **sofort ohne Schlüssel**: ohne eigene Schlüssel nutzt er automatisch die kostenlose Online-KI Pollinations (langsamer, begrenzt).
 - 🧠 **Eigene KI** (Werkzeuge → Eigene KI): einmal per WLAN laden (ca. 1,6 GB), danach läuft deine KI komplett auf dem Handy – ohne Schlüssel, ohne Konto, ohne Internet, privat. Kleiner als die großen Online-KIs, dafür deine. Schalter „Eigene KI zuerst“ = immer privat.

@@ -61,16 +61,14 @@ object LiveTool : JarvisTool {
                 "• " + (i.optString("topline").takeIf { it.isNotBlank() }?.let { "$it: " } ?: "") + i.optString("title") })
         }
         "stock" -> {
-            val q = a.optString("query").trim().lowercase(Locale.GERMANY)
+            val q = a.optString("query").trim()
             if (q.isBlank()) return Res.error("Welche Aktie oder welcher Index?")
-            val sym = SYMBOLS.entries.firstOrNull { q.contains(it.key) }?.value ?: q.replace(" ", "")
-            val csv = get("https://stooq.com/q/l/?s=" + URLEncoder.encode(sym, "UTF-8") + "&f=sd2t2ohlcv&h&e=csv").trim().lines()
-            val v = csv.getOrNull(1)?.split(',') ?: return Res.error("Kein Kurs gefunden.")
-            if (v.size < 7 || v[6] == "N/D") return Res.error("Für „$q“ habe ich keinen Kurs gefunden. Versuch den Firmennamen.")
-            val open = v[3].toDoubleOrNull(); val close = v[6].toDoubleOrNull() ?: return Res.error("Kein Kurs.")
-            val ch = if (open != null && open > 0) (close - open) / open * 100 else null
-            Res.ok("${v[0].uppercase()}: %.2f".format(Locale.GERMANY, close) + (ch?.let { " (%+.2f %% seit Handelsbeginn)".format(Locale.GERMANY, it) } ?: "") +
-                " · Stand ${v[1]} ${v[2]}. Kein Anlage-Rat – nur zur Info.")
+            val sym = de.jarvis.app.Market.symbol(q) ?: return Res.error("Für „$q“ habe ich kein Kürzel gefunden. Versuch den Firmennamen.")
+            val price = de.jarvis.app.Market.quote(sym) ?: return Res.error("Kein Kurs für „$q“ gefunden.")
+            val c = try { de.jarvis.app.Market.closes(t.ctx, sym) } catch (_: Exception) { emptyList() }
+            val ch = if (c.size >= 2) (price / c[c.size - 2] - 1) * 100 else null
+            Res.ok("${de.jarvis.app.Market.name(sym)}: %.2f %s".format(Locale.GERMANY, price, if (de.jarvis.app.Market.isUsd(sym)) "$" else "€") +
+                (ch?.let { " (%+.2f %% zum Vortag)".format(Locale.GERMANY, it) } ?: "") + ". Kein Anlage-Rat – nur zur Info.")
         }
         "football" -> {
             val lg = a.optString("league").ifBlank { "bl1" }

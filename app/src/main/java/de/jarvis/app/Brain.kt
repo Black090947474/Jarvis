@@ -69,6 +69,8 @@ object Persona {
               Handytemperatur, Internet-Speedtest, WLAN-Qualität, Speicherplatz, große Dateien, doppelte Bilder, Systeminfo = phone_check.
             - Sicherheits-Check, „ist dieser Link/diese Nachricht sicher/Betrug?“, Geräte im WLAN = security. Passwörter NIE im Gespräch
               erfragen oder wiederholen – nur security password (öffnet den Passwort-Check auf dem Handy).
+            - Trading/Aktien kaufen/„was steigt?“/Depot = trading (NUR Demo-Depot mit Spielgeld, nie echtes Geld). TradingView-Charts:
+              trading chart. Immer kurz sagen: Signale sind keine Vorhersage, keine Anlageberatung.
             - Auto/Motorrad: Kilometerstand, Tanken, Kosten, TÜV, Wartung, Rundenzeiten, Tacho = vehicle.
             - „Worüber haben wir … geredet?“, „Fass unser Gespräch zusammen“ = history. Flüstermodus, Expertenmodus,
               Diskussionsmodus, sarkastischer/lustiger sein, schneller sprechen, offline verstehen = jarvis_settings.
