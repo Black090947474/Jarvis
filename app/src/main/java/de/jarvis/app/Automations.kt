@@ -49,6 +49,7 @@ object Automations {
         "briefing" to "Tagesüberblick vorlesen",
         "greet" to "Begrüßung („Willkommen zurück“)",
         "routines" to "Eigenes Kommando ausführen",
+        "jarvis_call" to "Jarvis ruft mich an",
     )
 
     fun all(ctx: Context): List<JSONObject> = JsonStore(ctx).list(KEY)

@@ -167,6 +167,7 @@ object Scheduler {
         scheduleAutomations(ctx)
         SmartHints.scheduleHome(ctx)
         AutoPilot.scheduleAll(ctx)
+        JarvisCall.rescheduleAll(ctx)
     }
 
     /** Uhrzeit- und Orts-Automationen einplanen. */
@@ -346,6 +347,7 @@ class JarvisReceiver : BroadcastReceiver() {
                 Scheduler.scheduleAutomations(ctx)
             }
             "android.bluetooth.device.action.ACL_CONNECTED" -> Automations.onBluetooth(ctx, intent)
+            "android.app.action.NEXT_ALARM_CLOCK_CHANGED" -> AutoPilot.scheduleAll(ctx)
             "android.bluetooth.device.action.ACL_DISCONNECTED" -> {
                 val dev: android.bluetooth.BluetoothDevice? = if (Build.VERSION.SDK_INT >= 33)
                     intent.getParcelableExtra(android.bluetooth.BluetoothDevice.EXTRA_DEVICE, android.bluetooth.BluetoothDevice::class.java)

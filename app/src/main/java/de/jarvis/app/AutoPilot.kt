@@ -41,11 +41,11 @@ object AutoPilot {
     // Jobs
     const val J_BED = "bed"; const val J_WAKE = "wake"; const val J_NIGHT = "night"; const val J_EVENING = "evening"
     const val J_MORNING = "morning"; const val J_SCHOOL_ON = "school_on"; const val J_SCHOOL_OFF = "school_off"
-    const val J_SCREEN = "screen"; const val J_WEEKLY = "weekly"
+    const val J_SCREEN = "screen"; const val J_WEEKLY = "weekly"; const val J_WAKECHECK = "wakecheck"
 
     private val RC = mapOf(J_BED to 880_001, J_WAKE to 880_002, J_NIGHT to 880_003, J_EVENING to 880_004, J_MORNING to 880_005,
         J_SCHOOL_ON to 880_006, J_SCHOOL_OFF to 880_007, J_SCREEN to 880_008, J_WEEKLY to 880_009,
-        AutoPilot2.J_TRANSIT to 880_010, AutoPilot2.J_VOCAB to 880_011, AutoPilot2.J_SKY to 880_012)
+        AutoPilot2.J_TRANSIT to 880_010, AutoPilot2.J_VOCAB to 880_011, AutoPilot2.J_SKY to 880_012, J_WAKECHECK to 880_013)
 
     /** Alle Schalter mit Beschreibung (für die Autopilot-Zentrale). Standard: an, außer wo es ins Handy eingreift. */
     data class Feature(val key: String, val title: String, val info: String, val def: Boolean)
@@ -63,6 +63,7 @@ object AutoPilot {
         Feature("goodnight", "😴 Gute-Nacht-Routine", "30 Min. vor dem Schlafen: Bildschirm dimmen, Gute-Nacht-Geschichte oder Einschlafmusik anbieten.", true),
         Feature("fact", "💡 Fakt des Tages", "Jeden Morgen ein spannender Fakt – antippen und Jarvis erklärt ihn mit Hologramm.", true),
         Feature("weekly", "📊 Wochenrückblick (Sonntag 18 Uhr)", "Lernzeit, Bildschirmzeit, offene Aufgaben, Geburtstage nächste Woche.", true),
+        Feature("wake_call", "📞 Verschlafen-Schutz", "Warst du 15 Minuten nach dem Wecker noch nicht am Handy, ruft Jarvis dich an (klingelt auch bei lautlos).", false),
     ) + AutoPilot2.FEATURES
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences("autopilot", Context.MODE_PRIVATE)
@@ -115,6 +116,11 @@ object AutoPilot {
             at(ctx, J_MORNING, if (on(ctx, "birthdays") || on(ctx, "fact") || on(ctx, "school")) nextAt(wake(ctx).plusMinutes(10)) else null)
             at(ctx, J_SCREEN, if (on(ctx, "screen_coach")) nextAt(LocalTime.of(21, 0)) else null)
             at(ctx, J_WEEKLY, if (on(ctx, "weekly") || on(ctx, "cleanup")) nextAt(LocalTime.of(18, 0), DayOfWeek.SUNDAY) else null)
+            val alarm = ctx.getSystemService(AlarmManager::class.java)?.nextAlarmClock?.triggerTime
+            if (on(ctx, "wake_call") && alarm != null && alarm > System.currentTimeMillis()) {
+                sp(ctx).edit().putLong("alarm_at", alarm).apply()
+                at(ctx, J_WAKECHECK, alarm + 15 * 60_000L)
+            } else at(ctx, J_WAKECHECK, null)
             planSchool(ctx)
             AutoPilot2.scheduleAll(ctx)
         } catch (_: Exception) {}
@@ -134,6 +140,7 @@ object AutoPilot {
                 J_SCHOOL_OFF -> if (on(ctx, "school")) schoolOff(ctx)
                 J_SCREEN -> if (on(ctx, "screen_coach")) screenSummary(ctx)
                 J_WEEKLY -> { if (on(ctx, "weekly")) weekly(ctx); if (on(ctx, "cleanup")) cleanup(ctx) }
+                J_WAKECHECK -> if (on(ctx, "wake_call")) wakeCheck(ctx)
                 else -> AutoPilot2.handle(ctx, job, intent)
             }
         } catch (_: Exception) {}
@@ -223,9 +230,24 @@ object AutoPilot {
         sp(ctx).edit().remove("bri_$tag").remove("brimode_$tag").apply()
     }
 
+    /** Verschlafen-Schutz: Wecker hat geklingelt, aber das Handy wurde seitdem nicht entsperrt → Jarvis ruft an. */
+    private fun wakeCheck(ctx: Context) {
+        val alarm = sp(ctx).getLong("alarm_at", 0L)
+        if (alarm == 0L || System.currentTimeMillis() - alarm > 60 * 60_000L) return
+        if (sp(ctx).getLong("last_present", 0L) >= alarm) return
+        val km = ctx.getSystemService(android.app.KeyguardManager::class.java)
+        val pm = ctx.getSystemService(android.os.PowerManager::class.java)
+        if (pm?.isInteractive == true && km?.isKeyguardLocked == false) return   // Handy wird gerade benutzt
+        val hhmm = java.time.Instant.ofEpochMilli(alarm).atZone(ZoneId.systemDefault()).toLocalTime().toString().take(5)
+        val first = firstLesson(ctx, LocalDate.now().dayOfWeek)
+        JarvisCall.ring(ctx, "Guten Morgen! Dein Wecker hat um $hhmm geklingelt und du warst noch nicht am Handy. Zeit aufzustehen!" +
+            (first?.let { " Die erste Stunde beginnt um ${it.toString().take(5)}." } ?: ""))
+    }
+
     /** Erstes Entsperren am Morgen → Briefing. Wird von [Triggers] aufgerufen. */
     fun userPresent(ctx: Context) {
         usageResume()
+        sp(ctx).edit().putLong("last_present", System.currentTimeMillis()).apply()
         if (!sp(ctx).getBoolean("brief_pending", false)) return
         if (LocalTime.now().hour >= 12) { sp(ctx).edit().putBoolean("brief_pending", false).apply(); return }
         sp(ctx).edit().putBoolean("brief_pending", false).apply()

@@ -251,6 +251,12 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
 - 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
 
+## Jarvis ruft dich an (ab Version 30.2)
+- „Jarvis, ruf mich um 7 Uhr an und erinner mich an die Mathe-Arbeit“ → zur Uhrzeit erscheint ein Anruf-Bildschirm mit Klingelton (klingelt auch bei lautlos). Annehmen → Jarvis sagt dir, worum es geht. Auch: „In 5 Minuten“ oder ablehnen.
+- 📞 **Verschlafen-Schutz** (Autopilot): Warst du 15 Minuten nach dem Wecker noch nicht am Handy, ruft Jarvis an.
+- In Automationen gibt es die Aktion „Jarvis ruft mich an“. Testen: Autopilot → „Jarvis-Anruf testen“.
+- Damit der Anruf auch bei gesperrtem Handy erscheint: in der Autopilot-Zentrale „Vollbild-Anruf“ erlauben.
+
 ## Profi-Werkzeuge (ab Version 30, braucht den Profi-Modus)
 Im Profi-Modus gibt es jetzt: Handy schneller (Animationen), Cache leeren, Hintergrund-Apps beenden, Akkufresser anzeigen und im Hintergrund bremsen,
 Werbeblocker fürs ganze Handy, „Wer darf mein Mikrofon/Standort …?“ und Rechte wegnehmen, vorinstallierte Extras einfrieren (umkehrbar),

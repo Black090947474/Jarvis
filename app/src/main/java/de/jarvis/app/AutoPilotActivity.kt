@@ -72,6 +72,9 @@ class AutoPilotActivity : Activity() {
             line(write, "Helligkeit ändern (Dimmen)") { startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName"))) }
             line(acc, "Bedienungshilfe (Bildschirmzeit)") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
             line(pro, "Profi-Modus (Energiesparen, Dunkelmodus)") { startActivity(Intent(this@AutoPilotActivity, ProActivity::class.java)) }
+            line(JarvisCall.canFullScreen(this@AutoPilotActivity), "Vollbild-Anruf (Jarvis ruft an)") {
+                try { startActivity(Intent("android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT", Uri.parse("package:$packageName"))) }
+                catch (_: Exception) { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) } }
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(10) })
 
         col.addView(ui.section("Funktionen"))
@@ -125,6 +128,9 @@ class AutoPilotActivity : Activity() {
         col.addView(ui.section("Jetzt ausprobieren"))
         fun test(label: String, job: String) = col.addView(ui.button(label, false) {
             thread { AutoPilot.handle(applicationContext, job) }; toast("Schau in deine Benachrichtigungen.") })
+        col.addView(ui.button("📞 Jarvis-Anruf testen (in 10 Sekunden)") {
+            JarvisCall.schedule(this, System.currentTimeMillis() + 10_000L, "Das ist ein Test-Anruf. So rufe ich dich an, wenn es wichtig ist.")
+            toast("Sperr ruhig das Handy – in 10 Sekunden klingelt es.") })
         test("Abend-Check jetzt zeigen", AutoPilot.J_EVENING)
         test("Morgen-Hinweise (Geburtstage, Fakt)", AutoPilot.J_MORNING)
         test("Wochenrückblick jetzt zeigen", AutoPilot.J_WEEKLY)
