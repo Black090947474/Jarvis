@@ -201,6 +201,8 @@ object Scheduler {
 
     fun scan(ctx: Context) {
         JarvisWidget.updateAll(ctx)
+        // Alle 6 Stunden auch im Hintergrund nach einem Update schauen
+        Prefs(ctx).let { p -> if (System.currentTimeMillis() - p.lastUpdateCheck > 6 * 3_600_000L) { p.lastUpdateCheck = System.currentTimeMillis(); try { Updater.backgroundCheck(ctx) } catch (_: Exception) {} } }
         scanAutomationEvents(ctx)
         SmartHints.check(ctx)
         val p = Prefs(ctx)

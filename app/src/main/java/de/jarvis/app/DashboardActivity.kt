@@ -78,6 +78,7 @@ class DashboardActivity : Activity() {
     private var hudStatus: TextView? = null
     private var timeline: TimelineView? = null
     private var nowText: TextView? = null
+    private companion object { var lastUpdateLook = 0L }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,7 +86,6 @@ class DashboardActivity : Activity() {
         if (!prefs.v20Migrated) { prefs.design = "HOLO"; if (prefs.uiTheme != "HELL") prefs.uiTheme = "BLAU"; prefs.v20Migrated = true }
         thread { ProShell.keepAccessibility(applicationContext) }
         if (prefs.bubble && BubbleService.instance == null) BubbleService.start(this)
-        if (System.currentTimeMillis() - prefs.lastUpdateCheck > 6 * 3_600_000L) { prefs.lastUpdateCheck = System.currentTimeMillis(); Updater.check(this, quiet = true) }
         if (!prefs.wizardShown) { prefs.wizardShown = true; startActivity(Intent(this, PermissionsActivity::class.java).putExtra("wizard", true)) }
         Ui.load(prefs); ui = Ui(this)
         window.statusBarColor = BG; window.navigationBarColor = BG; Ui.lightBars(window)
@@ -432,7 +432,15 @@ class DashboardActivity : Activity() {
     override fun onResume() {
         super.onResume()
         refresh()
+        // Bei jedem Öffnen nach Updates schauen (höchstens alle 3 Minuten) – neue Version = Benachrichtigung
+        if (intent?.getBooleanExtra("install_update", false) == true) {
+            intent.removeExtra("install_update"); lastUpdateLook = System.currentTimeMillis(); Updater.check(this, quiet = false)
+        } else if (System.currentTimeMillis() - lastUpdateLook > 3 * 60_000L) {
+            lastUpdateLook = System.currentTimeMillis(); prefs.lastUpdateCheck = lastUpdateLook; Updater.check(this, quiet = true)
+        }
     }
+
+    override fun onNewIntent(i: Intent) { super.onNewIntent(i); setIntent(i) }
 
     private fun refresh() {
         if (current == "system") refreshSystem()
