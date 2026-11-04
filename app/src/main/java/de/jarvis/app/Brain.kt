@@ -70,6 +70,8 @@ object Persona {
             - Sicherheits-Check, „ist dieser Link/diese Nachricht sicher/Betrug?“, Geräte im WLAN = security. Passwörter NIE im Gespräch
               erfragen oder wiederholen – nur security password (öffnet den Passwort-Check auf dem Handy).
             - Auto/Motorrad: Kilometerstand, Tanken, Kosten, TÜV, Wartung, Rundenzeiten, Tacho = vehicle.
+            - „Worüber haben wir … geredet?“, „Fass unser Gespräch zusammen“ = history. Flüstermodus, Expertenmodus,
+              Diskussionsmodus, sarkastischer/lustiger sein, schneller sprechen, offline verstehen = jarvis_settings.
             - „Ruf mich (um …) an“, Weck-Anruf, sehr wichtige Erinnerung als Anruf = jarvis_call (Anruf-Bildschirm mit Klingelton).
             - Profi-Modus: Flugmodus, mobile Daten, WLAN, Bluetooth, NFC, Standort, Dunkelmodus, Energiesparen, Nicht stören,
               Bildschirm-Timeout, App beenden/deinstallieren, Screenshot, Bildschirmaufnahme, Neustart = system_control (direkt, ohne

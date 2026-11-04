@@ -59,7 +59,7 @@ class Convo(context: Context) {
         val a = load()
         a.put(org.json.JSONObject().put("r", role).put("t", text.take(1200)).put("at", System.currentTimeMillis()))
         val keep = JSONArray()
-        for (i in maxOf(0, a.length() - 40) until a.length()) keep.put(a.get(i))
+        for (i in maxOf(0, a.length() - 400) until a.length()) keep.put(a.get(i))
         sp.edit().putString("log", keep.toString()).apply()
     }
 
@@ -68,6 +68,21 @@ class Convo(context: Context) {
         val a = load(); val since = System.currentTimeMillis() - hours * 3_600_000L
         return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { it.optLong("at") >= since }
             .takeLast(n).map { it.optString("r") to it.optString("t") }
+    }
+
+    /** Frühere Gespräche durchsuchen: (Zeit, Rolle, Text). */
+    @Synchronized fun search(q: String, max: Int = 12): List<Triple<Long, String, String>> {
+        val a = load(); val words = q.lowercase().split(Regex("\\s+")).filter { it.length > 2 }
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }
+            .filter { o -> val t = o.optString("t").lowercase(); words.isNotEmpty() && words.all { t.contains(it) } || words.isEmpty() }
+            .takeLast(max).map { Triple(it.optLong("at"), it.optString("r"), it.optString("t")) }
+    }
+
+    /** Alles seit [since] (für Zusammenfassungen). */
+    @Synchronized fun since(since: Long): List<Triple<Long, String, String>> {
+        val a = load()
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { it.optLong("at") >= since }
+            .map { Triple(it.optLong("at"), it.optString("r"), it.optString("t")) }
     }
 
     fun clear() = sp.edit().remove("log").apply()

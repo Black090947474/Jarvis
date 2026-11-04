@@ -62,6 +62,7 @@ class ProvidersActivity : Activity() {
         Entry("cerebras", "Cerebras", "⚡ SCHNELL", "Extrem schnell; verlangt evtl. eine Karte.", "https://cloud.cerebras.ai", false),
         Entry("pollinations", "Pollinations", "", "Geht sogar ohne Schlüssel – einfach „Ohne Schlüssel nutzen“.", "https://auth.pollinations.ai", false),
         Entry("claude", "Claude (Anthropic)", "€ KOSTET GELD", "Sehr klug, aber nur mit Guthaben.", "https://console.anthropic.com/settings/keys", true),
+        Entry("openai", "ChatGPT (OpenAI)", "€ KOSTET GELD", "Bekannt aus ChatGPT – nur mit Guthaben (nicht im ChatGPT-Abo enthalten).", "https://platform.openai.com/api-keys", false),
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {

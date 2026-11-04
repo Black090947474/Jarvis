@@ -25,6 +25,8 @@ object ProviderCatalog {
             listOf("glm-4.5-flash", "glm-4.7-flash"), "https://z.ai/manage-apikey/apikey-list", "Flash-Modelle kostenlos."),
         Preset("sambanova", "SambaNova", "https://api.sambanova.ai/v1/chat/completions",
             listOf("Meta-Llama-3.3-70B-Instruct", "DeepSeek-V3-0324"), "https://cloud.sambanova.ai/apis", "Sehr schnell, Gratis-Kontingent (Bedingungen ändern sich manchmal)."),
+        Preset("openai", "ChatGPT (OpenAI)", "https://api.openai.com/v1/chat/completions",
+            listOf("gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini"), "https://platform.openai.com/api-keys", "Kostet Geld – nur mit Guthaben bei OpenAI."),
         Preset("cerebras", "Cerebras", "https://api.cerebras.ai/v1/chat/completions",
             listOf("gpt-oss-120b", "llama-3.3-70b"), "https://cloud.cerebras.ai", "Extrem schnell; verlangt inzwischen evtl. eine Karte."),
         Preset("pollinations", "Pollinations", "https://text.pollinations.ai/openai",

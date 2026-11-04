@@ -255,6 +255,10 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌍 **Live-Infos:** „Was gibt's Neues?“ (tagesschau), „Wie steht die Tesla-Aktie?“, „Bundesliga-Ergebnisse“ / „Tabelle“, „Wann geht die Sonne unter?“, „Welches Flugzeug fliegt da?“
 - 📱 **Handy-Check:** Temperatur, Internet-Speedtest, WLAN-Qualität, Speicherplatz, große Dateien, doppelte Bilder (Löschen nur nach Android-Bestätigung), Systeminfo. 🌡 Hitze-Warnung im Autopilot.
 - 🛡 **Sicherheitszentrale** (Werkzeuge → Sicherheit): Punkte-Check (Bildschirmsperre, Updates, fremde Bedienungshilfen, Apps mit vielen Rechten, Apps aus unbekannten Quellen …), Phishing-/Fake-Link-Prüfung, Passwort-Check (bleibt auf dem Handy), Geräte im WLAN (Profi-Modus), Bericht teilen.
+- 🗣 **Jarvis-Kern:** Flüstermodus („Flüstermodus an“), Lautstärke passt sich deiner Stimme an, „Wiederhol das“, Offline-Spracherkennung, frühere Gespräche durchsuchen und zusammenfassen, neue Persönlichkeiten (Sarkastisch, Experte, Diskussion), ChatGPT als zusätzlicher Anbieter (kostet Geld).
+- 🙂 **3D-Kopf:** Mund bewegt sich beim Sprechen, Farben je Zustand (Denken violett).
+- 📷 **Scan:** QR-Codes (mit Betrugs-Check für Links), Live-Modus, Pflanze/Tier, Handschrift, Sternenhimmel.
+- 🧭 **Kontrollzentrum:** Systemdiagnose, KI-Test, alle Bereiche, Module, „Jarvis übertragen“ (aufs neue Handy).
 - 🚗 **Fahrzeug:** Auto/Motorrad/Crossbike anlegen, Kilometer, Tanken, Verbrauch, Kosten, TÜV- und Wartungs-Erinnerung, Wetter-Warnung beim Einsteigen, GPS-Tacho und Rundenzeit-Stoppuhr für Motocross.
 
 ## Jarvis ruft dich an (ab Version 30.2)

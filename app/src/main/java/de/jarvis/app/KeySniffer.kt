@@ -21,6 +21,7 @@ object KeySniffer {
             k.startsWith("AIza") -> Hit("gemini", "Google Gemini", k)
             k.startsWith("sk-or-") -> Hit("openrouter", "OpenRouter", k)
             k.startsWith("hf_") -> Hit("huggingface", "Hugging Face", k)
+            k.startsWith("sk-proj-") || (k.startsWith("sk-") && expected == null) -> Hit("openai", "ChatGPT (OpenAI)", k)
             expected != null && Regex("^[A-Za-z0-9._\\-]+$").matches(k) ->
                 Hit(expected, de.jarvis.app.logic.ProviderCatalog.preset(expected)?.name ?: expected, k)
             else -> null

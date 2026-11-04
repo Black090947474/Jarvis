@@ -151,3 +151,57 @@ object TransitTool : JarvisTool {
         return Res.ok(de.jarvis.app.AutoPilot2.transit(t.ctx))
     }
 }
+
+/** Frühere Gespräche durchsuchen und zusammenfassen. */
+object HistoryTool : JarvisTool {
+    override val name = "history"
+    override val group = "core"
+    override val feature: String? = null
+    override val permissions = emptyList<String>()
+
+    override val definition: JSONObject = JSONObject("""
+{"name":"history","description":"Frühere Gespräche mit Jarvis. search: nach Stichworten suchen (query) – z. B. 'Was hatten wir über Mathe besprochen?'. summary: Verlauf der letzten days Tage (Standard 1) holen, um ihn zusammenzufassen.",
+ "input_schema":{"type":"object","properties":{"action":{"type":"string","enum":["search","summary"]},"query":{"type":"string"},"days":{"type":"integer"}},"required":["action"]}}
+""".trimIndent())
+
+    override fun run(t: ToolContext, a: JSONObject): String {
+        val c = de.jarvis.app.Convo(t.ctx)
+        fun fmt(l: List<Triple<Long, String, String>>) = l.joinToString("\n") { (at, r, txt) ->
+            de.jarvis.app.logic.TimeLogic.short(at) + " " + (if (r == "user") "Du" else "Jarvis") + ": " + txt.take(300) }
+        return when (a.optString("action")) {
+            "search" -> { val r = c.search(a.optString("query")); if (r.isEmpty()) Res.ok("Dazu habe ich in unseren Gesprächen nichts gefunden.") else Res.ok("Gefunden:\n" + fmt(r)) }
+            else -> { val days = a.optInt("days", 1).coerceIn(1, 30)
+                val r = c.since(System.currentTimeMillis() - days * 86_400_000L).takeLast(80)
+                if (r.isEmpty()) Res.ok("In dem Zeitraum haben wir nicht geredet.") else Res.ok("Verlauf (fasse ihn kurz zusammen):\n" + fmt(r)) }
+        }
+    }
+}
+
+/** Jarvis selbst einstellen: Flüstermodus, Auto-Lautstärke, Offline-Erkennung, Persönlichkeit, Sprechtempo. */
+object JarvisSettingsTool : JarvisTool {
+    override val name = "jarvis_settings"
+    override val group = "core"
+    override val feature: String? = null
+    override val permissions = emptyList<String>()
+
+    override val definition: JSONObject = JSONObject("""
+{"name":"jarvis_settings","description":"Jarvis einstellen. whisper (Flüstermodus, on), auto_volume (on), offline_speech (Spracherkennung offline, on), personality (value: BUTLER, FREUNDLICH, PROFESSIONELL, TECHNISCH, HUMORVOLL, MINIMAL, SARKASTISCH, EXPERTE, DISKUSSION – z. B. 'Expertenmodus', 'Diskussionsmodus', 'sei sarkastischer'), rate (value 0.6–1.6, Sprechtempo).",
+ "input_schema":{"type":"object","properties":{"setting":{"type":"string","enum":["whisper","auto_volume","offline_speech","personality","rate"]},"on":{"type":"boolean"},"value":{"type":"string"}},"required":["setting"]}}
+""".trimIndent())
+
+    override fun run(t: ToolContext, a: JSONObject): String {
+        val p = t.prefs
+        val on = a.optBoolean("on", true)
+        return when (a.optString("setting")) {
+            "whisper" -> { p.whisper = on; Res.ok(if (on) "Flüstermodus an." else "Flüstermodus aus.") }
+            "auto_volume" -> { p.autoVolume = on; Res.ok("Automatische Lautstärke ${if (on) "an" else "aus"}.") }
+            "offline_speech" -> { p.offlineSpeech = on; Res.ok(if (on) "Ich versuche ab jetzt, dich ohne Internet zu verstehen (dafür muss das deutsche Offline-Sprachpaket installiert sein)." else "Spracherkennung wieder normal.") }
+            "personality" -> { val k = a.optString("value").uppercase().trim()
+                if (k !in de.jarvis.app.Personality.PRESETS) return Res.error("Welche Persönlichkeit? " + de.jarvis.app.Personality.PRESETS.keys.joinToString())
+                p.personality = k; Res.ok("Persönlichkeit jetzt: " + de.jarvis.app.Personality.PRESETS[k]) }
+            "rate" -> { val r = a.optString("value").replace(',', '.').toFloatOrNull() ?: return Res.error("Wie schnell (0.6 bis 1.6)?")
+                p.voiceRate = r; Res.ok("Sprechtempo $r.") }
+            else -> Res.error("Unbekannte Einstellung.")
+        }
+    }
+}

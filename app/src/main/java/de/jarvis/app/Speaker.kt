@@ -169,6 +169,7 @@ class Speaker(
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             mp.setDataSource(f.absolutePath)
             mp.prepare()
+            volume().let { v -> mp.setVolume(v, v) }
             playing = true
             mp.setOnCompletionListener { releasePlayer(); f.delete(); if (g == gen) { playing = false; nextPlay++; pump() } }
             mp.setOnErrorListener { _, _, _ -> releasePlayer(); if (g == gen) { playing = false; nextPlay++; pump() }; true }
@@ -192,7 +193,22 @@ class Speaker(
     }
 
     private fun speakDirect(text: String, id: String) {
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id.substringBefore('#'))
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, android.os.Bundle().apply { putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume()) }, id.substringBefore('#'))
+    }
+
+    /** Lautstärke 0..1: Flüstermodus leise, sonst passend zu deiner Stimme (Auto-Lautstärke). */
+    fun volume(): Float = when {
+        prefs.whisper -> 0.28f
+        prefs.autoVolume && heardLevel >= 0f -> (0.55f + heardLevel * 0.9f).coerceIn(0.55f, 1f)
+        else -> 1f
+    }
+
+    companion object {
+        /** Lauteste Stelle der letzten Spracheingabe (0..1), -1 = unbekannt. Wird beim Zuhören gesetzt. */
+        @Volatile @JvmStatic var heardLevel = -1f
+        private var peak = 0f
+        @JvmStatic fun noteLevel(l: Float) { if (l > peak) peak = l }
+        @JvmStatic fun endUtterance() { if (peak > 0f) heardLevel = peak; peak = 0f }
     }
 
     private fun playFile(sid: String) {
@@ -207,6 +223,7 @@ class Speaker(
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             mp.setDataSource(file.absolutePath)
             mp.prepare()
+            volume().let { v -> mp.setVolume(v, v) }
             mp.setOnCompletionListener { releasePlayer(); onDone(id) }
             mp.setOnErrorListener { _, _, _ -> releasePlayer(); onDone(id); true }
             mp.start()

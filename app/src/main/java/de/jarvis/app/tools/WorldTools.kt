@@ -51,7 +51,7 @@ object LiveTool : JarvisTool {
         "allianz" to "alv.de", "adidas" to "ads.de", "puma" to "pum.de", "deutsche bank" to "dbk.de", "telekom" to "dte.de", "rheinmetall" to "rhm.de",
         "gold" to "xauusd", "euro" to "eurusd", "dollar" to "eurusd")
 
-    override fun run(t: ToolContext, a: JSONObject): String = try { when (a.optString("action")) {
+    override fun run(t: ToolContext, a: JSONObject): String { return try { when (a.optString("action")) {
         "news" -> {
             val j = JSONObject(get("https://www.tagesschau.de/api2u/homepage/"))
             val n = j.optJSONArray("news") ?: JSONArray()
@@ -112,7 +112,7 @@ object LiveTool : JarvisTool {
                 "\n(Daten: OpenSky Network)")
         }
         else -> Res.error("Unbekannte Aktion.")
-    } } catch (e: Exception) { Res.error("Live-Daten gerade nicht erreichbar (${e.message?.take(60)}).") }
+    } } catch (e: Exception) { Res.error("Live-Daten gerade nicht erreichbar (${e.message?.take(60)}).") } }
 }
 
 /** Handy-Check: Temperatur, Internet-Tempo, WLAN, Speicher, große Dateien, doppelte Bilder, Systeminfo. */

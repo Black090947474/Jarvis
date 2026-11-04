@@ -50,4 +50,6 @@ dependencies {
     // Profi-Modus: Shizuku (ADB-Rechte ohne Root, nur wenn du es einrichtest)
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    // QR-Codes offline lesen (Scan)
+    implementation("com.google.zxing:core:3.5.3")
 }

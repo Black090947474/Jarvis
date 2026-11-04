@@ -536,6 +536,7 @@ class JarvisActivity : Activity() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, nextListenLang?.let { Locale.forLanguageTag(it).toLanguageTag() } ?: "de-DE")
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, Prefs(this).offlineSpeech)
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
@@ -557,7 +558,7 @@ class JarvisActivity : Activity() {
         core.mode = CoreView.Mode.LISTENING
         youText.text = "…"
         thread {
-            val pcm = try { Whisper.record({ lvl -> main.post { core.level = lvl } }, cancelled, silenceMs = 750) }
+            val pcm = try { Whisper.record({ lvl -> Speaker.noteLevel(lvl); main.post { core.level = lvl } }, cancelled, silenceMs = 750).also { Speaker.endUtterance() } }
                       catch (e: Exception) { main.post { if (!cancelled()) { listening = false; whisperFailed = true; listen() } }; return@thread }
             if (cancelled()) return@thread
             if (pcm == null) { main.post { if (!cancelled()) { listening = false; onNothingHeard() } }; return@thread }
@@ -640,6 +641,18 @@ class JarvisActivity : Activity() {
         if (clean.split(" ").size <= 3 && BYE_WORDS.any { clean == it || clean.startsWith("$it ") }) {
             speak(listOf("Bis später.", "Gern geschehen.", "Jederzeit.").random(), ID_BYE)
             return
+        }
+        // „Wiederhol das“ – letzte Antwort nochmal
+        if (Regex("^(jarvis )?(wiederhol\\w*|nochmal bitte|sag das nochmal|was hast du (gerade |eben )?gesagt)").containsMatchIn(clean)) {
+            Convo(this).recent(10).lastOrNull { it.first == "assistant" }?.second?.let { last ->
+                jarvisText.text = last; speak(Persona.clean(last), "repeat"); return }
+        }
+        // Flüstermodus an/aus
+        if (clean.contains("flüstermodus") || clean.contains("flüster modus") || clean.startsWith("flüster")) {
+            val on = !Regex("\\b(aus|beenden|ausschalten|normal)\\b").containsMatchIn(clean)
+            Prefs(this).whisper = on
+            val r = if (on) "Flüstermodus an. Ich spreche jetzt leise." else "Flüstermodus aus."
+            jarvisText.text = r; speak(r, "whisper"); return
         }
         // „Wo bist du?“ – Handy klingeln lassen
         if (FindActivity.matches(text)) { FindActivity.start(this); finish(); return }

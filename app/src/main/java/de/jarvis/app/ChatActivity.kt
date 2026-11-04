@@ -461,6 +461,7 @@ class ChatActivity : Activity() {
         val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "de-DE")
+            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, Prefs(this).offlineSpeech)
             .putExtra(RecognizerIntent.EXTRA_PROMPT, "Sprich mit Jarvis …")
         try { startActivityForResult(i, REQ_SPEECH) } catch (_: Exception) { toast("Spracherkennung nicht verfügbar.") }
     }

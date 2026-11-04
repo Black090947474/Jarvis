@@ -63,6 +63,21 @@ class Prefs(context: Context) {
         get() = sp.getFloat("voice_pitch2", 1.0f)
         set(v) = sp.edit().putFloat("voice_pitch2", v.coerceIn(0.5f, 1.5f)).apply()
 
+    /** Flüstermodus: leise sprechen. */
+    var whisper: Boolean
+        get() = sp.getBoolean("whisper", false)
+        set(v) = sp.edit().putBoolean("whisper", v).apply()
+
+    /** Lautstärke automatisch an deine Stimme anpassen (leise gesprochen = leise Antwort). */
+    var autoVolume: Boolean
+        get() = sp.getBoolean("auto_volume", true)
+        set(v) = sp.edit().putBoolean("auto_volume", v).apply()
+
+    /** Spracherkennung möglichst offline (ohne Internet). */
+    var offlineSpeech: Boolean
+        get() = sp.getBoolean("offline_speech", false)
+        set(v) = sp.edit().putBoolean("offline_speech", v).apply()
+
     /** Tempo: 1.0 = normal. */
     var voiceRate: Float
         get() = sp.getFloat("voice_rate2", 1.0f)

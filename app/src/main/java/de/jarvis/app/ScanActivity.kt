@@ -84,6 +84,11 @@ class ScanActivity : Activity() {
         chip("🌍 Übersetzen", "Lies den Text auf dem Bild und übersetze ihn ins Deutsche (bzw. ins Englische, falls er Deutsch ist).")
         chip("📝 Text lesen", "Lies den Text auf dem Bild vollständig vor.")
         chip("🧮 Kalorien?", "Was für ein Essen ist das ungefähr, und wie viele Kalorien hat es grob? Kurz antworten.")
+        chip("🔳 QR-Code", "#QR")
+        chip("🎥 Live", "#LIVE")
+        chip("🌿 Pflanze/Tier", "Welche Pflanze oder welches Tier ist das genau (Art)? Nenne 2–3 Erkennungsmerkmale und ob es giftig oder geschützt ist.")
+        chip("✍️ Handschrift", "Lies die Handschrift auf dem Bild so genau wie möglich ab und gib sie als sauberen Text wieder.")
+        chip("🌌 Sternenhimmel", "Das ist ein Foto vom Nachthimmel. Welche Sternbilder, hellen Sterne oder Planeten erkennst du wahrscheinlich? Erkläre kurz, woran man sie findet.")
         bottom.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(chips) })
         root.addView(bottom, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
         setContentView(root)
@@ -107,7 +112,7 @@ class ScanActivity : Activity() {
         if (res.firstOrNull() != PackageManager.PERMISSION_GRANTED) { answerBox.visibility = View.VISIBLE; answer.text = "Ohne Kamera-Erlaubnis kann ich nichts sehen." }
     }
 
-    override fun onPause() { closeCamera(); super.onPause() }
+    override fun onPause() { live = false; liveHandler.removeCallbacksAndMessages(null); closeCamera(); super.onPause() }
     override fun onDestroy() { speaker?.shutdown(); super.onDestroy() }
 
     private fun startBg() { if (bgThread == null) bgThread = HandlerThread("scan-cam").also { it.start(); bg = Handler(it.looper) } }
@@ -163,7 +168,48 @@ class ScanActivity : Activity() {
         bgThread?.quitSafely(); bgThread = null; bg = null
     }
 
+    @Volatile private var live = false
+    private val liveHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val liveTick = object : Runnable { override fun run() {
+        if (!live || isFinishing) return
+        if (!busy) scan("Beschreibe in einem kurzen Satz, was du gerade siehst. Nur wenn sich etwas geändert hat, Neues nennen.")
+        liveHandler.postDelayed(this, 9000) } }
+
+    /** QR-Code offline lesen (zxing). */
+    private fun decodeQr(bmp: android.graphics.Bitmap): String? = try {
+        val w = bmp.width; val h = bmp.height; val px = IntArray(w * h); bmp.getPixels(px, 0, w, 0, 0, w, h)
+        val src = com.google.zxing.RGBLuminanceSource(w, h, px)
+        com.google.zxing.MultiFormatReader().decode(com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(src)),
+            mapOf(com.google.zxing.DecodeHintType.TRY_HARDER to true)).text
+    } catch (_: Throwable) { null }
+
     private fun scan(prompt: String) {
+        if (prompt == "#LIVE") {
+            live = !live
+            answerBox.visibility = View.VISIBLE
+            answer.text = if (live) "🎥 Live-Modus an – ich sage alle paar Sekunden, was ich sehe. Nochmal antippen zum Beenden." else "Live-Modus aus."
+            liveHandler.removeCallbacks(liveTick); if (live) liveHandler.postDelayed(liveTick, 1500)
+            return
+        }
+        if (prompt == "#QR") {
+            val bmp = tv.getBitmap(900, 1600) ?: return
+            answerBox.visibility = View.VISIBLE; answer.text = "Suche QR-Code …"
+            thread {
+                val txt = decodeQr(bmp)
+                runOnUiThread {
+                    if (txt == null) { answer.text = "Kein QR-Code erkannt – halte die Kamera etwas näher und gerade."; return@runOnUiThread }
+                    val isUrl = Regex("^(https?://|www\\.)", RegexOption.IGNORE_CASE).containsMatchIn(txt.trim())
+                    answer.text = "🔳 QR-Code:\n$txt" + (if (isUrl) "\n\n" + Security.phishingText(txt) + "\n\n◆ Antippen zum Öffnen" else "")
+                    answer.setOnClickListener {
+                        if (isUrl) android.app.AlertDialog.Builder(this).setTitle("Link öffnen?").setMessage(txt.trim())
+                            .setPositiveButton("Öffnen") { _, _ -> try { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(txt.trim().let { if (it.startsWith("www", true)) "https://$it" else it }))) } catch (_: Exception) {} }
+                            .setNegativeButton("Abbrechen", null).show()
+                        else (getSystemService(android.content.ClipboardManager::class.java))?.setPrimaryClip(android.content.ClipData.newPlainText("QR", txt))
+                    }
+                }
+            }
+            return
+        }
         if (busy) return
         val prefs = Prefs(this)
         if (!prefs.hasAnyKey) { answerBox.visibility = View.VISIBLE; answer.text = "Mir fehlt noch ein KI-Schlüssel."; return }

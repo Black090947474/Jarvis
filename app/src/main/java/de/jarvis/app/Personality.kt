@@ -11,6 +11,9 @@ object Personality {
         "TECHNISCH" to "Technisch – detailliert, nennt Zahlen und Hintergründe",
         "HUMORVOLL" to "Humorvoll – witzig, verspielt, Sprüche erlaubt",
         "MINIMAL" to "Minimalistisch – so kurz wie möglich",
+        "SARKASTISCH" to "Sarkastisch – trockener Witz und liebevoller Sarkasmus wie das Original, aber nie gemein",
+        "EXPERTE" to "Experte – tiefgehend wie ein Fachmann, erklärt Fachbegriffe, nennt Quellen und Unsicherheiten",
+        "DISKUSSION" to "Diskussionspartner – hinterfragt Aussagen, bringt Gegenargumente und lässt dich selbst nachdenken",
     )
 
     fun styleText(p: Prefs): String {
