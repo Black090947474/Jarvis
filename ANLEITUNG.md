@@ -255,7 +255,7 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 Werkzeuge → **Demo-Trading**: Jarvis-Depot mit 10.000 € **Spielgeld** und echten Kursen (Yahoo Finance, Binance). Nie echtes Geld.
 - „Jarvis, schau, welche Aktien gerade steigen könnten“ → Signale (Trend, RSI, Schwung) für ~25 Werte (Apple, NVIDIA, SAP, Rheinmetall, Bitcoin …).
 - „Kauf für 500 € Apple“, „Verkauf Tesla“, „Wie steht mein Depot?“, „Zeig den Chart“ (öffnet TradingView).
-- 🤖 Automatischer Demo-Bot (aus/an): werktags 17:45, Stop-Loss, Verlustgrenze -8 %, Gewinnmitnahme +15 %.
+- 🤖 Demo-Bot an/aus (großer Schalter oben oder „Jarvis, Bot an“): handelt dann ganz allein im Hintergrund – alle 30 Min., wenn die Börse offen ist (Krypto auch nachts). Stop-Loss, -8 %, +15 %, max. 3 Käufe am Tag. Jeder Trade kommt als Benachrichtigung. Aus = nichts passiert automatisch.
 - Signale sind Statistik, keine Vorhersage und keine Anlageberatung. TradingView bietet keine Schnittstelle für Demo-Trades, deshalb hat Jarvis sein eigenes Demo-Depot.
 
 ## Ohne API-Schlüssel (ab Version 33)

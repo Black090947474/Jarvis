@@ -202,11 +202,36 @@ object DemoDepot {
 
     fun reset(ctx: Context) { save(ctx, JSONObject().put("cash", START).put("positions", JSONObject()).put("start", START)); store(ctx).save("demo_trades", emptyList()) }
 
-    /** Der automatische Bot (nur wenn eingeschaltet): Stop-Loss/Gewinnmitnahme prüfen, dann ggf. bestes Signal kaufen. */
-    fun botRun(ctx: Context): String {
+    private val BERLIN = java.time.ZoneId.of("Europe/Berlin")
+
+    /** Ist die Börse für diesen Wert gerade offen? Krypto: immer. Xetra 9–17:30, USA 15:30–22 Uhr (deutsche Zeit), Mo–Fr. */
+    fun marketOpen(sym: String, now: java.time.ZonedDateTime = java.time.ZonedDateTime.now(BERLIN)): Boolean {
+        if (sym.endsWith("usd") && !sym.contains('.')) return true
+        if (now.dayOfWeek.value > 5) return false
+        val m = now.hour * 60 + now.minute
+        return if (sym.endsWith(".de") || sym.startsWith("^g")) m in 540..1050 else m in 930..1320
+    }
+
+    /** Nächster Bot-Lauf: tagsüber alle 30 Minuten, nachts alle 2 Stunden (nur Krypto handelt dann). */
+    fun nextRun(): Long {
+        val now = java.time.ZonedDateTime.now(BERLIN)
+        val step = if (now.hour in 7..22) 30L else 120L
+        return now.plusMinutes(step).withSecond(0).toInstant().toEpochMilli()
+    }
+
+    private fun sp(ctx: Context) = ctx.getSharedPreferences("jarvis_bot", Context.MODE_PRIVATE)
+    fun lastRunText(ctx: Context): String = sp(ctx).getString("last", "").orEmpty()
+
+    /**
+     * Der automatische Bot (läuft nur, wenn eingeschaltet): prüft offene Positionen (Stop-Loss, -8 %, +15 %, schwaches Signal)
+     * und kauft gute Signale – höchstens 3 Käufe pro Tag, max. 5 Positionen, nichts zurückkaufen, was in den letzten 3 Tagen verkauft wurde.
+     * Rückgabe: die gemachten Trades (leer = nichts getan).
+     */
+    fun botRun(ctx: Context): List<String> {
         val out = ArrayList<String>()
         val d = load(ctx); val pos = d.getJSONObject("positions")
         for (s in pos.keys().asSequence().toList()) {
+            if (!marketOpen(s)) continue
             val p = pos.getJSONObject(s); val price = try { Market.priceEur(s) } catch (_: Exception) { null } ?: continue
             val chg = price * p.optDouble("qty") / p.optDouble("cost") - 1
             when {
@@ -216,15 +241,21 @@ object DemoDepot {
                 Market.analyze(ctx, s)?.let { it.score < 0.5 } == true -> out += Res.spoken(sell(ctx, s, 1.0, true, "Signal schwach geworden"))
             }
         }
-        val d2 = load(ctx); val held = d2.getJSONObject("positions").length()
-        if (held < 5) {
-            val best = Market.scan(ctx).firstOrNull { it.score >= 3 && !d2.getJSONObject("positions").has(it.sym) }
+        val today = LocalDate.now().toString()
+        val buysToday = trades(ctx).count { it.optBoolean("bot") && it.optString("side") == "KAUF" &&
+            java.time.Instant.ofEpochMilli(it.optLong("t")).atZone(BERLIN).toLocalDate().toString() == today }
+        val recentlySold = trades(ctx).filter { it.optString("side") == "VERKAUF" && System.currentTimeMillis() - it.optLong("t") < 3 * 86_400_000L }.map { it.optString("sym") }.toSet()
+        val d2 = load(ctx)
+        if (d2.getJSONObject("positions").length() < 5 && buysToday < 3) {
+            val best = Market.scan(ctx).firstOrNull { it.score >= 3 && marketOpen(it.sym) && !d2.getJSONObject("positions").has(it.sym) && it.sym !in recentlySold }
             if (best != null) {
                 val amt = minOf(d2.optDouble("cash") * 0.15, 2000.0)
                 if (amt >= 50) out += Res.spoken(buy(ctx, best.sym, amt, 8.0, true)) + " Grund: " + best.reasons.take(2).joinToString(", ")
             }
         }
-        return if (out.isEmpty()) "Heute keine Bot-Trades – nichts Überzeugendes." else out.joinToString("\n")
+        val stamp = java.time.ZonedDateTime.now(BERLIN).format(DateTimeFormatter.ofPattern("dd.MM. HH:mm"))
+        sp(ctx).edit().putString("last", "Letzter Lauf: $stamp – " + (if (out.isEmpty()) "nichts gehandelt" else "${out.size} Trade(s)")).apply()
+        return out
     }
 }
 
@@ -258,7 +289,7 @@ object TradingTool : JarvisTool {
                 else Res.ok(l.reversed().joinToString("\n") { o -> "${de.jarvis.app.logic.TimeLogic.short(o.optLong("t"))} ${o.optString("side")} ${Market.name(o.optString("sym"))} ${DemoDepot.eur(o.optDouble("eur"))}" +
                     (if (o.has("pl")) " (" + (if (o.optDouble("pl") >= 0) "+" else "") + DemoDepot.eur(o.optDouble("pl")) + ")" else "") + (if (o.optBoolean("bot")) " 🤖" else "") }) }
             "chart" -> { val s = sym() ?: return Res.error("Welcher Chart?"); t.launch(Intent(Intent.ACTION_VIEW, Uri.parse(Market.tradingViewUrl(s))), "Chart von ${Market.name(s)} in TradingView geöffnet.") }
-            "bot" -> { AutoPilot.set(ctx, "trade_bot", a.optBoolean("on", true)); Res.ok(if (a.optBoolean("on", true)) "Demo-Bot an: Er prüft jeden Werktag um 17:45 das Depot, verkauft bei Stop-Loss/-8 %/+15 % und kauft höchstens das beste Signal – alles mit Spielgeld." else "Demo-Bot aus.") }
+            "bot" -> { AutoPilot.set(ctx, "trade_bot", a.optBoolean("on", true)); Res.ok(if (a.optBoolean("on", true)) "Demo-Bot an: Er handelt jetzt ganz allein im Hintergrund – alle 30 Minuten, wenn die Börse offen ist (Krypto auch nachts und am Wochenende). Er verkauft bei Stop-Loss, -8 % oder +15 % und kauft gute Signale, alles mit Spielgeld. Ich melde jeden Trade." else "Demo-Bot aus – er kauft und verkauft nichts mehr von selbst.") }
             "reset" -> { if (!a.optBoolean("confirmed")) return Res.confirm("Demo-Depot auf ${DemoDepot.eur(DemoDepot.START)} Spielgeld zurücksetzen (alle Positionen und Trades weg).")
                 DemoDepot.reset(ctx); Res.ok("Demo-Depot zurückgesetzt.") }
             else -> Res.error("Unbekannte Aktion.")
@@ -288,6 +319,18 @@ class TradingActivity : Activity() {
             addView(ui.text("‹", 30f).apply { setPadding(0, 0, ui.px(16), 0); setOnClickListener { finish() } })
             addView(LinearLayout(this@TradingActivity).apply { orientation = LinearLayout.VERTICAL
                 addView(ui.text("Demo-Trading", 28f, Ui.FG, true)); addView(ui.text("Spielgeld · echte Kurse · keine Anlageberatung", 13f, Ui.MUTED)) }) })
+        // Großer Schalter: Bot an/aus
+        val botOn = AutoPilot.on(this, "trade_bot")
+        col.addView(ui.card(false).apply {
+            background = ui.round(if (botOn) Color.argb(40, 50, 220, 130) else Ui.CARD, 20, if (botOn) Color.argb(120, 50, 220, 130) else Color.argb(24, 255, 255, 255))
+            addView(ui.weighted(LinearLayout(this@TradingActivity).apply { orientation = LinearLayout.VERTICAL
+                addView(ui.text(if (botOn) "🤖 Bot läuft" else "🤖 Bot ist aus", 18f, if (botOn) Ui.GREEN else Ui.FG, true))
+                addView(ui.text(if (botOn) "Kauft und verkauft allein im Hintergrund (alle 30 Min., wenn die Börse offen ist)." else "Einschalten, dann handelt er ganz allein – nur mit Spielgeld.", 12.5f, Ui.SOFT))
+                DemoDepot.lastRunText(this@TradingActivity).takeIf { it.isNotBlank() && botOn }?.let { addView(ui.text(it, 11.5f, Ui.MUTED)) } }))
+            addView(android.widget.Switch(this@TradingActivity).apply { isChecked = botOn
+                setOnCheckedChangeListener { _, v -> AutoPilot.set(this@TradingActivity, "trade_bot", v)
+                    toast(if (v) "Bot an – er handelt jetzt allein. Jeder Trade kommt als Benachrichtigung." else "Bot aus."); build() } })
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(16) })
         val depot = ui.text("Lade Depot …", 15f, Ui.FG)
         col.addView(ui.card().apply { addView(depot) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(16) })
         thread { val s = try { DemoDepot.summary(this) } catch (e: Exception) { "Kurse gerade nicht abrufbar." }; runOnUiThread { depot.text = s } }
@@ -323,13 +366,11 @@ class TradingActivity : Activity() {
         })
         col.addView(sigBox)
 
-        col.addView(ui.section("Automatischer Demo-Bot"))
-        col.addView(ui.card(false).apply {
-            addView(ui.weighted(ui.text("Werktags 17:45: verkauft bei Stop-Loss, -8 % oder +15 %, kauft höchstens das beste Signal (max. 15 % des Spielgelds, max. 5 Positionen).", 13f, Ui.SOFT)))
-            addView(android.widget.Switch(this@TradingActivity).apply { isChecked = AutoPilot.on(this@TradingActivity, "trade_bot")
-                setOnCheckedChangeListener { _, v -> AutoPilot.set(this@TradingActivity, "trade_bot", v) } }) })
+        col.addView(ui.section("Bot-Regeln"))
+        col.addView(ui.text("Verkauft bei Stop-Loss, −8 % Verlust, +15 % Gewinn oder wenn das Signal schwach wird. Kauft höchstens 3× am Tag, je max. 15 % des Spielgelds, max. 5 Aktien gleichzeitig, und nur, wenn die Börse offen ist. Ist der Bot aus, passiert nichts automatisch.", 12.5f, Ui.SOFT).apply { setPadding(ui.px(4), 0, 0, 0) })
         col.addView(ui.button("Bot jetzt einmal laufen lassen", false) { toast("Bot läuft …")
-            thread { val r = DemoDepot.botRun(this); runOnUiThread { android.app.AlertDialog.Builder(this).setTitle("🤖 Demo-Bot").setMessage(r).setPositiveButton("OK") { _, _ -> build() }.show() } } })
+            thread { val r = DemoDepot.botRun(this); runOnUiThread { android.app.AlertDialog.Builder(this).setTitle("🤖 Demo-Bot")
+                .setMessage(if (r.isEmpty()) "Gerade nichts gehandelt – kein überzeugendes Signal oder Börse zu." else r.joinToString("\n\n")).setPositiveButton("OK") { _, _ -> build() }.show() } } })
         col.addView(ui.button("Depot zurücksetzen", false) {
             android.app.AlertDialog.Builder(this).setTitle("Zurücksetzen?").setMessage("Wieder ${DemoDepot.eur(DemoDepot.START)} Spielgeld, alle Trades weg.")
                 .setPositiveButton("Zurücksetzen") { _, _ -> DemoDepot.reset(this); build() }.setNegativeButton("Abbrechen", null).show() })
@@ -343,7 +384,7 @@ class TradingActivity : Activity() {
             setTextColor(Ui.FG); setHintTextColor(Ui.MUTED) }
         android.app.AlertDialog.Builder(this).setTitle("Demo-Kauf: ${Market.name(sym)}")
             .setView(LinearLayout(this).apply { setPadding(ui.px(20), ui.px(8), ui.px(20), 0); addView(e, LinearLayout.LayoutParams(-1, -2)) })
-            .setPositiveButton("Kaufen (Stop-Loss -8 %)") { _, _ -> val amt = e.text.toString().replace(',', '.').toDoubleOrNull() ?: return@setPositiveButton
+            .setPositiveButton("Kaufen") { _, _ -> val amt = e.text.toString().replace(',', '.').toDoubleOrNull() ?: return@setPositiveButton
                 thread { val r = DemoDepot.buy(this, sym, amt, 8.0); runOnUiThread { toast(Res.spoken(r)); build() } } }
             .setNegativeButton("Abbrechen", null).show()
     }

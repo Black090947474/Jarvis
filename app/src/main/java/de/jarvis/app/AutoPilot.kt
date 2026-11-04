@@ -121,7 +121,7 @@ object AutoPilot {
                 sp(ctx).edit().putLong("alarm_at", alarm).apply()
                 at(ctx, J_WAKECHECK, alarm + 15 * 60_000L)
             } else at(ctx, J_WAKECHECK, null)
-            at(ctx, J_TRADE, if (on(ctx, "trade_bot")) nextAt(LocalTime.of(17, 45)) else null)
+            at(ctx, J_TRADE, if (on(ctx, "trade_bot")) DemoDepot.nextRun() else null)
             planSchool(ctx)
             AutoPilot2.scheduleAll(ctx)
         } catch (_: Exception) {}
@@ -142,9 +142,11 @@ object AutoPilot {
                 J_SCREEN -> if (on(ctx, "screen_coach")) screenSummary(ctx)
                 J_WEEKLY -> { if (on(ctx, "weekly")) weekly(ctx); if (on(ctx, "cleanup")) cleanup(ctx) }
                 J_WAKECHECK -> if (on(ctx, "wake_call")) wakeCheck(ctx)
-                J_TRADE -> if (on(ctx, "trade_bot") && LocalDate.now().dayOfWeek.value <= 5) {
+                J_TRADE -> if (on(ctx, "trade_bot")) {
                     val r = DemoDepot.botRun(ctx)
-                    post(ctx, 88_600, "🤖 Demo-Bot (Spielgeld)", r + "\n\n" + DemoDepot.summary(ctx).lines().take(2).joinToString("\n"), emptyList(),
+                    // Nur melden, wenn wirklich gehandelt wurde
+                    if (r.isNotEmpty()) post(ctx, 88_600 + (System.currentTimeMillis() / 60_000 % 50).toInt(), "🤖 Demo-Bot hat gehandelt (Spielgeld)",
+                        r.joinToString("\n") + "\n\n" + DemoDepot.summary(ctx).lines().first(), emptyList(),
                         PendingIntent.getActivity(ctx, 88_601, Intent(ctx, TradingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE))
                 }
                 else -> AutoPilot2.handle(ctx, job, intent)
