@@ -121,7 +121,13 @@ object AutoPilot {
                 sp(ctx).edit().putLong("alarm_at", alarm).apply()
                 at(ctx, J_WAKECHECK, alarm + 15 * 60_000L)
             } else at(ctx, J_WAKECHECK, null)
-            at(ctx, J_TRADE, if (on(ctx, "trade_bot")) DemoDepot.nextRun() else null)
+            // Bot: geplanten Termin behalten (sonst würde jedes Neuplanen ihn nach hinten schieben)
+            if (on(ctx, "trade_bot")) {
+                val planned = sp(ctx).getLong("trade_next", 0L)
+                val next = if (planned > System.currentTimeMillis() + 30_000L) planned else DemoDepot.nextRun()
+                sp(ctx).edit().putLong("trade_next", next).apply()
+                at(ctx, J_TRADE, next)
+            } else { sp(ctx).edit().remove("trade_next").apply(); at(ctx, J_TRADE, null) }
             planSchool(ctx)
             AutoPilot2.scheduleAll(ctx)
         } catch (_: Exception) {}
@@ -143,6 +149,7 @@ object AutoPilot {
                 J_WEEKLY -> { if (on(ctx, "weekly")) weekly(ctx); if (on(ctx, "cleanup")) cleanup(ctx) }
                 J_WAKECHECK -> if (on(ctx, "wake_call")) wakeCheck(ctx)
                 J_TRADE -> if (on(ctx, "trade_bot")) {
+                    sp(ctx).edit().remove("trade_next").apply()   // gleich danach den nächsten Lauf neu berechnen
                     val r = DemoDepot.botRun(ctx)
                     // Nur melden, wenn wirklich gehandelt wurde
                     if (r.isNotEmpty()) post(ctx, 88_600 + (System.currentTimeMillis() / 60_000 % 50).toInt(), "🤖 Demo-Bot hat gehandelt (Spielgeld)",
