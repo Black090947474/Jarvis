@@ -282,7 +282,7 @@ class DashboardActivity : Activity() {
     private class ToolTile(val icon: String, val name: String, val sub: String, val action: () -> Unit)
 
     private fun toolCategory(name: String): String = when (name) {
-        "Was ist das?", "Schwebender Jarvis", "Hologramme", "Handy finden", "Profi-Modus", "Autopilot", "Sicherheit", "Kontrollzentrum" -> "⭐ Highlights"
+        "Was ist das?", "Schwebender Jarvis", "Hologramme", "Handy finden", "Profi-Modus", "Autopilot", "Sicherheit", "Kontrollzentrum", "Eigene KI" -> "⭐ Highlights"
         "Chat", "Telefon", "Nachrichten", "E-Mails", "Übersetzer" -> "💬 Kommunikation"
         "Schule", "Lernen", "Packliste", "Fokus-Timer", "Klassenarbeit-Coach" -> "🎓 Schule & Lernen"
         "Quiz-Abend", "Geschichte", "Witz", "Wer bin ich?", "Rätsel", "Abenteuer" -> "🎮 Spaß"
@@ -324,6 +324,7 @@ class DashboardActivity : Activity() {
         tile("brain", "Rätsel", "Knobeln mit Jarvis") { voice("Gib mir ein kniffliges, aber lösbares Rätsel. Verrate die Lösung erst, wenn ich aufgebe.") }
         tile("sun", "Abenteuer", "Du entscheidest die Story") { voice("Starte ein kurzes Abenteuer, in dem ich der Held bin. Gib mir nach jedem Abschnitt zwei oder drei Möglichkeiten.") }
         tile("bolt", "Autopilot", "Was Jarvis von selbst macht") { startActivity(Intent(this, AutoPilotActivity::class.java)) }
+        tile("brain", "Eigene KI", "Ohne Schlüssel, läuft offline") { startActivity(Intent(this, OwnAiActivity::class.java)) }
         tile("shield", "Sicherheit", "Check, Phishing, Passwort") { startActivity(Intent(this, SecurityActivity::class.java)) }
         tile("gear", "Kontrollzentrum", "Diagnose, Module, Übertragen") { startActivity(Intent(this, CommandCenterActivity::class.java)) }
         tile("pin", "Fahrzeug", "Auto, Motorrad, Tacho, Runden") { startActivity(Intent(this, VehicleActivity::class.java)) }

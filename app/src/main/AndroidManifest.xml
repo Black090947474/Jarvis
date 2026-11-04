@@ -222,6 +222,7 @@
         <receiver android:name=".JarvisCallReceiver" android:exported="false" />
         <activity android:name=".SecurityActivity" android:exported="false" />
         <activity android:name=".CommandCenterActivity" android:exported="false" />
+        <activity android:name=".OwnAiActivity" android:exported="false" />
         <activity android:name=".AirPodsActivity" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar"
             android:excludeFromRecents="true" android:launchMode="singleTop" />
         <activity android:name=".VehicleActivity" android:exported="false" android:screenOrientation="portrait" />

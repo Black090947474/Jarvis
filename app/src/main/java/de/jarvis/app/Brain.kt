@@ -200,6 +200,9 @@ object Brains {
             plan += Provider(x.optString("name", "Anbieter"), url, models, emptyList(), "max_tokens") to x.optString("key").ifBlank { "none" }
         }
         if (p.mistralKey.isNotBlank()) plan += Provider.MISTRAL to p.mistralKey
+        // Ohne Schlüssel: kostenlose Online-KI (Pollinations), damit Jarvis sofort funktioniert
+        if (!p.hasRealKey && p.freeOnline)
+            plan += Provider("Pollinations", "https://text.pollinations.ai/openai", listOf("openai", "mistral"), emptyList(), "max_tokens") to "none"
         val later = p.geminiKey.isNotBlank() || p.anthropicKey.isNotBlank()
         val list = mutableListOf<Brain>()
         plan.forEachIndexed { i, (prov, key) ->
@@ -207,8 +210,17 @@ object Brains {
         }
         if (p.geminiKey.isNotBlank()) list += GeminiClient(p.geminiKey, p.geminiModel, p.userName, tools, mem, chat = chat)
         if (p.anthropicKey.isNotBlank()) list += ClaudeClient(p.anthropicKey, p.model, p.userName, tools, mem, chat = chat)
+        // Eigene KI auf dem Handy: zuerst (wenn gewünscht) oder als letzte Rettung
+        if (LocalAi.installed(tools.appContext)) {
+            val local = LocalBrain(tools.appContext, p, mem, chat)
+            if (p.ownAiFirst) list.add(0, local) else list += local
+        }
         return BrainRouter(list)
     }
+
+    /** Nur die eigene KI (z. B. ohne Internet). null = nicht geladen. */
+    fun local(p: Prefs, tools: PhoneTools, mem: Memory, chat: Boolean): BrainRouter? =
+        if (LocalAi.installed(tools.appContext)) BrainRouter(listOf(LocalBrain(tools.appContext, p, mem, chat))) else null
 }
 
 

@@ -679,7 +679,9 @@ class JarvisActivity : Activity() {
             val reply0 = when {
                 local != null -> local
                 client == null -> "Dafür brauche ich einen KI-Schlüssel. Ohne geht nur: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."
-                offline -> "Ich bin gerade offline. Ohne Internet kann ich Timer, Wecker, Taschenlampe, Erinnerungen, deinen Tagesplan und den Akku."
+                offline && t != null && Brains.local(Prefs(this), t, Memory(this), chat = false) != null ->
+                    Brains.local(Prefs(this), t, Memory(this), chat = false)!!.also { it.seed(Convo(this).recent(6)) }.ask(text, { step -> main.post { jarvisText.text = step } })
+                offline -> "Ich bin gerade offline. Ohne Internet kann ich Timer, Wecker, Taschenlampe, Erinnerungen, deinen Tagesplan und den Akku. Mit „Eigene KI“ (Werkzeuge) kann ich auch offline reden."
                 else -> client.ask(text, { step -> main.post { jarvisText.text = step } })
             }
             val reply = reply0

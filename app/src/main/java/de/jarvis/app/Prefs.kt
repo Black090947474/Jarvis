@@ -5,6 +5,17 @@ import android.content.Context
 /** Speichert die Schlüssel und Einstellungen lokal auf dem Handy. */
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("jarvis", Context.MODE_PRIVATE)
+    private val appCtx = context.applicationContext
+
+    /** Eigene KI (auf dem Handy) immer zuerst fragen. */
+    var ownAiFirst: Boolean
+        get() = sp.getBoolean("own_ai_first", false)
+        set(v) = sp.edit().putBoolean("own_ai_first", v).apply()
+
+    /** Ohne Schlüssel automatisch die kostenlose Online-KI (Pollinations) nutzen. */
+    var freeOnline: Boolean
+        get() = sp.getBoolean("free_online", true)
+        set(v) = sp.edit().putBoolean("free_online", v).apply()
 
 
 
@@ -30,8 +41,11 @@ class Prefs(context: Context) {
     } catch (_: Exception) { emptyList() }
 
     /** Mindestens ein KI-Schlüssel eingetragen? */
-    val hasAnyKey get() = nvidiaKey.isNotBlank() || mistralKey.isNotBlank() || groqKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank() ||
+    val hasRealKey get() = nvidiaKey.isNotBlank() || mistralKey.isNotBlank() || groqKey.isNotBlank() || geminiKey.isNotBlank() || anthropicKey.isNotBlank() ||
         extraList().any { it.optBoolean("on", true) }
+
+    /** Kann Jarvis denken? (Schlüssel, kostenlose Online-KI oder eigene KI auf dem Handy) */
+    val hasAnyKey get() = hasRealKey || freeOnline || LocalAi.installed(appCtx)
 
     var geminiKey: String
         get() = sp.getString("gemini_key", "") ?: ""

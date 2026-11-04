@@ -11,8 +11,8 @@ android {
         applicationId = "de.jarvis.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 53
-        versionName = "32.1"
+        versionCode = 54
+        versionName = "33.0"
         // Nur für moderne Handys (64-Bit ARM) – macht die App viel kleiner
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -52,4 +52,6 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
     // QR-Codes offline lesen (Scan)
     implementation("com.google.zxing:core:3.5.3")
+    // Eigene KI: Sprachmodell läuft offline auf dem Handy (Google MediaPipe LLM Inference)
+    implementation("com.google.mediapipe:tasks-genai:0.10.24")
 }

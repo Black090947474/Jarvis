@@ -380,7 +380,9 @@ class ChatActivity : Activity() {
                 when {
                     local != null -> local
                     b == null -> "Trag zuerst deinen NVIDIA- oder Groq-Schlüssel in der Jarvis-App ein. Ohne Schlüssel verstehe ich nur einfache Befehle wie „Timer 10 Minuten“, „Erinnere mich in 20 Minuten an …“ oder „Was steht heute an?“."
-                    offline -> "Du bist gerade offline. Ohne Internet gehen nur einfache Befehle: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku."
+                    offline && b64 == null && tools != null && Brains.local(Prefs(this), tools!!, Memory(this), chat = true) != null ->
+                        Brains.local(Prefs(this), tools!!, Memory(this), chat = true)!!.also { it.seed(Convo(this).recent(6)) }.ask(aiText, { step -> main.post { thinking.text = step } })
+                    offline -> "Du bist gerade offline. Ohne Internet gehen nur einfache Befehle: Timer, Wecker, Taschenlampe, Erinnerungen, Tagesplan, Akku. Mit „Eigene KI“ (Werkzeuge) kann ich auch offline antworten."
                     else -> b.ask(aiText, { step -> main.post { thinking.text = step } }, b64)
                 }
             } catch (e: Exception) { "Da ist etwas schiefgelaufen: ${e.message}" }

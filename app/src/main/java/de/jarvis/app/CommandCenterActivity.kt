@@ -36,7 +36,8 @@ class CommandCenterActivity : Activity() {
 
         val prefs = Prefs(this)
         val checks = listOf(
-            Triple(prefs.hasAnyKey, "KI-Schlüssel", Intent(this, ProvidersActivity::class.java)),
+            Triple(prefs.hasAnyKey, if (prefs.hasRealKey) "KI-Schlüssel" else "KI (kostenlos ohne Schlüssel)", Intent(this, ProvidersActivity::class.java)),
+            Triple(LocalAi.installed(this), "Eigene KI auf dem Handy (offline)", Intent(this, OwnAiActivity::class.java)),
             Triple(WakeWordService.isRunning, "Weckwort „Jarvis“ hört zu", Intent(this, MainActivity::class.java)),
             Triple(perm(Manifest.permission.RECORD_AUDIO), "Mikrofon", Intent(this, PermissionsActivity::class.java)),
             Triple(JarvisAccessibility.instance != null, "Bildschirmsteuerung (Bedienungshilfe)", Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)),

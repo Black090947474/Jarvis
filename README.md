@@ -251,6 +251,11 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
 - 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
 
+## Ohne API-Schlüssel (ab Version 33)
+- Jarvis funktioniert jetzt **sofort ohne Schlüssel**: ohne eigene Schlüssel nutzt er automatisch die kostenlose Online-KI Pollinations (langsamer, begrenzt).
+- 🧠 **Eigene KI** (Werkzeuge → Eigene KI): einmal per WLAN laden (ca. 1,6 GB), danach läuft deine KI komplett auf dem Handy – ohne Schlüssel, ohne Konto, ohne Internet, privat. Kleiner als die großen Online-KIs, dafür deine. Schalter „Eigene KI zuerst“ = immer privat.
+- Schlüssel (Groq, Gemini …) sind freiwillig und machen Jarvis schneller und schlauer.
+
 ## AirPods (ab Version 32.1)
 Verbindest du AirPods oder Beats, öffnet Jarvis ein Menü wie beim iPhone: Akkustand links/rechts/Case (auch „im Ohr“ und Laden), Musik, Lautstärke, Spotify, Bluetooth.
 Geräuschunterdrückung/Transparenz: Stiel gedrückt halten. Per App geht das auf Samsung erst ab Android 17 / One UI 9 ohne Root (App „LibrePods“) – ist sie installiert, öffnet Jarvis sie direkt.
