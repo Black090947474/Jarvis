@@ -134,9 +134,9 @@ object Market {
     }
 
     /** Alle Werte der Beobachtungsliste parallel prüfen, beste zuerst. */
-    fun scan(ctx: Context): List<Signal> {
+    fun scan(ctx: Context, syms: Collection<String> = BotConfig.watch(ctx)): List<Signal> {
         val pool = Executors.newFixedThreadPool(5)
-        val futures = WATCH.keys.map { s -> pool.submit<Signal?> { analyze(ctx, s) } }
+        val futures = syms.map { s -> pool.submit<Signal?> { analyze(ctx, s) } }
         pool.shutdown(); pool.awaitTermination(60, TimeUnit.SECONDS)
         return futures.mapNotNull { try { it.get(1, TimeUnit.SECONDS) } catch (_: Exception) { null } }.sortedByDescending { it.score }
     }
@@ -158,49 +158,106 @@ object DemoDepot {
     fun load(ctx: Context): JSONObject = store(ctx).obj("demo_depot").also { if (!it.has("cash")) it.put("cash", START).put("positions", JSONObject()).put("start", START) }
     private fun save(ctx: Context, d: JSONObject) = store(ctx).saveObj("demo_depot", d)
     fun trades(ctx: Context) = store(ctx).list("demo_trades")
-    private fun log(ctx: Context, o: JSONObject) = store(ctx).save("demo_trades", (trades(ctx) + o.put("t", System.currentTimeMillis())).takeLast(500))
+    private fun log(ctx: Context, o: JSONObject) = store(ctx).save("demo_trades",
+        (trades(ctx) + o.put("t", System.currentTimeMillis()).put("broker", if (Alpaca.active(ctx)) "alpaca" else "jarvis")).takeLast(500))
     fun eur(v: Double) = "%,.2f €".format(Locale.GERMANY, v)
+    fun usd(v: Double) = "%,.2f $".format(Locale.GERMANY, v)
+    /** Betrag in der Währung des aktiven Kontos (Jarvis-Depot €, Alpaca $). */
+    fun money(ctx: Context, v: Double) = if (Alpaca.active(ctx)) usd(v) else eur(v)
 
-    fun buy(ctx: Context, sym: String, amountEur: Double, stopPct: Double = 0.0, bot: Boolean = false): String {
+    /** Einheitliche Sicht auf eine Position (beide Konten). Werte in Kontowährung. */
+    data class Pos(val sym: String, val qty: Double, val cost: Double, val value: Double, val price: Double)
+
+    fun positions(ctx: Context): List<Pos> {
+        if (Alpaca.active(ctx)) {
+            val a = Alpaca.positions(ctx)
+            return (0 until a.length()).map { a.getJSONObject(it) }.map { o ->
+                Pos(Alpaca.fromAlpaca(o.optString("symbol"), o.optString("asset_class")), o.optString("qty").toDoubleOrNull() ?: 0.0,
+                    o.optString("cost_basis").toDoubleOrNull() ?: 0.0, o.optString("market_value").toDoubleOrNull() ?: 0.0, o.optString("current_price").toDoubleOrNull() ?: 0.0) }
+        }
+        val pos = load(ctx).getJSONObject("positions")
+        return pos.keys().asSequence().toList().mapNotNull { s -> val p = pos.getJSONObject(s)
+            val price = try { Market.priceEur(s) } catch (_: Exception) { null } ?: return@mapNotNull Pos(s, p.optDouble("qty"), p.optDouble("cost"), p.optDouble("cost"), 0.0)
+            Pos(s, p.optDouble("qty"), p.optDouble("cost"), price * p.optDouble("qty"), price) }
+    }
+
+    fun cash(ctx: Context): Double = if (Alpaca.active(ctx)) Alpaca.account(ctx).optString("cash").toDoubleOrNull() ?: 0.0 else load(ctx).optDouble("cash")
+
+    private fun peakKey(sym: String) = "peak_" + sym
+
+    fun buy(ctx: Context, sym: String, amount: Double, stopPct: Double = 0.0, bot: Boolean = false): String {
+        if (amount <= 0) return Res.error("Für wie viel ${if (Alpaca.active(ctx)) "Dollar" else "Euro"}?")
+        if (Alpaca.active(ctx)) {
+            if (Alpaca.symbol(sym) == null) return Res.error("${Market.name(sym)} gibt es im Alpaca-Demo-Konto nicht – dort nur US-Aktien, ETFs und Krypto.")
+            return try {
+                val cash = cash(ctx); if (amount > cash + 0.01) return Res.error("Nicht genug Demo-Geld – frei sind ${usd(cash)}.")
+                Alpaca.order(ctx, sym, amount)
+                sp(ctx).edit().remove(peakKey(sym)).apply()
+                log(ctx, JSONObject().put("side", "KAUF").put("sym", sym).put("eur", amount).put("bot", bot))
+                Res.ok("Alpaca-Demo-Kauf: ${Market.name(sym)} für ${usd(amount)} (Order ist raus" + (if (Alpaca.symbol(sym)!!.contains('/')) ")." else "; außerhalb der US-Handelszeit wird sie zur Börsenöffnung ausgeführt).") +
+                    " Du siehst sie in der Alpaca-App.")
+            } catch (e: Exception) { Res.error("Alpaca hat abgelehnt: ${e.message}") }
+        }
         val d = load(ctx); val cash = d.optDouble("cash")
-        if (amountEur <= 0) return Res.error("Für wie viel Euro?")
-        if (amountEur > cash + 0.01) return Res.error("Nicht genug Spielgeld – frei sind ${eur(cash)}.")
+        if (amount > cash + 0.01) return Res.error("Nicht genug Spielgeld – frei sind ${eur(cash)}.")
         val price = Market.priceEur(sym) ?: return Res.error("Für ${Market.name(sym)} gibt es gerade keinen Kurs.")
-        val qty = amountEur / price
+        val qty = amount / price
         val pos = d.getJSONObject("positions").optJSONObject(sym) ?: JSONObject().put("qty", 0.0).put("cost", 0.0)
-        pos.put("qty", pos.optDouble("qty") + qty).put("cost", pos.optDouble("cost") + amountEur)
+        pos.put("qty", pos.optDouble("qty") + qty).put("cost", pos.optDouble("cost") + amount)
         if (stopPct > 0) pos.put("stop", price * (1 - stopPct / 100))
-        d.getJSONObject("positions").put(sym, pos); d.put("cash", cash - amountEur); save(ctx, d)
-        log(ctx, JSONObject().put("side", "KAUF").put("sym", sym).put("qty", qty).put("price", price).put("eur", amountEur).put("bot", bot))
-        return Res.ok("Demo-Kauf: ${Market.name(sym)} für ${eur(amountEur)} (%.4f Stück à ${eur(price)}).".format(Locale.GERMANY, qty) +
-            (if (stopPct > 0) " Stop-Loss bei -${stopPct.toInt()} %." else "") + " Freies Spielgeld: ${eur(cash - amountEur)}.")
+        d.getJSONObject("positions").put(sym, pos); d.put("cash", cash - amount); save(ctx, d)
+        sp(ctx).edit().remove(peakKey(sym)).apply()
+        log(ctx, JSONObject().put("side", "KAUF").put("sym", sym).put("qty", qty).put("price", price).put("eur", amount).put("bot", bot))
+        return Res.ok("Demo-Kauf: ${Market.name(sym)} für ${eur(amount)} (%.4f Stück à ${eur(price)}).".format(Locale.GERMANY, qty) + " Freies Spielgeld: ${eur(cash - amount)}.")
     }
 
     fun sell(ctx: Context, sym: String, part: Double = 1.0, bot: Boolean = false, why: String = ""): String {
+        val f = part.coerceIn(0.01, 1.0)
+        if (Alpaca.active(ctx)) {
+            val p = try { positions(ctx).firstOrNull { it.sym == sym } } catch (e: Exception) { return Res.error("Alpaca nicht erreichbar: ${e.message}") }
+                ?: return Res.error("${Market.name(sym)} ist nicht im Alpaca-Depot.")
+            return try {
+                Alpaca.close(ctx, sym, f)
+                val value = p.value * f; val pl = (p.value - p.cost) * f
+                if (f >= 0.999) sp(ctx).edit().remove(peakKey(sym)).apply()
+                log(ctx, JSONObject().put("side", "VERKAUF").put("sym", sym).put("eur", value).put("pl", pl).put("bot", bot).put("why", why))
+                Res.ok("Alpaca-Demo-Verkauf: ${Market.name(sym)} für ca. ${usd(value)} – " + (if (pl >= 0) "Gewinn ${usd(pl)} 🎉" else "Verlust ${usd(-pl)}") + (if (why.isNotBlank()) " ($why)" else "") + ".")
+            } catch (e: Exception) { Res.error("Alpaca hat abgelehnt: ${e.message}") }
+        }
         val d = load(ctx); val pos = d.getJSONObject("positions").optJSONObject(sym) ?: return Res.error("${Market.name(sym)} ist nicht im Depot.")
         val price = Market.priceEur(sym) ?: return Res.error("Gerade kein Kurs für ${Market.name(sym)}.")
-        val f = part.coerceIn(0.01, 1.0); val qty = pos.optDouble("qty") * f; val cost = pos.optDouble("cost") * f
+        val qty = pos.optDouble("qty") * f; val cost = pos.optDouble("cost") * f
         val value = qty * price; val pl = value - cost
-        if (f >= 0.999) d.getJSONObject("positions").remove(sym) else pos.put("qty", pos.optDouble("qty") - qty).put("cost", pos.optDouble("cost") - cost)
+        if (f >= 0.999) { d.getJSONObject("positions").remove(sym); sp(ctx).edit().remove(peakKey(sym)).apply() } else pos.put("qty", pos.optDouble("qty") - qty).put("cost", pos.optDouble("cost") - cost)
         d.put("cash", d.optDouble("cash") + value); save(ctx, d)
         log(ctx, JSONObject().put("side", "VERKAUF").put("sym", sym).put("qty", qty).put("price", price).put("eur", value).put("pl", pl).put("bot", bot).put("why", why))
         return Res.ok("Demo-Verkauf: ${Market.name(sym)} für ${eur(value)} – " + (if (pl >= 0) "Gewinn ${eur(pl)} 🎉" else "Verlust ${eur(-pl)}") + (if (why.isNotBlank()) " ($why)" else "") + ".")
     }
 
-    /** Depot-Übersicht mit aktuellen Kursen. */
+    /** Depot-Übersicht mit aktuellen Kursen (merkt sich nebenbei den Tageswert für die Kurve). */
     fun summary(ctx: Context): String {
-        val d = load(ctx); val pos = d.getJSONObject("positions"); var value = 0.0
-        val lines = pos.keys().asSequence().toList().map { s -> val p = pos.getJSONObject(s)
-            val price = try { Market.priceEur(s) } catch (_: Exception) { null }
-            val v = price?.let { it * p.optDouble("qty") } ?: p.optDouble("cost"); value += v
-            val pl = v - p.optDouble("cost")
-            "• ${Market.name(s)}: ${eur(v)} (" + (if (pl >= 0) "+" else "") + eur(pl) + ", " + "%+.1f %%".format(Locale.GERMANY, pl / p.optDouble("cost") * 100) + ")" }
-        val total = d.optDouble("cash") + value; val start = d.optDouble("start", START)
-        return "Demo-Depot: ${eur(total)} (" + "%+.1f %%".format(Locale.GERMANY, (total / start - 1) * 100) + " seit Start)\nFreies Spielgeld: ${eur(d.optDouble("cash"))}" +
-            (if (lines.isEmpty()) "\nNoch keine Aktien im Depot." else "\n" + lines.joinToString("\n"))
+        val ps = positions(ctx)
+        val lines = ps.map { p -> val pl = p.value - p.cost
+            "• ${Market.name(p.sym)}: ${money(ctx, p.value)} (" + (if (pl >= 0) "+" else "") + money(ctx, pl) + ", " + "%+.1f %%".format(Locale.GERMANY, if (p.cost > 0) pl / p.cost * 100 else 0.0) + ")" }
+        val total: Double; val cash: Double; val start: Double; val title: String
+        if (Alpaca.active(ctx)) {
+            val acc = Alpaca.account(ctx)
+            total = acc.optString("portfolio_value").toDoubleOrNull() ?: 0.0; cash = acc.optString("cash").toDoubleOrNull() ?: 0.0
+            start = BotConfig.history(ctx).firstOrNull()?.second ?: total; title = "Alpaca-Demo-Konto"
+        } else {
+            val d = load(ctx); cash = d.optDouble("cash"); total = cash + ps.sumOf { it.value }; start = d.optDouble("start", START); title = "Jarvis-Demo-Depot"
+        }
+        try { BotConfig.record(ctx, total) } catch (_: Exception) {}
+        return "$title: ${money(ctx, total)} (" + "%+.1f %%".format(Locale.GERMANY, (total / start - 1) * 100) + " seit Start)\nFreies Demo-Geld: ${money(ctx, cash)}" +
+            (if (lines.isEmpty()) "\nNoch keine Aktien im Depot." else "\n" + lines.joinToString("\n")) +
+            (BotConfig.vsMarket(ctx)?.let { "\n\n" + it } ?: "")
     }
 
-    fun reset(ctx: Context) { save(ctx, JSONObject().put("cash", START).put("positions", JSONObject()).put("start", START)); store(ctx).save("demo_trades", emptyList()) }
+    fun reset(ctx: Context) {
+        save(ctx, JSONObject().put("cash", START).put("positions", JSONObject()).put("start", START))
+        store(ctx).save("demo_trades", trades(ctx).filter { it.optString("broker", "jarvis") != "jarvis" })
+        BotConfig.clearHistory(ctx)
+    }
 
     private val BERLIN = java.time.ZoneId.of("Europe/Berlin")
 
@@ -223,36 +280,43 @@ object DemoDepot {
     fun lastRunText(ctx: Context): String = sp(ctx).getString("last", "").orEmpty()
 
     /**
-     * Der automatische Bot (läuft nur, wenn eingeschaltet): prüft offene Positionen (Stop-Loss, -8 %, +15 %, schwaches Signal)
-     * und kauft gute Signale – höchstens 3 Käufe pro Tag, max. 5 Positionen, nichts zurückkaufen, was in den letzten 3 Tagen verkauft wurde.
+     * Der automatische Bot (läuft nur, wenn eingeschaltet). Verkauft per Trailing-Stop (zieht mit dem Höchstkurs mit,
+     * Abstand je nach Risiko-Stufe) oder wenn das Signal kippt. Kauft gute Signale aus der Beobachtungsliste –
+     * begrenzt nach Risiko-Stufe, nichts zurückkaufen, was in den letzten 3 Tagen verkauft wurde.
      * Rückgabe: die gemachten Trades (leer = nichts getan).
      */
     fun botRun(ctx: Context): List<String> {
         val out = ArrayList<String>()
-        val d = load(ctx); val pos = d.getJSONObject("positions")
-        for (s in pos.keys().asSequence().toList()) {
-            if (!marketOpen(s)) continue
-            val p = pos.getJSONObject(s); val price = try { Market.priceEur(s) } catch (_: Exception) { null } ?: continue
-            val chg = price * p.optDouble("qty") / p.optDouble("cost") - 1
+        val r = BotConfig.risk(ctx)
+        val ps = try { positions(ctx) } catch (_: Exception) { return emptyList() }
+        for (p in ps) {
+            if (!marketOpen(p.sym) || p.price <= 0) continue
+            val peak = maxOf(sp(ctx).getFloat(peakKey(p.sym), 0f).toDouble(), p.price, if (p.qty > 0) p.cost / p.qty else 0.0)
+            sp(ctx).edit().putFloat(peakKey(p.sym), peak.toFloat()).apply()
+            val stop = peak * (1 - r.trail)
+            val gainPct = if (p.cost > 0) (p.value / p.cost - 1) * 100 else 0.0
             when {
-                p.has("stop") && price <= p.optDouble("stop") -> out += Res.spoken(sell(ctx, s, 1.0, true, "Stop-Loss"))
-                chg <= -0.08 -> out += Res.spoken(sell(ctx, s, 1.0, true, "-8 % Verlustgrenze"))
-                chg >= 0.15 -> out += Res.spoken(sell(ctx, s, 1.0, true, "+15 % Gewinn mitgenommen"))
-                Market.analyze(ctx, s)?.let { it.score < 0.5 } == true -> out += Res.spoken(sell(ctx, s, 1.0, true, "Signal schwach geworden"))
+                p.price <= stop -> out += Res.spoken(sell(ctx, p.sym, 1.0, true, "Trailing-Stop: −${(r.trail * 100).toInt()} % vom Hoch" + (if (gainPct > 0) ", Gewinn gesichert" else "")))
+                Market.analyze(ctx, p.sym)?.let { it.score < 0 } == true -> out += Res.spoken(sell(ctx, p.sym, 1.0, true, "Signal ist gekippt"))
             }
         }
         val today = LocalDate.now().toString()
-        val buysToday = trades(ctx).count { it.optBoolean("bot") && it.optString("side") == "KAUF" &&
+        val broker = if (Alpaca.active(ctx)) "alpaca" else "jarvis"
+        val mine = trades(ctx).filter { it.optString("broker", "jarvis") == broker }
+        val buysToday = mine.count { it.optBoolean("bot") && it.optString("side") == "KAUF" &&
             java.time.Instant.ofEpochMilli(it.optLong("t")).atZone(BERLIN).toLocalDate().toString() == today }
-        val recentlySold = trades(ctx).filter { it.optString("side") == "VERKAUF" && System.currentTimeMillis() - it.optLong("t") < 3 * 86_400_000L }.map { it.optString("sym") }.toSet()
-        val d2 = load(ctx)
-        if (d2.getJSONObject("positions").length() < 5 && buysToday < 3) {
-            val best = Market.scan(ctx).firstOrNull { it.score >= 3 && marketOpen(it.sym) && !d2.getJSONObject("positions").has(it.sym) && it.sym !in recentlySold }
+        val recentlySold = mine.filter { it.optString("side") == "VERKAUF" && System.currentTimeMillis() - it.optLong("t") < 3 * 86_400_000L }.map { it.optString("sym") }.toSet()
+        val held = try { positions(ctx).map { it.sym }.toSet() } catch (_: Exception) { ps.map { it.sym }.toSet() }
+        if (held.size < r.maxPos && buysToday < r.maxBuysDay) {
+            val best = Market.scan(ctx).firstOrNull { it.score >= r.minScore && marketOpen(it.sym) && it.sym !in held && it.sym !in recentlySold }
             if (best != null) {
-                val amt = minOf(d2.optDouble("cash") * 0.15, 2000.0)
-                if (amt >= 50) out += Res.spoken(buy(ctx, best.sym, amt, 8.0, true)) + " Grund: " + best.reasons.take(2).joinToString(", ")
+                val c = try { cash(ctx) } catch (_: Exception) { 0.0 }
+                val total = c + ps.sumOf { it.value }
+                val amt = minOf(c * r.perTrade * 1.6, total * r.perTrade).coerceAtMost(c)
+                if (amt >= 50) out += Res.spoken(buy(ctx, best.sym, amt, 0.0, true)) + " Grund: " + best.reasons.take(2).joinToString(", ")
             }
         }
+        try { BotConfig.record(ctx, (try { cash(ctx) } catch (_: Exception) { 0.0 }) + positions(ctx).sumOf { it.value }) } catch (_: Exception) {}
         val stamp = java.time.ZonedDateTime.now(BERLIN).format(DateTimeFormatter.ofPattern("dd.MM. HH:mm"))
         sp(ctx).edit().putString("last", "Letzter Lauf: $stamp – " + (if (out.isEmpty()) "nichts gehandelt" else "${out.size} Trade(s)")).apply()
         return out
@@ -266,10 +330,10 @@ object TradingTool : JarvisTool {
     override val permissions = emptyList<String>()
 
     override val definition: JSONObject = JSONObject("""
-{"name":"trading","description":"Jarvis-Demo-Depot mit Spielgeld (NIE echtes Geld) und echten Kursen. scan: Beobachtungsliste prüfen, welche Werte gerade die besten Trend-/Schwung-Signale haben (keine Garantie!). analyze: einen Wert bewerten (symbol = Name oder Kürzel, z. B. Apple, SAP, Bitcoin). buy: Demo-Kauf (symbol, amount Euro, stop Prozent optional). sell: Demo-Verkauf (symbol, part 0–1, Standard alles). portfolio: Depot mit Gewinn/Verlust. trades: letzte Trades. chart: Chart in TradingView öffnen. bot: automatischen Demo-Bot an/aus (on). reset: Depot zurücksetzen (confirmed). Immer erwähnen: Signale sind keine Vorhersage und keine Anlageberatung.",
+{"name":"trading","description":"Jarvis-Demo-Depot mit Spielgeld (NIE echtes Geld) und echten Kursen. scan: Beobachtungsliste prüfen, welche Werte gerade die besten Trend-/Schwung-Signale haben (keine Garantie!). analyze: einen Wert bewerten (symbol = Name oder Kürzel, z. B. Apple, SAP, Bitcoin). buy: Demo-Kauf (symbol, amount in Kontowährung: Jarvis-Depot €, Alpaca-Demo $). sell: Demo-Verkauf (symbol, part 0–1, Standard alles). portfolio: Depot mit Gewinn/Verlust. trades: letzte Trades. chart: Chart in TradingView öffnen. bot: automatischen Demo-Bot an/aus (on). stats: Leistung (Trefferquote, Vergleich mit S&P 500). risk: Risiko-Stufe (value vorsichtig|normal|mutig). account: Konto wechseln (value jarvis|alpaca). reset: Jarvis-Depot zurücksetzen (confirmed). Immer erwähnen: Signale sind keine Vorhersage und keine Anlageberatung.",
  "input_schema":{"type":"object","properties":{
-  "action":{"type":"string","enum":["scan","analyze","buy","sell","portfolio","trades","chart","bot","reset"]},
-  "symbol":{"type":"string"},"amount":{"type":"number"},"stop":{"type":"number"},"part":{"type":"number"},"on":{"type":"boolean"},"confirmed":{"type":"boolean"}},"required":["action"]}}
+  "action":{"type":"string","enum":["scan","analyze","buy","sell","portfolio","trades","chart","bot","stats","risk","account","reset"]},
+  "symbol":{"type":"string"},"value":{"type":"string"},"amount":{"type":"number"},"stop":{"type":"number"},"part":{"type":"number"},"on":{"type":"boolean"},"confirmed":{"type":"boolean"}},"required":["action"]}}
 """.trimIndent())
 
     override fun run(t: ToolContext, a: JSONObject): String {
@@ -289,8 +353,15 @@ object TradingTool : JarvisTool {
                 else Res.ok(l.reversed().joinToString("\n") { o -> "${de.jarvis.app.logic.TimeLogic.short(o.optLong("t"))} ${o.optString("side")} ${Market.name(o.optString("sym"))} ${DemoDepot.eur(o.optDouble("eur"))}" +
                     (if (o.has("pl")) " (" + (if (o.optDouble("pl") >= 0) "+" else "") + DemoDepot.eur(o.optDouble("pl")) + ")" else "") + (if (o.optBoolean("bot")) " 🤖" else "") }) }
             "chart" -> { val s = sym() ?: return Res.error("Welcher Chart?"); t.launch(Intent(Intent.ACTION_VIEW, Uri.parse(Market.tradingViewUrl(s))), "Chart von ${Market.name(s)} in TradingView geöffnet.") }
-            "bot" -> { AutoPilot.set(ctx, "trade_bot", a.optBoolean("on", true)); Res.ok(if (a.optBoolean("on", true)) "Demo-Bot an: Er handelt jetzt ganz allein im Hintergrund – alle 30 Minuten, wenn die Börse offen ist (Krypto auch nachts und am Wochenende). Er verkauft bei Stop-Loss, -8 % oder +15 % und kauft gute Signale, alles mit Spielgeld. Ich melde jeden Trade." else "Demo-Bot aus – er kauft und verkauft nichts mehr von selbst.") }
-            "reset" -> { if (!a.optBoolean("confirmed")) return Res.confirm("Demo-Depot auf ${DemoDepot.eur(DemoDepot.START)} Spielgeld zurücksetzen (alle Positionen und Trades weg).")
+            "bot" -> { AutoPilot.set(ctx, "trade_bot", a.optBoolean("on", true)); Res.ok(if (a.optBoolean("on", true)) "Demo-Bot an: Er handelt jetzt ganz allein im Hintergrund – alle 30 Minuten, wenn die Börse offen ist (Krypto auch nachts und am Wochenende). Er verkauft per Trailing-Stop oder wenn das Signal kippt und kauft gute Signale, alles mit Demo-Geld. Ich melde jeden Trade." else "Demo-Bot aus – er kauft und verkauft nichts mehr von selbst.") }
+            "stats" -> Res.ok(BotConfig.stats(ctx) + (BotConfig.vsMarket(ctx)?.let { "\n" + it } ?: "\nVergleich mit dem S&P 500 erscheint nach ein paar Tagen."))
+            "risk" -> { val k = a.optString("value").lowercase(); if (k !in BotConfig.RISKS) return Res.error("Vorsichtig, normal oder mutig?")
+                BotConfig.setRisk(ctx, k); val r = BotConfig.risk(ctx); Res.ok("Risiko-Stufe ${r.label}: Trailing-Stop ${(r.trail * 100).toInt()} %, je Kauf ca. ${(r.perTrade * 100).toInt()} %, max. ${r.maxPos} Werte.") }
+            "account" -> { val alp = a.optString("value").lowercase().contains("alpaca")
+                if (alp && !Alpaca.hasKeys(ctx)) return t.launch(Intent(ctx, TradingActivity::class.java), "Für Alpaca brauche ich erst die zwei Demo-Schlüssel – tipp auf der Seite auf „Konto“.")
+                Alpaca.setActive(ctx, alp); Res.ok(if (alp) "Der Bot handelt jetzt im Alpaca-Demo-Konto." else "Der Bot handelt jetzt im Jarvis-Demo-Depot.") }
+            "reset" -> { if (Alpaca.active(ctx)) return Res.error("Das Alpaca-Demo-Konto setzt du auf der Alpaca-Website zurück.")
+                if (!a.optBoolean("confirmed")) return Res.confirm("Demo-Depot auf ${DemoDepot.eur(DemoDepot.START)} Spielgeld zurücksetzen (alle Positionen und Trades weg).")
                 DemoDepot.reset(ctx); Res.ok("Demo-Depot zurückgesetzt.") }
             else -> Res.error("Unbekannte Aktion.")
         } } catch (e: Exception) { Res.error("Börsendaten gerade nicht erreichbar (${e.message?.take(60)}).") }
@@ -331,25 +402,57 @@ class TradingActivity : Activity() {
                 setOnCheckedChangeListener { _, v -> AutoPilot.set(this@TradingActivity, "trade_bot", v)
                     toast(if (v) "Bot an – er handelt jetzt allein. Jeder Trade kommt als Benachrichtigung." else "Bot aus."); build() } })
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(16) })
+        // Risiko-Stufe
+        val rk = BotConfig.riskKey(this)
+        col.addView(ui.row().apply {
+            for ((k, r) in BotConfig.RISKS) addView(ui.text(r.label, 13.5f, if (k == rk) Color.rgb(3, 16, 32) else Ui.SOFT, k == rk).apply {
+                gravity = android.view.Gravity.CENTER; setPadding(ui.px(8), ui.px(9), ui.px(8), ui.px(9))
+                background = if (k == rk) ui.gradient(Ui.RED, Ui.ACCENT2, 14) else ui.round(Ui.CARD2, 14, Color.argb(24, 255, 255, 255))
+                setOnClickListener { BotConfig.setRisk(this@TradingActivity, k); build() }
+            }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = ui.px(6) })
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(10) })
+
+        // Konto: Jarvis-Depot oder Alpaca-Demo
+        val alp = Alpaca.active(this)
+        col.addView(ui.card().apply {
+            addView(ui.text(if (alp) "Konto: Alpaca-Demo (Paper Trading, $)" else "Konto: Jarvis-Demo-Depot (€)", 14.5f, Ui.FG, true))
+            addView(ui.text(if (alp) "Trades siehst du auch in der Alpaca-App und – wenn du Alpaca dort verbindest – in TradingView." else "Tippen, um ein Alpaca-Demo-Konto zu verbinden (US-Aktien & Krypto, 100.000 $ Spielgeld).", 12.5f, Ui.SOFT))
+            setOnClickListener { alpacaDialog() }
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(10) })
+
         val depot = ui.text("Lade Depot …", 15f, Ui.FG)
-        col.addView(ui.card().apply { addView(depot) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(16) })
-        thread { val s = try { DemoDepot.summary(this) } catch (e: Exception) { "Kurse gerade nicht abrufbar." }; runOnUiThread { depot.text = s } }
+        col.addView(ui.card().apply { addView(depot) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ui.px(10) })
         val posRow = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(posRow)
-        val pos = DemoDepot.load(this).getJSONObject("positions")
-        for (s in pos.keys().asSequence().toList()) posRow.addView(ui.row().apply {
-            addView(ui.weighted(ui.text(Market.name(s), 14.5f, Ui.FG, true)))
-            addView(ui.text("Chart", 13f, Ui.RED).apply { setPadding(ui.px(10), ui.px(10), ui.px(10), ui.px(10)); setOnClickListener { chart(s) } })
-            addView(ui.text("Verkaufen", 13f, Color.rgb(255, 110, 110)).apply { setPadding(ui.px(10), ui.px(10), 0, ui.px(10))
-                setOnClickListener { thread { val r = DemoDepot.sell(this@TradingActivity, s); runOnUiThread { toast(Res.spoken(r)); build() } } } })
-        })
+        col.addView(ui.section("Leistung"))
+        val chartBox = android.widget.FrameLayout(this)
+        col.addView(ui.card().apply { addView(chartBox, LinearLayout.LayoutParams(-1, ui.px(170))) })
+        val statsText = ui.text("", 13f, Ui.SOFT).apply { setPadding(ui.px(4), ui.px(6), 0, 0) }
+        col.addView(statsText)
+        thread {
+            val s = try { DemoDepot.summary(this) } catch (e: Exception) { "Konto gerade nicht erreichbar (${e.message?.take(60)})." }
+            val ps = try { DemoDepot.positions(this) } catch (_: Exception) { emptyList() }
+            val hist = BotConfig.history(this); val st = BotConfig.stats(this)
+            runOnUiThread {
+                depot.text = s
+                for (p in ps) posRow.addView(ui.row().apply {
+                    addView(ui.weighted(ui.text(Market.name(p.sym), 14.5f, Ui.FG, true)))
+                    addView(ui.text("Chart", 13f, Ui.RED).apply { setPadding(ui.px(10), ui.px(10), ui.px(10), ui.px(10)); setOnClickListener { chart(p.sym) } })
+                    addView(ui.text("Verkaufen", 13f, Color.rgb(255, 110, 110)).apply { setPadding(ui.px(10), ui.px(10), 0, ui.px(10))
+                        setOnClickListener { thread { val r = DemoDepot.sell(this@TradingActivity, p.sym); runOnUiThread { toast(Res.spoken(r)); build() } } } })
+                })
+                chartBox.addView(EquityChartView(this, hist))
+                statsText.text = st
+            }
+        }
 
         col.addView(ui.section("Signale"))
         val sigBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(ui.button("Jetzt Markt scannen") {
-            sigBox.removeAllViews(); sigBox.addView(ui.text("Prüfe ${Market.WATCH.size} Werte … (ca. 10–30 Sekunden)", 13f, Ui.MUTED))
+            val w = BotConfig.watch(this)
+            sigBox.removeAllViews(); sigBox.addView(ui.text("Prüfe ${w.size} Werte … (ca. 10–30 Sekunden)", 13f, Ui.MUTED))
             thread {
-                val list = try { Market.scan(this) } catch (_: Exception) { emptyList() }
+                val list = try { Market.scan(this, w) } catch (_: Exception) { emptyList() }
                 runOnUiThread {
                     sigBox.removeAllViews()
                     if (list.isEmpty()) { sigBox.addView(ui.text("Kurse gerade nicht abrufbar.", 13f, Ui.AMBER)); return@runOnUiThread }
@@ -366,26 +469,59 @@ class TradingActivity : Activity() {
         })
         col.addView(sigBox)
 
-        col.addView(ui.section("Bot-Regeln"))
-        col.addView(ui.text("Verkauft bei Stop-Loss, −8 % Verlust, +15 % Gewinn oder wenn das Signal schwach wird. Kauft höchstens 3× am Tag, je max. 15 % des Spielgelds, max. 5 Aktien gleichzeitig, und nur, wenn die Börse offen ist. Ist der Bot aus, passiert nichts automatisch.", 12.5f, Ui.SOFT).apply { setPadding(ui.px(4), 0, 0, 0) })
+        col.addView(ui.section("Meine Liste"))
+        val wl = EditText(this).apply { setText(BotConfig.ownList(this@TradingActivity)); hint = "Leer = Standardliste. Z. B.: Apple, Tesla, SAP, Bitcoin"
+            setTextColor(Ui.FG); setHintTextColor(Ui.MUTED); background = ui.round(Ui.CARD2, 14); setPadding(ui.px(14), ui.px(12), ui.px(14), ui.px(12)) }
+        col.addView(wl)
+        col.addView(ui.button("Liste speichern", false) {
+            BotConfig.setOwnList(this, wl.text.toString())
+            val n = BotConfig.watch(this).size
+            toast(if (BotConfig.ownList(this).isBlank()) "Standardliste aktiv." else "$n Werte erkannt" + if (Alpaca.active(this)) " (bei Alpaca nur US & Krypto)." else ".") })
+
+        val r = BotConfig.risk(this)
+        col.addView(ui.section("Bot-Regeln (${r.label})"))
+        col.addView(ui.text("Trailing-Stop: verkauft, wenn der Kurs ${(r.trail * 100).toInt()} % unter seinen Höchststand seit dem Kauf fällt – so werden Gewinne mitgezogen. " +
+            "Verkauft auch, wenn das Signal kippt. Kauft höchstens ${r.maxBuysDay}× am Tag, je ca. ${(r.perTrade * 100).toInt()} % des Depots, max. ${r.maxPos} Werte, ab ${"%.1f".format(Locale.GERMANY, r.minScore)} Punkten, nur bei offener Börse. Ist der Bot aus, passiert nichts automatisch.", 12.5f, Ui.SOFT).apply { setPadding(ui.px(4), 0, 0, 0) })
         col.addView(ui.button("Bot jetzt einmal laufen lassen", false) { toast("Bot läuft …")
-            thread { val r = DemoDepot.botRun(this); runOnUiThread { android.app.AlertDialog.Builder(this).setTitle("🤖 Demo-Bot")
-                .setMessage(if (r.isEmpty()) "Gerade nichts gehandelt – kein überzeugendes Signal oder Börse zu." else r.joinToString("\n\n")).setPositiveButton("OK") { _, _ -> build() }.show() } } })
-        col.addView(ui.button("Depot zurücksetzen", false) {
+            thread { val res = DemoDepot.botRun(this); runOnUiThread { android.app.AlertDialog.Builder(this).setTitle("🤖 Demo-Bot")
+                .setMessage(if (res.isEmpty()) "Gerade nichts gehandelt – kein überzeugendes Signal oder Börse zu." else res.joinToString("\n\n")).setPositiveButton("OK") { _, _ -> build() }.show() } } })
+        if (!alp) col.addView(ui.button("Jarvis-Depot zurücksetzen", false) {
             android.app.AlertDialog.Builder(this).setTitle("Zurücksetzen?").setMessage("Wieder ${DemoDepot.eur(DemoDepot.START)} Spielgeld, alle Trades weg.")
                 .setPositiveButton("Zurücksetzen") { _, _ -> DemoDepot.reset(this); build() }.setNegativeButton("Abbrechen", null).show() })
-        col.addView(ui.text("Nur Spielgeld – Jarvis handelt nie mit echtem Geld. Die Signale sind einfache Statistik (Trend, RSI, Schwung) und keine Vorhersage oder Anlageberatung. Kurse: Yahoo Finance & Binance, teils verzögert.", 11.5f, Ui.MUTED).apply { setPadding(0, ui.px(14), 0, 0) })
+        col.addView(ui.text("Nur Demo-Geld – Jarvis kann technisch nicht mit echtem Geld handeln (Alpaca: fest das Demo-System). Die Signale sind einfache Statistik (Trend, RSI, Schwung) und keine Vorhersage oder Anlageberatung. Kurse: Yahoo Finance & Binance, teils verzögert.", 11.5f, Ui.MUTED).apply { setPadding(0, ui.px(14), 0, 0) })
     }
+
+    private fun alpacaDialog() {
+        fun f(hint: String, v: String) = EditText(this).apply { this.hint = hint; setText(v); setTextColor(Ui.FG); setHintTextColor(Ui.MUTED); textSize = 14f }
+        val id = f("API Key ID (beginnt mit PK…)", Alpaca.keyId(this)); val sec = f("Secret Key", Alpaca.secret(this))
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(ui.px(20), ui.px(4), ui.px(20), 0)
+            addView(ui.text("1. Kostenloses Demo-Konto anlegen (nur E-Mail; bei Brokern meist ab 18 – sonst mit einem Elternteil).\n2. Im Paper-Dashboard „API Keys“ → „Generate“.\n3. Beide Schlüssel hier einfügen.", 13f, Ui.SOFT))
+            addView(ui.text("① Konto anlegen", 14f, Ui.RED, true).apply { setPadding(0, ui.px(10), 0, ui.px(4)); setOnClickListener { open(Alpaca.SIGNUP) } })
+            addView(ui.text("② Schlüssel holen", 14f, Ui.RED, true).apply { setPadding(0, ui.px(4), 0, ui.px(8)); setOnClickListener { open(Alpaca.KEYS) } })
+            addView(id); addView(sec) }
+        android.app.AlertDialog.Builder(this).setTitle("Alpaca-Demo-Konto").setView(box)
+            .setPositiveButton("Verbinden & nutzen") { _, _ ->
+                Alpaca.saveKeys(this, id.text.toString(), sec.text.toString())
+                thread {
+                    val ok = try { Alpaca.setActive(this, true); Alpaca.account(this); true } catch (e: Exception) { Alpaca.setActive(this, false); runOnUiThread { toast("Verbindung fehlgeschlagen: ${e.message}") }; false }
+                    runOnUiThread { if (ok) toast("Alpaca-Demo verbunden – der Bot handelt jetzt dort."); build() }
+                }
+            }
+            .setNeutralButton("Jarvis-Depot nutzen") { _, _ -> Alpaca.setActive(this, false); build() }
+            .setNegativeButton("Abbrechen", null).show()
+    }
+
+    private fun open(url: String) = try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (_: Exception) {}
 
     private fun chart(sym: String) = try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Market.tradingViewUrl(sym)))) } catch (_: Exception) {}
 
     private fun buyDialog(sym: String) {
-        val e = EditText(this).apply { hint = "Betrag in € (Spielgeld)"; inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL; setText("500")
+        val e = EditText(this).apply { hint = if (Alpaca.active(this@TradingActivity)) "Betrag in $ (Demo-Geld)" else "Betrag in € (Spielgeld)"; inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL; setText("500")
             setTextColor(Ui.FG); setHintTextColor(Ui.MUTED) }
         android.app.AlertDialog.Builder(this).setTitle("Demo-Kauf: ${Market.name(sym)}")
             .setView(LinearLayout(this).apply { setPadding(ui.px(20), ui.px(8), ui.px(20), 0); addView(e, LinearLayout.LayoutParams(-1, -2)) })
             .setPositiveButton("Kaufen") { _, _ -> val amt = e.text.toString().replace(',', '.').toDoubleOrNull() ?: return@setPositiveButton
-                thread { val r = DemoDepot.buy(this, sym, amt, 8.0); runOnUiThread { toast(Res.spoken(r)); build() } } }
+                thread { val r = DemoDepot.buy(this, sym, amt, 0.0); runOnUiThread { toast(Res.spoken(r)); build() } } }
             .setNegativeButton("Abbrechen", null).show()
     }
 }

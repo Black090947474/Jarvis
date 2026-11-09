@@ -257,6 +257,8 @@ Werkzeuge → **Demo-Trading**: Jarvis-Depot mit 10.000 € **Spielgeld** und ec
 - „Kauf für 500 € Apple“, „Verkauf Tesla“, „Wie steht mein Depot?“, „Zeig den Chart“ (öffnet TradingView).
 - 🤖 Demo-Bot an/aus (großer Schalter oben oder „Jarvis, Bot an“): handelt dann ganz allein im Hintergrund – alle 30 Min., wenn die Börse offen ist (Krypto auch nachts). Stop-Loss, -8 %, +15 %, max. 3 Käufe am Tag. Jeder Trade kommt als Benachrichtigung. Aus = nichts passiert automatisch.
 - Signale sind Statistik, keine Vorhersage und keine Anlageberatung. TradingView bietet keine Schnittstelle für Demo-Trades, deshalb hat Jarvis sein eigenes Demo-Depot.
+- **Neu in 35:** Trailing-Stop (zieht Gewinne mit), Risiko-Stufen (Vorsichtig/Normal/Mutig), eigene Beobachtungsliste, Leistungs-Kurve mit Vergleich zum S&P 500, Trefferquote.
+- **Alpaca-Demo-Konto** (optional): echtes Paper-Trading-Konto bei einem Broker (100.000 $ Spielgeld, US-Aktien, ETFs, Krypto). Auf der Demo-Trading-Seite → „Konto“ → Konto anlegen, zwei Schlüssel einfügen. Jarvis ist fest auf das Demo-System eingestellt – echtes Geld ist ausgeschlossen. Bei Brokern muss man meist 18 sein.
 
 ## Ohne API-Schlüssel (ab Version 33)
 - Jarvis funktioniert jetzt **sofort ohne Schlüssel**: ohne eigene Schlüssel nutzt er automatisch die kostenlose Online-KI Pollinations (langsamer, begrenzt).
