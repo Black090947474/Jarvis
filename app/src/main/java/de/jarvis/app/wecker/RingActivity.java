@@ -281,6 +281,8 @@ public class RingActivity extends Activity {
         done = true;
         inPhotoMode = false;
         AlarmService.stop(this);
+        // Für Jarvis: Aufgabe geschafft = wach (Verschlafen-Schutz ruft dann nicht an)
+        getSharedPreferences("autopilot", MODE_PRIVATE).edit().putLong("last_present", System.currentTimeMillis()).apply();
 
         LinearLayout l = page();
         l.setGravity(Gravity.CENTER);
