@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -224,6 +226,22 @@
         <activity android:name=".CommandCenterActivity" android:exported="false" />
         <activity android:name=".OwnAiActivity" android:exported="false" />
         <activity android:name=".TradingActivity" android:exported="false" />
+        <!-- Aufsteh-Wecker: klingelt, bis Foto- und Abschreib-Aufgabe erledigt sind -->
+        <activity android:name=".wecker.WeckerActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".wecker.ReferenceActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".wecker.RingActivity" android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true"
+            android:launchMode="singleTask" android:taskAffinity="" android:excludeFromRecents="true" android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+        <receiver android:name=".wecker.AlarmReceiver" android:exported="false" />
+        <receiver android:name=".wecker.WeckerBootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <service android:name=".wecker.AlarmService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <activity android:name=".AirPodsActivity" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar"
             android:excludeFromRecents="true" android:launchMode="singleTop" />
         <activity android:name=".VehicleActivity" android:exported="false" android:screenOrientation="portrait" />

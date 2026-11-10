@@ -205,3 +205,18 @@ object JarvisSettingsTool : JarvisTool {
         }
     }
 }
+
+
+/** Aufsteh-Wecker öffnen (klingelt, bis Foto- und Abschreib-Aufgabe erledigt sind). */
+object WeckerTool : JarvisTool {
+    override val name = "aufsteh_wecker"
+    override val group = "core"
+    override val feature: String? = null
+    override val permissions = emptyList<String>()
+    override val definition: JSONObject = JSONObject("""
+{"name":"aufsteh_wecker","description":"Öffnet den Aufsteh-Wecker: ein Wecker, der erst aufhört, wenn man ein Foto vom eingestellten Ort macht und einen Satz abschreibt. Für 'Aufsteh-Wecker', 'Wecker, der mich wirklich aus dem Bett holt', 'Wecker mit Aufgabe'.",
+ "input_schema":{"type":"object","properties":{},"required":[]}}
+""".trimIndent())
+    override fun run(t: ToolContext, a: JSONObject): String =
+        t.launch(android.content.Intent(t.ctx, de.jarvis.app.wecker.WeckerActivity::class.java), "Aufsteh-Wecker geöffnet – dort stellst du Uhrzeit, Tage und den Foto-Ort ein.")
+}
