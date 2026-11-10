@@ -228,17 +228,53 @@ public class RingActivity extends Activity {
         l.addView(input, Ui.wide(this, 16));
 
         TextView hint = Ui.text(this,
-                "Groß-/Kleinschreibung ist egal, ae/oe/ue/ss statt Umlauten geht auch. Einfügen ist gesperrt.",
+                "Abtippen, dann „Fertig“ drücken – Jarvis prüft einmal (kleine Tippfehler sind okay). Einfügen ist gesperrt.",
                 13, false, Ui.MUTED);
         l.addView(hint, Ui.wide(this, 8));
 
-        l.addView(Ui.button(this, "Zurück", 0xFF3A4654, v -> showChoice()), Ui.wide(this, 24));
+        final Runnable[] nextHolder = new Runnable[1];
+        TextView status = Ui.text(this, "", 15, true, Ui.MUTED);
+        l.addView(status, Ui.wide(this, 12));
+
+        final boolean[] checking = {false};
+        final android.widget.Button[] done = new android.widget.Button[1];
+        done[0] = Ui.button(this, "Fertig – prüfen", 0xFF1E88E5, v -> {
+            if (checking[0]) return;
+            String typed = input.getText().toString();
+            String target = current;
+            checking[0] = true;
+            done[0].setEnabled(false);
+            status.setTextColor(Ui.MUTED);
+            status.setText("Jarvis prüft …");
+            new Thread(() -> {
+                CopyCheck.Result r = CopyCheck.check(getApplicationContext(), target, typed);
+                handler.post(() -> {
+                    checking[0] = false;
+                    done[0].setEnabled(true);
+                    status.setText(r.message);
+                    status.setTextColor(r.ok ? 0xFF4CAF50 : 0xFFFF6B6B);
+                    if (!r.ok) return;
+                    int p = progress() + 1;
+                    Prefs.get(RingActivity.this).edit().putInt("progress", p).apply();
+                    if (p >= needed) {
+                        dismissAlarm();
+                    } else {
+                        input.setText("");
+                        nextHolder[0].run();
+                    }
+                });
+            }).start();
+        });
+        l.addView(done[0], Ui.wide(this, 16));
+
+        l.addView(Ui.button(this, "Zurück", 0xFF3A4654, v -> showChoice()), Ui.wide(this, 12));
 
         Runnable next = () -> {
             current = Sentences.random(current);
             sentence.setText(current);
             counter.setText("Satz " + (progress() + 1) + " von " + needed);
         };
+        nextHolder[0] = next;
         next.run();
 
         input.addTextChangedListener(new TextWatcher() {
@@ -254,18 +290,6 @@ public class RingActivity extends Activity {
                     handler.post(() -> input.setText(""));
                     Toast.makeText(RingActivity.this, "Einfügen ist gesperrt – selbst tippen!", Toast.LENGTH_SHORT).show();
                     return;
-                }
-                if (Sentences.normalize(s.toString()).equals(Sentences.normalize(current))) {
-                    int p = progress() + 1;
-                    Prefs.get(RingActivity.this).edit().putInt("progress", p).apply();
-                    if (p >= needed) {
-                        handler.post(RingActivity.this::dismissAlarm);
-                    } else {
-                        handler.post(() -> {
-                            input.setText("");
-                            next.run();
-                        });
-                    }
                 }
             }
         });

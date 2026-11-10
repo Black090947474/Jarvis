@@ -254,6 +254,8 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 ## Aufsteh-Wecker (ab Version 35.1)
 Werkzeuge → **Aufsteh-Wecker** (oder „Jarvis, öffne den Aufsteh-Wecker“): ein Wecker, der erst aufhört, wenn du ein Foto vom eingestellten Ort machst (z. B. Waschbecken im Bad) und einen Satz abschreibst. Uhrzeit, Tage, Strenge und Foto-Ort stellst du dort ein. Klingelt auch nach Neustart.
 
+**Abschreiben (ab 35.3):** Satz abtippen und **„Fertig – prüfen“** drücken. Jarvis prüft dann einmal: ganz richtig oder nur 1 Tippfehler → sofort okay; viele Fehler oder fehlende Wörter → nicht okay; dazwischen schaut die KI (eigene KI auf dem Handy, sonst die kostenlose Online-KI) drüber. Ist keine KI erreichbar, entscheidet eine feste Regel – der Wecker hängt nie am Internet.
+
 ## Demo-Trading (ab Version 34)
 Werkzeuge → **Demo-Trading**: Jarvis-Depot mit 10.000 € **Spielgeld** und echten Kursen (Yahoo Finance, Binance). Nie echtes Geld.
 - „Jarvis, schau, welche Aktien gerade steigen könnten“ → Signale (Trend, RSI, Schwung) für ~25 Werte (Apple, NVIDIA, SAP, Rheinmetall, Bitcoin …).
