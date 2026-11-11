@@ -138,6 +138,9 @@ interface Brain {
     /** Früheren Verlauf (Rolle "user"/"assistant", Text) übernehmen, z. B. beim Öffnen des Chats. */
     fun seed(history: List<Pair<String, String>>) {}
 
+    /** Name für die Ausfall-Liste (welche KI gerade hängt oder am Limit ist). */
+    val id: String get() = javaClass.simpleName
+
     companion object {
         /** Beginnt mit user, wechselt sich ab, endet mit assistant – so wollen es alle Anbieter. */
         fun normalize(h: List<Pair<String, String>>): List<Pair<String, String>> {
@@ -172,16 +175,40 @@ class BrainRouter(brains: List<Brain>) {
     fun ask(userText: String, onStep: (String) -> Unit, image: String? = null): String {
         if (order.isEmpty()) return "Mir fehlt noch ein Schlüssel. Trag ihn bitte in der Jarvis-App ein."
         var first: Brain.Unavailable? = null
-        for (b in order.toList()) {
+        // KIs, die gerade erst ausgefallen sind (Limit, Störung), ans Ende – so wird nicht jedes Mal erst gewartet
+        val now = System.currentTimeMillis()
+        val tryOrder = order.sortedBy { if (BrainHealth.coolingDown(it.id, now)) 1 else 0 }
+        for ((n, b) in tryOrder.withIndex()) {
             try {
-                return b.ask(userText, onStep, image).also { if (b !is AiClient) ModelStatus.set(b.javaClass.simpleName.removeSuffix("Client"), "", image != null, false) }
+                if (n > 0) onStep("Wechsle zu einer anderen KI …")
+                return b.ask(userText, onStep, image).also {
+                    BrainHealth.ok(b.id)
+                    if (b !is AiClient) ModelStatus.set(b.javaClass.simpleName.removeSuffix("Client"), "", image != null, false)
+                }
             } catch (e: Brain.Unavailable) {
                 if (first == null) first = e   // der eigentliche Grund steht beim ersten Gehirn
+                BrainHealth.failed(b.id)
                 if (order.size > 1) { order.remove(b); order.add(b) } // ans Ende stellen
             }
         }
         return first?.spoken ?: "Da ist etwas schiefgelaufen."
     }
+}
+
+/**
+ * Merkt sich (für alle Gespräche), welche KI gerade ausgefallen ist. Die wird ein paar Minuten lang
+ * erst zum Schluss gefragt – dadurch wechselt Jarvis sofort zur funktionierenden statt jedes Mal neu zu warten.
+ */
+object BrainHealth {
+    private val until = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val strikes = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    fun coolingDown(id: String, now: Long = System.currentTimeMillis()) = (until[id] ?: 0L) > now
+    fun failed(id: String) {
+        val s = (strikes[id] ?: 0) + 1; strikes[id] = s
+        // 1. Ausfall 90 s, dann 3 min, höchstens 10 min
+        until[id] = System.currentTimeMillis() + minOf(600_000L, 90_000L * (1L shl minOf(s - 1, 3)))
+    }
+    fun ok(id: String) { until.remove(id); strikes.remove(id) }
 }
 
 
@@ -205,7 +232,7 @@ object Brains {
         // Ohne Schlüssel: kostenlose Online-KI (Pollinations), damit Jarvis sofort funktioniert
         if (!p.hasRealKey && p.freeOnline)
             plan += Provider("Pollinations", "https://text.pollinations.ai/openai", listOf("openai", "mistral"), emptyList(), "max_tokens") to "none"
-        val later = p.geminiKey.isNotBlank() || p.anthropicKey.isNotBlank()
+        val later = p.geminiKey.isNotBlank() || p.anthropicKey.isNotBlank() || LocalAi.installed(tools.appContext)
         val list = mutableListOf<Brain>()
         plan.forEachIndexed { i, (prov, key) ->
             list += AiClient(key, prov.models[0], p.userName, tools, mem, chat, prov, quickFail = i < plan.size - 1 || later)

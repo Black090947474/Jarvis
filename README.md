@@ -251,6 +251,9 @@ Die Bildschirmzeit bleibt nur auf deinem Handy.
 - 🌨 **Wetter-Überraschungen**: Schnee, Gewitter, Sturm und Sternschnuppen-Nächte.
 - 🆘 **Akku-Notfall-SMS** (nur wenn du es einschaltest): bei 5 % bekommt deine Notfall-Person deinen Standort.
 
+## Schneller KI-Wechsel (ab Version 35.4)
+Hängt eine KI oder ist ihr Gratis-Limit voll, wechselt Jarvis jetzt nach wenigen Sekunden zur nächsten (statt bis zu über einer Minute zu warten). Eine KI, die gerade ausgefallen ist, fragt er die nächsten Minuten erst zum Schluss – dann antwortet direkt die, die funktioniert.
+
 ## Aufsteh-Wecker (ab Version 35.1)
 Werkzeuge → **Aufsteh-Wecker** (oder „Jarvis, öffne den Aufsteh-Wecker“): ein Wecker, der erst aufhört, wenn du ein Foto vom eingestellten Ort machst (z. B. Waschbecken im Bad) und einen Satz abschreibst. Uhrzeit, Tage, Strenge und Foto-Ort stellst du dort ein. Klingelt auch nach Neustart.
 

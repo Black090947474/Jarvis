@@ -142,7 +142,7 @@ class ClaudeClient(
 
         val conn = (URL("https://api.anthropic.com/v1/messages").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
-            connectTimeout = 15_000
+            connectTimeout = 8_000
             readTimeout = 90_000
             doOutput = true
             setRequestProperty("content-type", "application/json")

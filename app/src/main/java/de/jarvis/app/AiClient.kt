@@ -51,6 +51,8 @@ class AiClient(
     private val quickFail: Boolean = false,
 ) : Brain {
 
+    override val id: String get() = "ai:" + provider.name
+
     /** Beim Kopieren am Handy rutschen oft Leerzeichen, Zeilenumbrüche oder unsichtbare Zeichen mit hinein. */
     private val apiKey = rawKey.filter { it.isLetterOrDigit() && it.code < 128 || it == '_' || it == '-' || it == '.' }
 
@@ -170,12 +172,14 @@ class AiClient(
             var i = 0
             val list = if (vision) visionModels else if (complex) (provider.strong + models).distinct().toMutableList() else models
             while (i < list.size) {
-                if (System.currentTimeMillis() - askStart > DEADLINE_MS)
+                if (System.currentTimeMillis() - askStart > (if (quickFail) DEADLINE_FAST_MS else DEADLINE_MS))
                     throw Brain.Unavailable("${provider.name} antwortet gerade viel zu langsam. Versuch es gleich nochmal.")
                 try {
                     return post(list[i]).also { ModelStatus.set(provider.name, list[i], vision, complex) }
                 } catch (e: java.net.SocketTimeoutException) {
                     // Modell hängt (überlastet) → sofort das nächste probieren statt ewig zu warten
+                    // Wartet schon ein anderer Anbieter? Dann sofort wechseln statt das nächste Modell hier zu probieren.
+                    if (quickFail) throw Brain.Unavailable("${provider.name} ist gerade zu langsam.")
                     step("${provider.name} ist langsam – nehme ein anderes Modell …")
                     i++
                     if (i >= list.size) throw Brain.Unavailable("${provider.name} ist gerade überlastet und antwortet nicht. Versuch es gleich nochmal.")
@@ -185,9 +189,11 @@ class AiClient(
                     when {
                         // Ein 400er kann von der eingebauten Websuche kommen: einmal ohne sie probieren
                         e.code == 400 && webSearch -> { webSearch = false; continue }
-                        e.code == 429 && quickFail && i == list.size - 1 -> throw toUnavailable(e)
+                        // Limit voll und ein anderer Anbieter wartet: nicht erst alle Modelle durchprobieren
+                        e.code == 429 && quickFail && (i == list.size - 1 || e.retryAfter > 3) -> throw toUnavailable(e)
                         e.code == 429 -> { waitSec = if (waitSec == 0) e.retryAfter else minOf(waitSec, e.retryAfter); i++ }
                         // Modell gibt es (dort) nicht mehr: 404/410 → nächstes Modell probieren
+                        e.code in 500..599 && quickFail -> throw toUnavailable(e)
                         e.code == 404 || e.code == 410 || (e.code in listOf(400, 422) && e.body.contains("model", true)) -> list.removeAt(i)
                         else -> throw toUnavailable(e)
                     }
@@ -261,8 +267,9 @@ class AiClient(
 
         val conn = (URL(provider.url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
-            connectTimeout = 10_000
-            readTimeout = if (vision) 45_000 else 28_000
+            // Gibt es noch einen anderen Anbieter, kürzer warten – lieber schnell wechseln als hängen
+            connectTimeout = if (quickFail) 4_000 else 10_000
+            readTimeout = when { vision -> 45_000; !quickFail -> 28_000; chat -> 22_000; else -> 14_000 }
             doOutput = true
             setRequestProperty("content-type", "application/json")
             if (apiKey.isNotBlank() && apiKey != "none") setRequestProperty("authorization", "Bearer $apiKey")
@@ -286,6 +293,8 @@ class AiClient(
         private const val MAX_ROUNDS = 16
         /** Spätestens nach so langer Zeit gibt dieser Anbieter auf (dann kommt der nächste oder eine Meldung). */
         private const val DEADLINE_MS = 75_000L
+        /** Kürzere Geduld, wenn danach noch ein anderer Anbieter bereitsteht. */
+        private const val DEADLINE_FAST_MS = 30_000L
         private const val MAX_MESSAGES = 20
     }
 }

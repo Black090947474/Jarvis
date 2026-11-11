@@ -168,8 +168,8 @@ class GeminiClient(
         val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
         val conn = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
-            connectTimeout = 15_000
-            readTimeout = 90_000
+            connectTimeout = 6_000
+            readTimeout = 40_000
             doOutput = true
             setRequestProperty("content-type", "application/json")
             setRequestProperty("x-goog-api-key", apiKey)
